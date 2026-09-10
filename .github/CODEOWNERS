@@ -1,0 +1,13 @@
+/.husky/*       @adityaborkar
+/.github/*      @adityaborkar
+/.changeset/*   @adityaborkar
+/scripts/*      @adityaborkar
+/infra/*        @adityaborkar
+
+/bunfig.toml    @adityaborkar
+# /package.json   @adityaborkar
+/conform.config.ts @adityaborkar
+
+/LICENSE        @adityaborkar
+/SECURITY.md    @adityaborkar
+/CHANGELOG.md   @adityaborkar

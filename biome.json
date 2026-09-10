@@ -1,0 +1,103 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": {
+					"level": "on",
+					"options": {
+						"groups": [
+							":URL:",
+							":BLANK_LINE:",
+							":NODE:",
+							":BUN:",
+							":PACKAGE_WITH_PROTOCOL:",
+							":BLANK_LINE:",
+							":PACKAGE:",
+							":BLANK_LINE:",
+							":ALIAS:",
+							":PATH:"
+						]
+					}
+				},
+				"preset": "all"
+			}
+		}
+	},
+	"css": {
+		"parser": {
+			"cssModules": true,
+			"tailwindDirectives": true
+		}
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": ["**"]
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"html": {
+		"formatter": {
+			"selfCloseVoidElements": "always"
+		}
+	},
+	"linter": {
+		"domains": {
+			"astro": "none",
+			"next": "none",
+			"project": "all",
+			"qwik": "none",
+			"react": "all",
+			"reactNative": "none",
+			"solid": "none",
+			"svelte": "none",
+			"tailwind": "all",
+			"types": "all",
+			"vue": "none"
+		},
+		"enabled": true,
+		"rules": {
+			"correctness": {
+				"useUniqueElementIds": "off"
+			},
+			"performance": {
+				"noBarrelFile": "off",
+				"noJsxPropsBind": "off",
+				"preset": "recommended",
+				"useTopLevelRegex": "off"
+			},
+			"preset": "recommended",
+			"style": {
+				"noContinue": "off",
+				"noDefaultExport": "off",
+				"noJsxLiterals": "off",
+				"noNestedTernary": "off",
+				"noTernary": "off",
+				"preset": "recommended",
+				"useComponentExportOnlyModules": "off",
+				"useExportsLast": "off",
+				"useFilenamingConvention": "off",
+				"useNamingConvention": "off"
+			},
+			"suspicious": {
+				"noUnnecessaryConditions": "off"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"assist": { "actions": { "source": { "useSortedKeys": "off" } } },
+			"includes": ["**/package.json"]
+		},
+		{
+			"includes": ["./src/components/ui/**"],
+			"linter": { "enabled": false }
+		}
+	],
+	"vcs": {
+		"clientKind": "git",
+		"enabled": true,
+		"useIgnoreFile": true
+	}
+}

@@ -1,0 +1,7 @@
+name: planner
+description: planner
+main: apps/infra/index.ts
+runtime: bun
+options:
+  refresh: always
+config:

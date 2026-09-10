@@ -1,0 +1,53 @@
+encryptionsalt: v1:J+XHOi/EUtc=:v1:ER8ZstpuFYvalVSk:cDa8JQBxqV50lOgtEC2ohxzy3bTmAg==
+config:
+  app:AUTH_SECRET:
+    secure: v1:f59qCdtrEatLcOaO:Ed1Qa3TzBehVKlhn8yIAX0h69oFYC5chzfrDI0BNsvzVdp30Lb4ekMB5EnoV62F9GudppOyz2wC4fl1fIu41Gegl3RdqCC7QFBToiw==
+  app:GITHUB_CLIENT_ID:
+    secure: v1:HDCEDf40brpI+OXE:YlQHBGzWwN2GJz4/AWhnokdtl2SvSDrY5uOykDDdb5DOksSj
+  app:GITHUB_CLIENT_SECRET:
+    secure: v1:DiJnfAUGpbo4Q0W8:ak3wqwQiQ5LjN/5F6NAXlM3ZKDy+Fs0I7xrSkMKhv3xUUUlTpQNSHgvDIb290jZxmgFMJahHjpo=
+  app:GOOGLE_CLIENT_ID:
+    secure: v1:7JkMnhLgmxb/xujY:xjbuLxgCZ2vK6ungrTr9PSXtma/HeBKBCI9GPfHrsWQ6/BtyBmEjqIu+eN+P/P9OPEx4QY9rdtESdN5uIwStmj4ku9YO19IVJ6g2Ziaf3i+2kv02usGFbw==
+  app:GOOGLE_CLIENT_SECRET:
+    secure: v1:5tS9R8q11BGsPK2q:Ut8/c8bX5dB2ctSz6FGiEmgpidzEeXyrK3npQE51x0KXx1FlQpj1At0DhRwxv0igD3KY
+  app:PUBLIC_POSTHOG_HOST: https://us.i.posthog.com
+  app:PUBLIC_POSTHOG_KEY: phc_xxx
+  app:PUBLIC_WEB_DOMAIN: planner.adityab.tech
+  app:PUBLIC_WEB_PORT: 443
+  app:PUBLIC_WEB_SSL: "true"
+  # Postgres backups: pgBackRest → OCI Object Storage (see docs/adr/007)
+  backup:BUCKET_NAME: planner-preview-pgbackups
+  backup:REPO_PATH: /planner
+  backup:STANZA: planner
+  backup:SCHEDULE: "0 1 */2 * *"
+  backup:RETENTION_FULL_DAYS: "60"
+  backup:RETENTION_ARCHIVE_DAYS: "14"
+  oci:compartmentId:
+    secure: v1:jTaepfNoihe1P0qL:92IfDp01yXPfuGayreORXSvIDaQBeUIer7dgJwkcA3uK6tPpPr9NJq1ntX+TvV06NbA+Cmr7Pmplsz8McuJj3qDOv+Yq5NF/pzNpEDUHKerjv0HuBDXBo4Gd40TRlf8zO9Vw
+  oci:fingerprint:
+    secure: v1:XkMaCYHgJJEuQZJ4:XO/8bxd8aQXKMUREVrd7608Swcld4bDoWudV3ULFZoDOjFc8+IBKtGrztmqkr3SmGayvFhWinmyZgRVToaSQ
+  oci:privateKey:
+    secure: v1:coqc4RyaffWU8ACM:o9zJpLd0Zb7jGU5PrNIKHqqvyPnYyPJooB+5SuLq/P9QvtwSUF/0VeOIIr8DDnGQqaEwk39+J+HZUeQTzPwi4qf/bB7pvrMh0ACUMwE/HsEgrau9od986bPt23rdOUDv+toOWPNG4Wmyz6jeUEixPishx3jtxDbu8pZgqTdkp4j9Q9w9Kvr5EnzpsZu9wW/U9gr189uzTPzZFm0ZnkIyj/jya10kLx5aKT4QRg55/sKaq5rm4t0Mwl9mUVYfiLyBH5ePUFor/CDkqBacMKFElqdlIuTcDzZCodZj7l5PlLWP2kdFOvcNCPiYAlFC4TGxao36l7zjTFqEZs3SU2RqgeIruqfJH9SHS7TcpDKInaHR2x7+DMtND40/jbAtsrGG5Y/EQNAA5yAHgT9Kp2sHaSQ0vQd32ZG0fz8/zLnD3dCRTU1AyNcIyDuCW1PV1RlDVSlYuddnZ9/Kj4h9tdKutx28nE0tVNZzPoOejk/rYwWO+bajUyJoQeJJuetXpLNVHbG3NNa3zMzJFIwwfbMm3r+2G9SkG5hPCeIzeH/AJjiaSvTKklkXXW5uQ3m3Ea7/1ptHhjF1T2NLMg9wGpfmKm2n/Bf3towS/ChLJySvVZASX/TbfZAIk/LSwmt/ti7uC9V0NnA08SSEZgh759ZgDqLW+YfS6GdcKPdqX2Wd9M+noEmxSlTFLMvlER8RbQ18Stj645yEcAn3lN7GKj6ErqITaMbTQ47fjIij8q/0bD5oL/xMofL0FBetf0oXVpTituMJMlSY3mnk+ih8173p21+OLgoP/qyCv/HCEVbLOIWGId0XUHqEWQzglL6MPXTZRvAiXKCaqR40pkIWJKRWfrzgC8+dEHFAom0l7JTEYR87InYLB/DNuhpaBXEPIuwwFg3hBM7uqhfnRHdvbYsGnc6gCVhpcF5H6hpKjoola26FHDCgvJaKCpv6wftm3bdDS7gcISDY4uxF2BP2Km0MDk9YfcYTOwMvrsB7rDS9UExDDQ8xPiyhPSFTChJsGH/JUB94IG6IFgeEsckg0KnVVFNIdjHlapUv1dVOHpcT3a5yeQ7vx1FhMZ1tQ2G5S1cW00KOhNsDcdIM9830lYRrwjaRaRsDE8LsvrCdlo27n2iKfsYK1HPCRxSXKe4OqFjQaN8ZeM2T5tJQNmaf7AYc9GW/TWjd7wBkRQym7Ozg3z5PmzoiVV/jDA9yQ/OfBVKqKmV33J3vXlxRVxudaJmBTRAGR5gm5AeyqIa+VMhZ/5Z2uUW5CXK4vhZEACKRXkIyVoA8C2KZHoACHSyvb6iSC6VTMYhzK2Fa9SsrBpBt0re4iXSKDrMpIXb2OR3A7Xe7BshtALykIx0bUeHO8Rl0m+4Y4uT5pNfhiGXmpnl1iQhhhrQGhi+J7LUsdc+IJNN7kSOFcME9frkpIsC7Pn7zgtcPMwvAlPepZ4cdys4O7/eXc0i1MIQy6o6GpVzVHDk+wxuBQCD5PLMm8C3RFQYgdi8uJBaSpe2T8dpDLtbuACenIFOzms+NjR5+mY1tTjftvyUW/ajanRzXqT1LkmFVt9yJX530GeQuSyC2tN/YNNWN2tKlR5AbsFML3FIFVqfr1acdLNL80OTkTJDAes0F6nwxGbe0d96/dsu7lQhVGYbNO2ZKGwBrwed5w2rUgALwHa0rfsJSpI8xpIz5eTg5c4Pn3uB6P/5E9jn9v8My7KQHNaEtOD2f9XhxWDJkJkHoFQP1MooAOkaR58cTTmHGIDFD9SM0yIHfK/GN0fPuqZfEJK/gW2GSnpvqfcMInapQ25k4SGt4TiHIwn/4qpMUXHPEZh8ZwYusBETCGP8/wLVd0HsN33WZFHvHW7X1cWx4XrpEYLsQFbQHaOfWcL5nCE+KPYjIoolNOuJfGaZmgOJvc801Op2yDofnkHeVe39QekBHIj1D/+0i0qCM2moFZ6lddOu+3aKsy54N+mxE4DJiiMxdRPDNdx7uiG4G9h8G5spr73UserN5VKNO3PdAHvbzT3iRtwGeouaz///9sZzQwdfuYcfLkd+4F1ogZ1fZ+Wg1u9XFsFyAMS23RWqwf/OjLd8Ln7xQbTrDmSNNdWxji/MCGIwW29vKSlxVTiLTLX3heKXWS+VLcJAT3hIJNPEPB9EUCsW0MLRxm7oGjDKQBVeeP8CI5KAcxq3Um5+4O/tRe+OXiY8/K5O+GEn+R2qeomlkL1Bvf2Mp5Xis9MXv4RrJLvVjKr/TlJMJbxXrxY4FOUsKjRvwJ2zSomMtp87bsOymS5NcIT6YfeRenZ5w7cpUPBiEdpRLJDHGdS0MywG0
+  oci:region: ap-mumbai-1
+  oci:sshPublicKey:
+    secure: v1:eE54fwHRrU8rkC+i:cew3+Kmw1HmoWP52AJSzegBVTvPn+86HUZB6KcF53/Rsw5jub18vcJzboqyn0EWbsrq1YdrlhMbj5Ts/eQVte23WkuBfYQV+V9x43dtlpLPEutUupt8M10wJzrfHokH+pJjJIcnUlQ==
+  oci:tenancyOcid:
+    secure: v1:WgwGTEIOZUfF0Btb:wztyVO9qBO2BWAM1UidRxH5caPb+Gyme7P2Q+Kx7MNemGTEWrdW7XQWoC7gpJtlBoZz3FE1uAaDzqOFOnN6vqANdgul6sEV4FUXoxXcYOEb0NIGxDI76c27N4LqocNY=
+  oci:userOcid:
+    secure: v1:MKU5C6GohsAFQ1vy:Foeq+6vebIHBOeWa6e+eL9vcdcgYoo1Ey2XRchdj3Uhn+avF/VXZt3da9PwCkhaNNeEuYXlPUpsoO0ZY3ln0OCB/ANvujd+YoTouP8P0wrg4QI6rhnj6VpfQu5I=
+  oci:sshUser:
+    secure: v1:1AMIqiklGMroXwFa:Q7WCUSeuJ9UnrPx1Ouew8bUp65SZ6g==
+  otel:OTEL_SERVICE_NAME: planner
+  postgres:DB_HOST: localhost
+  postgres:DB_PASSWORD:
+    secure: v1:7hqJXWNkAvRdTBEU:o+swVEzlNgGZH/JN9Wvuqw2yL5hufE0/
+  postgres:DB_PORT: "5432"
+  postgres:DB_SSL: "false"
+  postgres:DB_USER:
+    secure: v1:SxXBWdLggpncns63:lqOw0ATj8qHF4gBo7ODLg33BcfaTnipA
+  seaweedfs:STORAGE_ACCESS_KEY: planner
+  seaweedfs:STORAGE_BUCKET: planner
+  seaweedfs:STORAGE_ENDPOINT: http://localhost:8333
+  seaweedfs:STORAGE_FORCE_PATH_STYLE: "true"
+  seaweedfs:STORAGE_REGION: us-east-1
+  seaweedfs:STORAGE_SECRET_KEY: password

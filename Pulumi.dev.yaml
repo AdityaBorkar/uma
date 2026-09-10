@@ -1,0 +1,35 @@
+encryptionsalt: v1:RoFZS/kVdKk=:v1:2U2QK6LYToFfsOJT:jFeFp/wtDNRtNNfvGxjI2X6o355QEA==
+config:
+  # App
+  app:PUBLIC_WEB_DOMAIN: localhost
+  app:PUBLIC_WEB_PORT: "3000"
+  app:PUBLIC_WEB_SSL: "false"
+  app:PUBLIC_POSTHOG_KEY: "phc_xxx"
+  app:PUBLIC_POSTHOG_HOST: "https://us.i.posthog.com"
+  # App Auth
+  app:AUTH_SECRET:
+    secure: v1:4zmT3/TVdL370Tk0:qXQqlxplkgbi7iMBel3iqKq4UvgYcDTY3XuqyDV7gt8b54gbJljpjW837opB/PgzzHCihdn3ntBSY5RX4HgiB0ElOyYF16O5Lkp9Xg==
+  app:GOOGLE_CLIENT_ID:
+    secure: v1:JenLcYaBT2+kNI5E:TnV9mVoWtZsw7qabW9VUdjs262z0gaQ9AxY+k3mAGDJfgglLcAtSnpKL9Za2IG3D/Nb6/beYb+wVA5Xyes7AZDwdfUs/9aQSS6OcIiihw/PFNKEpZ6bNqQ==
+  app:GOOGLE_CLIENT_SECRET:
+    secure: v1:oqpwP7e4w4kVDmUi:OzkK03Ygi3EbgXPBP/sA/duR4sGOdbm8xLqre8GIU8Ym+jT0tViStb1h07l/FOxCkezR
+  app:GITHUB_CLIENT_ID:
+    secure: v1:JavSsvUcgBdUP2mV:G3w1erAmnb1ssOL341kvpjGCgT6z1BF6rc3arAUCMhG31tu0
+  app:GITHUB_CLIENT_SECRET:
+    secure: v1:bp7lYuuXcUAb5U/v:MscTL3Dw7+qpbHQQPRMLp7NkNsJRxWjOw6mPlU7a1wq6fD4ktu1hMDnwW9OGi98A8569gG/2IVg=
+  # Postgres
+  postgres:DB_USER:
+    secure: v1:DdDT51WHbV8QWpUY:NwdAh0TH0jYjt9D7hEJHCf8Wm/Xoejgz
+  postgres:DB_PASSWORD:
+    secure: v1:tCfH4MMuq8gLBK95:wH096aq4bixUWkT4SFpZIn7rCwfhvA+b
+  postgres:DB_HOST: localhost
+  postgres:DB_SSL: "false"
+  postgres:DB_PORT: "5432"
+  # TO BE INTEGRATED AND TESTED:
+  seaweedfs:STORAGE_BUCKET: "planner"
+  seaweedfs:STORAGE_ENDPOINT: "http://localhost:8333"
+  seaweedfs:STORAGE_REGION: "us-east-1"
+  seaweedfs:STORAGE_ACCESS_KEY: "planner"
+  seaweedfs:STORAGE_SECRET_KEY: "password"
+  seaweedfs:STORAGE_FORCE_PATH_STYLE: "true"
+  otel:OTEL_SERVICE_NAME: "planner"

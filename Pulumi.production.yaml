@@ -1,0 +1,60 @@
+encryptionsalt: v1:kr0uU+fbW7Y=:v1:IpqwC9l+GxEr5AM3:sCzS1h+vvmEdLkfnIbxjQj7Q2XLS2Q==
+config:
+  app:AUTH_SECRET:
+    secure: v1:rCNrq8cnZIhyqsm6:z4xdH/LQvNW0ukyYf1fYKAuCCaZfFf3QmTP4LMuLLP2+GED63msiz0Qsmj5bG2BWXGvvJw+L0bl8UBx/Gaa3g7ReG2dV50q+tfuYmQ==
+  app:GITHUB_CLIENT_ID:
+    secure: v1:CQEbUZ8GjnIhHuBB:nnJT6hEIVzUrKDyniaJ4Ii06PMk+1F/4TLt2/rAqXLkWAg6j
+  app:GITHUB_CLIENT_SECRET:
+    secure: v1:XJ6uc2TfoQkMnOit:wQNG7W8XdXtbV5aA04SpAV6qT81AlIxAubk/5ovjbr3I7XHYy7ZNJ99Fx7wF7TgiWYJybvC7onk=
+  app:GOOGLE_CLIENT_ID:
+    secure: v1:Zib9+8D+QrsrZjdF:sfWt22JuKPMjQ20GuO2e2hwxBm2kMVkRYV8N1Kkj4jzvsqo5tBfegnSrf8kpZLQsRfp9EHixlwaZmf6eOEQWCfJg3N7DmRsN8funQT6QI20W4/xLXiiDTw==
+  app:GOOGLE_CLIENT_SECRET:
+    secure: v1:PNsOVmatcBuueQV8:/ZTkzw1VcaMdIS+vpt0Lar57AEf/0jb7281w07mHeGOU8idkoybvyUWIse6AHJvUgKtM
+  app:PUBLIC_POSTHOG_HOST: https://us.i.posthog.com
+  app:PUBLIC_POSTHOG_KEY: phc_xxx
+  app:PUBLIC_WEB_DOMAIN: planner.adityab.tech
+  app:PUBLIC_WEB_PORT: 443
+  app:PUBLIC_WEB_SSL: "true"
+  # Postgres backups: pgBackRest → OCI Object Storage (see docs/adr/007)
+  backup:BUCKET_NAME: planner-prod-pgbackups
+  backup:REPO_PATH: /planner
+  backup:STANZA: planner
+  backup:SCHEDULE: "0 1 */2 * *"
+  backup:RETENTION_FULL_DAYS: "60"
+  backup:RETENTION_ARCHIVE_DAYS: "14"
+  oci:fingerprint:
+    secure: v1:Bh2zR6OuSB+8X0AL:x9gfXVbLfqdBYe66yEWl+kjlXbrjEGo61dka/KK6p0QYUgFchOst4r6Iq8l118lK59MzmR3aeG5TbU+aesd/
+  oci:privateKey:
+    secure: v1:eujPtK1dN1F0BJ3c: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
+  oci:region: ap-mumbai-1
+  oci:tenancyOcid:
+    secure: v1:Qdf0K/YjtmxhoHUL:6J10JvOCfjjjMeDGHHE/xg8d4E48BOtzQoloDuHijLTL8wVk/nk/N5iYBd7GE4CSHM/6gfnXrc10Zauy2Cy6jwGDBc9y6JAbDeQwnvj9CeyTC/qLoCRttQCzc8/tzKE=
+  oci:userOcid:
+    secure: v1:52oaHfItsbQBE92m:XH7NTC+y0MJp4wYrvFi8LsZzMPv0SG7URsEsFhkDETsJqfLI9vhErMWscH7S+7XljF/t+pr2Dftx6BC03X9Sgg7bT2AqvIQOjT+IBMTOgiFH+BbvJhS1Psdx9oE=
+  vps:sshPublicKey:
+    secure: v1:iCo2gJF+dCfQyLuX:iUC7enUTMJOG1NvvJh98+SsWcDukV1ABUiSGUtSuBVXwxnEAX/Eso845NbWzhwHI8TZfV2Dq4xEp/CZlMQGd5vQ7gYp3Hs7cOrmYZs8XeHv4HAdiL5rlRxOr/SU7z1I0Njs6uJvOQCyXbPtSfc4h5tsU6yuFT4blnLjWkQ==
+  vps:sshPrivateKey:
+    secure: v1:xBHBbLiEq8/6O1xF:hFrCBlI9DNEcgt1Y9C1wpduWoaFa3CGyYYP7njOjfKBRzDYYQH8Z6RyOF3sHQOSC3MIUxoSeACNRMIBLDJ8B++pEvhcsqQWiyC/M9TeUSxdy4Y8S21lAqEWIYGdCdhqEmNn+EC9PLGXEl31HKR6gXYtwHfug6d09TSmPgeiEoL8udP/LBPmyciJOF578dgh0lJU9rUwnvhMEkNHEwhfCLW7L0jvP/jioS1gLqkiQatU4lu8eSK5qKnM5epe7ILuI66P7MBvd2RSzEIZDU+cNaQk7N8gVRfoNoPm9Yz4S1fR3tJwnqhiwAQD9ShSxPO9y3rTVCdaTAWVo0rlbbcfh3CVyvr3UYYW22Xsfc9QvlMLOOZxdP21TDsbeJnXP35q1xrRUCNlJn7uTBnOBJtSEIy9h7qf4fwRwQYSLzgcVT3t4Fw87A1eChgBlGHH51n44OVAtt5/GDvmgRtMVJyA0tIZFzIkIZK7gkzXy5yzeQkXsQsCSJGZYIZVolN5yb4U9OaFDkbLVjxjC4tflMEbVyGz07PbKUfO31e6PTeUbKag6p2LrkcGSiDlEwG3xwWQzwww=
+  vps:compartmentId:
+    secure: v1:3Xb/wWlEc89XghkR:PBzG9L1SrV6Gxe0uxImn3ynLnLE9TpdFyazDSsY9U2t8lnN6sCYNS41kM+14aeGdJo1hya4WzYSf+61tcIwkg18ReMiosUx0ZNJWmzuNPPahjrAAFyXj7yqnKG3yMY0Vonxy
+  vps:sshUser:
+    secure: v1:gLFlxdmDA+ubK34W:kHfflSPHhXtfNuDX+DNbfk//SLEhGQ==
+  cf:domain: planner.adityab.tech
+  cf:zoneId:
+    secure: v1:uqBeycdLnxt5Ze8n:XlA7NwoeXrN/gpjaNBZXepVUKGeB6qku1iAaUuS6ttMWq69ASFWYnZXEURiPgSqZ
+  cloudflare:apiToken:
+    secure: v1:eIHwa5Uek57NJoro:du56dNYUhn6m27rAT4uAwTjPFjNeBOWtoDX26GSkMuKFkLszHmEloZO1U5WwFZzFlbfkT5Blo2ht+P8TI2v/nkcONHZx
+  otel:OTEL_SERVICE_NAME: planner
+  postgres:DB_HOST: localhost
+  postgres:DB_PASSWORD:
+    secure: v1:ftyKpHRiKBThLqc/:HIK9zg1Gj2bLoATQ5QPjcXWr8rVTriFT
+  postgres:DB_PORT: "5432"
+  postgres:DB_SSL: "false"
+  postgres:DB_USER:
+    secure: v1:a1AhbbxWxEYZIvx5:uBSK6ftqRj4nWENhJkBSveNXEhUjeigt
+  seaweedfs:STORAGE_ACCESS_KEY: planner
+  seaweedfs:STORAGE_BUCKET: planner
+  seaweedfs:STORAGE_ENDPOINT: http://localhost:8333
+  seaweedfs:STORAGE_FORCE_PATH_STYLE: "true"
+  seaweedfs:STORAGE_REGION: us-east-1
+  seaweedfs:STORAGE_SECRET_KEY: password

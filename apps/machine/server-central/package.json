@@ -1,0 +1,11 @@
+{
+	"name": "@uma/server-central",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"nanoid": "6",
+		"semver": "7",
+		"zod": "^4.6.1"
+	}
+}

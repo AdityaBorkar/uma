@@ -1,0 +1,14 @@
+node_modules
+
+.nitro
+.tanstack
+.output
+
+.env
+.env.*
+*.pem
+*.gen.ts
+
+.DS_Store
+
+.agents/skills/

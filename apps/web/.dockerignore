@@ -1,0 +1,22 @@
+# VCS / editor / tooling
+.git
+.github
+.zed
+.agents
+.husky
+
+# Local env & secrets — must never be baked into the image
+.env
+.env.*
+*.pem
+
+# Builds & caches
+node_modules
+.nitro
+.tanstack
+.output
+
+# Pulumi — Pulumi.dev.yaml contains secrets
+infra
+Pulumi*.yaml
+codedb.snapshot

@@ -1,0 +1,17 @@
+{
+	"skills": {
+		"deslop": {
+			"computedHash": "8883a7d459c07a0b2ee06972e79baa634009aa3bab969a6650acbefac394ad41",
+			"skillPath": "cursor-team-kit/skills/deslop/SKILL.md",
+			"source": "cursor/plugins",
+			"sourceType": "github"
+		},
+		"unslop": {
+			"computedHash": "3dfc2afeda677e12c6065497a40df7d895859de1c7d1cffb899b1559d129fe4f",
+			"skillPath": "pstack/skills/unslop/SKILL.md",
+			"source": "cursor/plugins",
+			"sourceType": "github"
+		}
+	},
+	"version": 1
+}

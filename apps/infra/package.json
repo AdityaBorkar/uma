@@ -1,0 +1,19 @@
+{
+  "name": "@uma/infra",
+  "imports": {
+		"#/*": "./src/*"
+	},
+	"private": true,
+	"type": "module",
+	"devDependencies": {
+		"@clack/prompts": "^1.7.0",
+		"@pulumi/cloudflare": "^6.20.0",
+		"@pulumi/docker": "^5.2.0",
+		"@pulumi/oci": "^4.22.0",
+		"@pulumi/pulumi": "^3.261.0",
+		"@types/bun": "^1.4.1",
+		"commander": "^15.0.0",
+		"drizzle-kit": "^0.31.10",
+		"typescript": "^7.0.2"
+	}
+}
