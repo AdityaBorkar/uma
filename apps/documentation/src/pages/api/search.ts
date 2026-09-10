@@ -5,13 +5,10 @@ import { getStructuredData, source } from "@/lib/source.ts";
 
 const server = createFromSource(source, {
 	buildIndex(page) {
-		return {
-			description: page.data.description,
-			id: page.data._raw.id,
-			structuredData: getStructuredData(page.data._raw),
-			title: page.data.title,
-			url: page.url,
-		};
+		const { url } = page;
+		const { description, title, _raw } = page.data;
+		const structuredData = getStructuredData(_raw);
+		return { description, id: _raw.id, structuredData, title, url };
 	},
 });
 
