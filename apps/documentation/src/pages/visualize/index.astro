@@ -1,0 +1,67 @@
+---
+import Layout from "@/components/layout.astro";
+import "@/styles/global.css";
+
+const pages = [
+	{
+		desc: "uma-machine enroll · daemon · check · reset · sync · history · sandbox · run — tree, flags, exits.",
+		href: "/visualize/cli",
+		title: "CLI commands",
+	},
+	{
+		desc: "Daemon dispatch (assign / cancel / reset-config / UPGRADE_REQUIRED), heartbeat tick, execution pipeline.",
+		href: "/visualize/machine",
+		title: "Machine commands",
+	},
+	{
+		desc: "Frozen v1 WS frames at /api/machines/ws — 8 machine→server, 4 server→machine, plus device + claim HTTPS.",
+		href: "/visualize/contract-machine-server",
+		title: "oRPC contract: machine ↔ server",
+	},
+	{
+		desc: "Web oRPC router at POST /api/rpc/* — tasks, signals, projects, documents, connections.",
+		href: "/visualize/contract-server-web",
+		title: "oRPC contract: server ↔ web",
+	},
+	{
+		desc: "End-to-end: operator → CLI → daemon → server → sandboxes, and browser → web → Postgres.",
+		href: "/visualize/architecture",
+		title: "Connection & architecture",
+	},
+];
+const nav = [
+	{ href: "/", label: "Docs" },
+	{ href: "/visualize", label: "Visualize" },
+	{ href: "/visualize/cli", label: "CLI" },
+	{ href: "/visualize/machine", label: "Machine" },
+	{ href: "/visualize/contract-machine-server", label: "M↔S" },
+	{ href: "/visualize/contract-server-web", label: "S↔W" },
+	{ href: "/visualize/architecture", label: "Arch" },
+];
+---
+<Layout>
+  <title>Visualize — UMA</title>
+  <div class="min-h-screen bg-fd-background text-fd-foreground">
+    <header class="border-b border-fd-border">
+      <nav class="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-4 py-3 text-sm">
+        {nav.map((n) => (
+          <a href={n.href} class="rounded-md px-2.5 py-1.5 text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-accent-foreground">{n.label}</a>
+        ))}
+      </nav>
+    </header>
+    <main class="mx-auto max-w-6xl px-4 py-10">
+      <p class="text-sm font-medium text-fd-muted-foreground">visualize/*</p>
+      <h1 class="mt-1 text-3xl font-semibold">System diagrams</h1>
+      <p class="mt-2 max-w-2xl text-fd-muted-foreground">Interactive maps of the CLI surface, daemon commands, both oRPC contracts, and the full connection. Each card links to a standalone diagram page; the same material is documented in detail under Docs.</p>
+      <div class="mt-8 grid gap-4 md:grid-cols-2">
+        {pages.map((p) => (
+          <a href={p.href} class="group rounded-xl border border-fd-border bg-fd-card p-5 hover:border-fd-primary">
+            <h2 class="font-semibold group-hover:underline">{p.title}</h2>
+            <p class="mt-1 text-sm text-fd-muted-foreground">{p.desc}</p>
+            <span class="mt-3 inline-block text-sm text-fd-primary">{p.href} →</span>
+          </a>
+        ))}
+      </div>
+    </main>
+  </div>
+</Layout>

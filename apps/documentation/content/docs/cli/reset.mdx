@@ -1,0 +1,45 @@
+---
+title: reset
+description: Reset drifted config, or fresh-start a sandbox worktree.
+---
+
+Defined in `apps/machine/src/cli.ts:56`, dispatched to `cmdReset` in `apps/machine/src/index.ts:87`. Two disjoint modes share one command.
+
+```text
+uma-machine reset [--only <k1,k2>] [--dry-run] [--prune]
+uma-machine reset --fresh-start --sandbox <id> [--commit <sha>] [--repo <url>] [--branch <b>] [--task <id>] [--dry-run]
+```
+
+## Mode 1 — config reset (default)
+
+| Flag | Notes |
+| --- | --- |
+| `--only <k1,k2>` | Subset of config keys. |
+| `--dry-run` | Print actions without applying. |
+| `--prune` | Prune unmanaged entries. Parsed by `parsePruneFlag` (default `false`). |
+| `--json` | JSON receipts instead of `key: ok / FAILED — detail` lines. |
+
+Runs `resetAll({ dryRun, only, prune })`. Exit `0` when every receipt is `ok`, else `2`.
+
+```bash
+uma-machine reset --dry-run
+uma-machine reset --only agents,skills --prune
+```
+
+## Mode 2 — worktree fresh-start (`--fresh-start`)
+
+The **only** reset path that touches a worktree; `sync` / reset-all never do. Implemented in `src/git-binding.ts` (`freshStart` = `git clean -fdx + git reset --hard`).
+
+| Flag | Notes |
+| --- | --- |
+| `--fresh-start` | Selects this mode. |
+| `--sandbox <id>` | **Required** (or positional `rest[0]`). Missing → error + exit `1`. |
+| `--commit / --repo / --branch / --task` | Target ref for the worktree. `--task` defaults to `"task"`. |
+| `--dry-run` | Prints `would fresh-start <id> (git clean -fdx + reset --hard)`, changes nothing. |
+
+```bash
+uma-machine reset --fresh-start --sandbox task-abc123
+uma-machine reset --fresh-start --sandbox task-abc123 --branch task/abc123 --dry-run
+```
+
+Exit `0` on `fresh-start <id>: clean`, `1` on failure (`fresh-start <id> failed: …`).

@@ -1,0 +1,25 @@
+---
+title: history
+description: Show persisted heartbeat history from SQLite.
+---
+
+Defined in `apps/machine/src/cli.ts:82`, dispatched to `cmdHistory` in `apps/machine/src/index.ts:145`, read path in `apps/machine/src/heartbeat.ts:206` (`readHistory` → `queryHistory`).
+
+```text
+uma-machine history [--range 24h|30d] [--json]
+```
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--range <range>` | `24h` | Parsed by `ms()` — e.g. `24h`, `7d`, `30d`. |
+| `--json` | off | Raw rows instead of the table. |
+
+Human output is a `ts | cpu | ram | disk` table over the last 50 rows in range, plus `(N rows in range <range>)`. Always exits `0`.
+
+```bash
+uma-machine history
+uma-machine history --range 30d
+uma-machine history --range 24h --json
+```
+
+Rows are written by every heartbeat tick (`persistHeartbeat`), so history is queryable even for periods when the WS was down.

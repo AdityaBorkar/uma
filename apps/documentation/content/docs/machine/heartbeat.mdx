@@ -1,0 +1,43 @@
+---
+title: heartbeat
+description: Periodic machine → server presence, quota, and sandbox inventory.
+---
+
+Built by `buildHeartbeat` in `apps/machine/src/heartbeat.ts`, sent by `sendHeartbeat` in `apps/machine/src/daemon.ts:29`, schema `HeartbeatFrameSchema` in `apps/orpc-contract/src/machine-frames.ts:18`.
+
+```ts
+{
+  t: "heartbeat",
+  machineId: string,        // min 1
+  protocol: "v1",
+  cliVersion: string,       // e.g. "0.1.0"
+  configVersion: string,    // desired-state version
+  metrics: { cpu: 0-100, ram: 0-100, disk: 0-100, pids: number[] },
+  quotaUsage: { running: number, total: number },
+  sandboxes: { id, status: "created"|"running"|"stopped"|"destroyed", taskId, projectId }[],
+  scopeHint: string | null, // pressure attribution ("none" normally)
+}
+```
+
+## Behavior
+
+- **Tick:** `setInterval(..., intervalS * 1000)` (`src/daemon.ts:165`), plus one immediate heartbeat on connect (`onOpen`) and one at startup. `intervalS` comes from `daemonIntervalS()` (floor 2s, default 30s).
+- **Persist-first:** `persistHeartbeat(frame)` writes SQLite before `send(frame)` — a send failure never loses the row, and `uma-machine history` stays queryable offline.
+- **Pressure hint:** `evaluateScopeHint()` sets `scopeHint` when host pressure exceeds `PRESSURE_THRESHOLD_PCT` (90%) with `PRESSURE_ATTRIBUTION_PCT` (60%) attribution sustained `PRESSURE_SUSTAINED_S` (600s), with a `PRESSURE_COOLDOWN_S` (600s) cooldown. Constants in `apps/orpc-contract/src/constants.ts:13`.
+- **Retention:** `UMA_HEARTBEAT_RETENTION_DAYS` (default 30).
+
+## Example
+
+```json
+{
+  "t": "heartbeat",
+  "machineId": "worker-01",
+  "protocol": "v1",
+  "cliVersion": "0.1.0",
+  "configVersion": "42",
+  "metrics": { "cpu": 12.5, "ram": 44.1, "disk": 61.0, "pids": [1, 412] },
+  "quotaUsage": { "running": 1, "total": 3 },
+  "sandboxes": [{ "id": "sbx-abc", "status": "running", "taskId": "t1", "projectId": null }],
+  "scopeHint": null
+}
+```

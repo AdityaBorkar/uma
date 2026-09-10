@@ -1,0 +1,30 @@
+---
+title: reset-config
+description: Server-driven config convergence with per-key acks.
+---
+
+Schema `ResetConfigFrameSchema` in `apps/orpc-contract/src/server-frames.ts:26`; handler `handleResetConfig` in `apps/machine/src/daemon.ts:80`.
+
+```ts
+{
+  t: "reset-config",
+  jobId: string,
+  keys: string[] | "*",
+  version: string,           // desired-state version to cache
+  payload?: {
+    limits?: Partial<Limits>,
+    templates?: Record<string, string>,
+    keys?: { key: string, provider: string }[],
+  },
+}
+```
+
+## Handler order (crash-safe by design)
+
+1. `resetAll({ only: keys == "*" ? undefined : keys, payload })` — same `ORDERED_KEYS` ordering as local `sync`.
+2. **Cache desired-state before acking** — `templates`/`limits` + `version` go to `desired.json` (`loadDesired`/`saveDesired`). A crash after acking must not leave converged config un-cached.
+3. **Persist all receipts first** — `persistReceiptsBestEffort(stateDbPath(), jobId, receipts)`. A DB hiccup never masks converge results.
+4. **Ack each key independently** — one `reset-ack { jobId, key, ok, error? }` per receipt (`ResetAckFrameSchema`, `machine-frames.ts:73`). One dropped ack never aborts the rest.
+5. **If `keys == "*"`**, additionally send `sync-ack { jobId, receipts[] }` (`SyncAckFrameSchema`, `machine-frames.ts:83`).
+
+`check-ack` (`CheckAckFrameSchema`) is contract-only in `v1` — defined but never sent (see `apps/orpc-contract/docs/FRAMES.md`).

@@ -1,0 +1,45 @@
+---
+title: Device flow & claim
+description: Enrollment HTTPS and the atomic task claim.
+---
+
+Schemas in `apps/orpc-contract/src/orpc.ts`; machine side in `apps/machine/src/enroll.ts` and `execution.ts`; contract wiring `device.*` / `machines.claim` in `apps/orpc-contract/src/contracts/api.ts:132`. Local test server: `apps/machine/server-central/src/index.ts` (`bun run server`, :3030).
+
+## Device authorization (`device.code` → `device.token`)
+
+OAuth-style device flow (plain HTTPS, not an oRPC envelope):
+
+```text
+POST /device/code   { client_id, machineName?, scope? }
+  → { device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }
+
+(operator approves user_code in a browser)
+
+POST /device/token  { client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }
+  → { access_token, machine_id, token_type: "Bearer", expires_in? }
+  → error { error: authorization_pending | slow_down | expired_token | access_denied, error_description? }
+```
+
+Contract errors map to `AUTHORIZATION_PENDING | SLOW_DOWN | EXPIRED_TOKEN | ACCESS_DENIED` on `device.token`. Machine behavior: `authorization_pending` → keep polling, `slow_down` → back off, `expired_token`/`access_denied` → abort. See [/cli/enroll](/cli/enroll) for the file writes.
+
+## Task claim (`machines.claim`)
+
+```text
+POST /rpc/tasks.claim  { machineId, sandboxId, taskId }   (all min-1 strings)
+  → { ok, startedAt? }            (contract: TaskClaimResponseSchema)
+  → CONFLICT on double-claim      (contract error)
+```
+
+The claim is **atomic and authoritative**: `409` means the server gave the task to someone else — the machine frees its sandbox and emits `claim-ack { ok: false }` (`rejected`). Network failure after retries → `CLAIM_UNREACHABLE`. Only a claimed task proceeds to `start`. Used by both daemon `assign` handling and `uma-machine run`.
+
+## Other `machines.*` HTTPS (contract-first, test-server implemented)
+
+| Procedure | Input | Output |
+| --- | --- | --- |
+| `machines.checkState` | `void` | `{ drift: DbRecord[], version }` |
+| `machines.heartbeatHistory` | `void` | `{ heartbeats: DbRecord[] }` |
+| `machines.sandboxList` | `void` | `{ sandboxes: DbRecord[] }` |
+| `machines.latestVersion` | `void` | `{ latest, min }` |
+| `machines.resetState` | `{ keys?: string[]\|"*" }` | `{ jobId, keys }` |
+
+`check-ack` / `reset-ack` / `sync-ack` WS frames are the async halves of `checkState` / `resetState`; see [/machine/reset-config](/machine/reset-config).

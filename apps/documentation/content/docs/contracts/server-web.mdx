@@ -1,0 +1,68 @@
+---
+title: Server ↔ web contract
+description: The oRPC router the TanStack frontend actually calls.
+---
+
+Router in `apps/web/src/rpc/router.ts`, served by `RPCHandler` at `POST /api/rpc/*` (`apps/web/src/routes/api/rpc.$.ts`, prefix `/api/rpc`, context `{ headers }`). OpenAPI via `OpenAPIHandler` at `/api` (`src/routes/api/$.ts`). Client in `src/lib/rpc.ts` (`createRouterClient` on the server, `RPCLink(/api/rpc)` + `createTanstackQueryUtils` as `rpc` in the browser). Diagram: [/visualize/contract-server-web](/visualize/contract-server-web).
+
+Auth: every procedure runs `requireUser(headers)` → `UNAUTHORIZED` when signed out (`src/rpc/auth.ts`). Project/signal scoping asserts ownership → `NOT_FOUND` on cross-project access (`src/rpc/scope.ts`). Pagination is keyset on `(sortAt, id)` desc (`paginate`, `nextCursor` opaque).
+
+> Drift note: the contract-first `apiContract` in `apps/orpc-contract/src/contracts/api.ts` is **not yet implemented** by web (`implement(apiContract)` is future work). Web procedures mirror the same shapes from `apps/web/src/schemas/schema.ts`. `device.*` / `machines.*` exist only in the contract — web has no machine registry or `/api/machines/ws` server yet (`settings/machines.tsx` is a placeholder).
+
+## `tasks.*` (`src/rpc/procedures/tasks.ts`)
+
+| Procedure | Input | Output / errors |
+| --- | --- | --- |
+| `tasks.list` | `{ cursor?, limit 1–100 (dflt 20), q?, projectId?, status? }?` | `{ items, nextCursor }` |
+| `tasks.stats` | `{ projectId? }?` | `{ queued, running, completed, failed, cancelled }` |
+| `tasks.get` | `{ id }` | row, `NOT_FOUND` |
+| `tasks.create` | `{ title 2–200, prompt ≤10k?, projectId?, signalId? }` | row (created `queued`, `agent: cli`) |
+| `tasks.updateStatus` | `{ id, status }` | row, `NOT_FOUND`; only `queued→running\|cancelled`, `running→completed\|failed\|cancelled`, `failed→queued` else `BAD_REQUEST`; server stamps `startedAt`/`finishedAt` |
+
+Task lifecycle: `queued → running → completed|failed|cancelled`, with `failed → queued` retry. DB `CHECK` enforces `finishedAt` presence on terminal states.
+
+## `signals.*` (`src/rpc/procedures/signals.ts`)
+
+| Procedure | Input | Output / errors |
+| --- | --- | --- |
+| `signals.list` | `{ cursor?, limit, q?, projectId?, severity?, status? }?` | joined `{ items, nextCursor }` |
+| `signals.stats` | `{ projectId? }?` | `{ new, triaged, dismissed }` |
+| `signals.get` | `{ id }` | row, `NOT_FOUND` |
+| `signals.create` | `{ title 2–200, body ≤5k?, projectId?, severity = info, url ≤2k? }` | row (`source: manual`, `status: new`) |
+| `signals.update` | `{ id, title?, body?, projectId?\|null, severity?, status?, url?\|null }` (strict) | row; only `new→triaged\|dismissed`, `triaged→dismissed` else `BAD_REQUEST` |
+
+## `projects.*` (`src/rpc/procedures/projects.ts`)
+
+| Procedure | Input | Output / errors |
+| --- | --- | --- |
+| `projects.list` | `{ cursor?, limit, q?, status? }?` | `{ items, nextCursor }` |
+| `projects.get` | `{ id }` | row, `NOT_FOUND` |
+| `projects.getBySlug` | `{ slug }` | row, `NOT_FOUND` |
+| `projects.create` | `{ name 2–100, description ≤5k?, slug? (regex, else derived), status = active }` | row; reserved/duplicate slug → `BAD_REQUEST` |
+| `projects.update` | `{ id, …partial }` | row, `NOT_FOUND` / `BAD_REQUEST` |
+
+`status: active|on_hold|completed`. Slugs match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–60 chars.
+
+## `documents.*` (`src/rpc/procedures/documents.ts`, exposed as `documents` + `documents.comments.create`)
+
+| Procedure | Input | Output / errors |
+| --- | --- | --- |
+| `documents.list` | `{ cursor?, limit, kind?, kinds[]?, label?, projectId?, q?, state? }?` | projection + FTS `{ items, nextCursor }` |
+| `documents.get` | `{ number: int+ }` | `{ …doc, projectName }`, `NOT_FOUND` |
+| `documents.create` | `{ title, body 1–200k, kind, labels ≤20?, meta?, projectId! }` | row (frontmatter `composeBody` + `allocateNumber` txn + `opened` event) |
+| `documents.update` | `{ number, title?, body?, labels?, meta? }` | row (+ `renamed`/`labeled` events) |
+| `documents.close` / `reopen` | `{ number }` | row (+ `closed`/`reopened` event) |
+| `documents.remove` | `{ number }` | `{ ok: true }`; `BAD_REQUEST` unless `closed` |
+| `documents.comments.create` | `{ body 1–10k, documentNumber: int+ }` | row (+ `commented` event) |
+
+`kind: wiki|spec|bug_report|update|changelog|release|deployment|action_log`; `state: open|closed` (documents use **state**, tasks/signals/connections use **status** — see `apps/web/docs/CONTEXT.md`).
+
+## `connections.*` (`src/rpc/procedures/connections.ts`)
+
+| Procedure | Input | Output |
+| --- | --- | --- |
+| `connections.list` | `void` | stripped rows array |
+| `connections.get` | `{ provider: github\|google }` | stripped row \| `null` |
+| `connections.getAuthUrl` | `{ provider }` | `{ url, state, redirectUri }` (`BAD_REQUEST` if unsupported) |
+| `connections.providers` | `void` | `{ providers: [{ id }] }` |
+| `connections.disconnect` | `{ provider }` | `{ success: true }` |

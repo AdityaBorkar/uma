@@ -73,10 +73,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "catalog:",
 		"@clack/prompts": "catalog:",
-		"@commitlint/cli": "catalog:",
-		"@commitlint/config-conventional": "catalog:",
 		"@rolldown/plugin-babel": "^0.2.4",
 		"@tailwindcss/typography": "^0.5.20",
 		"@tanstack/devtools-event-client": "^0.5.0",

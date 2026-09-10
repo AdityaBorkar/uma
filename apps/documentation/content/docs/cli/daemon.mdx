@@ -1,0 +1,40 @@
+---
+title: daemon
+description: Run the device daemon — WebSocket client, heartbeat tick, and frame dispatcher.
+---
+
+Defined in `apps/machine/src/cli.ts:45`, dispatched in `apps/machine/src/index.ts:308`, implemented in `apps/machine/src/daemon.ts:144` (`runDaemon`).
+
+```text
+uma-machine daemon [--interval <seconds>]
+```
+
+## Flags
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--interval <seconds>` | `heartbeatIntervalS()` = `UMA_HEARTBEAT_INTERVAL_S` or `30` | Coerced by `daemonIntervalS()` (`src/env.ts:112`): floor `2s`, invalid → default |
+
+Startup prints `uma-machine daemon ${CLI_VERSION} starting...`, installs `SIGINT`/`SIGTERM` handlers, then blocks forever (`await new Promise(() => {})`).
+
+## What the daemon does
+
+1. **Requires enrollment.** `loadIdentity()` must return `{ machineId, serverUrl, sessionToken }` or it throws `not enrolled — run uma-machine enroll first` (`src/daemon.ts:145`).
+2. **Seeds the redactor** with `sessionToken` + `GH_TOKEN`/`GITHUB_TOKEN` so secrets never reach logs.
+3. **Opens the WS** with `connectWithBackoff` (`src/ws-client.ts:40`): `ws(s)://<server>/api/machines/ws`, `Authorization: Bearer <sessionToken>`, jittered backoff `1s → 30s`. Unknown inbound `t` values are logged and ignored (`parseServerFrame` → `null`).
+4. **Ticks every `intervalS`.** Each tick calls `sendHeartbeat(lastSend)` + `reapStopped()`:
+   - `sendHeartbeat` snapshots quota, builds the frame (`buildHeartbeat`), persists it to SQLite **even when WS is down**, then sends if connected. Send failure never loses data.
+   - `reapStopped` removes `stopped` sandboxes idle longer than `UMA_SANDBOX_TTL_S` (default 1h). Never touches `running` sandboxes.
+5. **Dispatches inbound frames** (`handleFrame`, `src/daemon.ts:155`): `UPGRADE_REQUIRED` → `handleUpgrade`, `assign` → `handleAssign` → `executeTask`, `cancel` → `cancelTask`, `reset-config` → `handleResetConfig`. See [/machine](/machine) for each.
+
+## Test hook
+
+`runDaemon({ once: true })` sends a single heartbeat and returns a noop stop — used by tests, not by the CLI.
+
+## Examples
+
+```bash
+uma-machine daemon
+uma-machine daemon --interval 10
+UMA_HEARTBEAT_INTERVAL_S=15 uma-machine daemon
+```

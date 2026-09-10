@@ -1,0 +1,34 @@
+---
+title: check
+description: Check config drift without changing anything.
+---
+
+Defined in `apps/machine/src/cli.ts:50`, dispatched to `cmdCheck` in `apps/machine/src/index.ts:66`.
+
+```text
+uma-machine check [--only <k1,k2>] [--json]
+```
+
+## Flags
+
+| Flag | Notes |
+| --- | --- |
+| `--only <k1,k2>` | Comma-separated subset of config keys (see [/cli](/cli)). Parsed by `parseOnlyFlag`. |
+| `--json` | Print the raw `checkAll()` result array as JSON instead of the human table. |
+
+Runs `checkAll(only)` over `ORDERED_KEYS` (`src/config/mod.ts:43`). Human output is a `cli-table3` table with `key | status (ok / DRIFTED) | detail`.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | all checked keys clean |
+| `2` | at least one key drifted |
+
+## Examples
+
+```bash
+uma-machine check
+uma-machine check --only programs,systemd
+uma-machine check --json
+```

@@ -1,0 +1,33 @@
+---
+title: assign
+description: Server → machine task assignment; the core execution trigger.
+---
+
+Schema `AssignFrameSchema` in `apps/orpc-contract/src/server-frames.ts:7`; handler `handleAssign` in `apps/machine/src/daemon.ts:59` → `executeTask` in `apps/machine/src/execution.ts:309`.
+
+```ts
+{
+  t: "assign",
+  taskId: string,            // min 1, required
+  projectId: string | null,  // required (null = global)
+  prompt: string,            // min 1, required
+  repoUrl?: string,          // default ""
+  branch?: string,
+  commit?: string,
+  freshStart?: boolean,
+  limits?: Partial<{ maxRunning, maxTotal, cpu, ram }>, // per-task override
+}
+```
+
+Effective limits are `server override ?? limits.json` (`effectiveLimits` in `apps/orpc-contract/src/utils.ts`).
+
+## Execution pipeline (`executeTask`)
+
+1. **Admission lock** — `snapshotQuota()` + `quotaPreCheck()` + `create`. Over quota → emit `quota-exceeded { taskId, limits, usage }` **and** `claim-ack { ok: false, error: "QUOTA_EXCEEDED" }` (`quotaRefusalFrames` in `src/protocol.ts`), log `refused (quota)`, stop. No sandbox is leaked.
+2. **Claim** — `POST /rpc/tasks.claim { machineId, sandboxId, taskId }`. `409`/4xx → `claim-ack { ok: false, error: CLAIM_REJECTED }`, free the sandbox, log `rejected (claim …)`. Network failure with retries exhausted → `CLAIM_UNREACHABLE`. Success → `claim-ack { ok: true, sandboxId }`.
+3. **Start** — `startSandbox`. Binds the worktree via `ensureBinding` (clone/fetch/checkout `branchForTask(taskId)` = `task/<short>`; `freshStart` does `git clean -fdx + reset --hard` first).
+4. **Exec + stream** — `execStream` runs the agent binary, redacts secrets (`Redactor` seeded with session + GitHub tokens), splits output into ≤256 KB UTF-8 chunks (`splitChunks`, byte-accurate for multibyte text), emits `log { taskId, chunk, stream?: stdout|stderr|system }` per chunk.
+5. **Done + stop** — emits `task-done { taskId, status: completed|failed, projectId, result? ≤64k }`, then `stopSandbox` (left `stopped` for later TTL reap — never removed inline).
+6. **Failure** — any throw frees the sandbox; `cancelTask(taskId)` (in-flight map, falls back to `task.id` label lookup) does `stopSandbox --force`.
+
+`uma-machine run` builds the same frame locally (see [/cli/run](/cli/run)).

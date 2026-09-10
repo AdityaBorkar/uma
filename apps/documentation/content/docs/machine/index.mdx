@@ -1,0 +1,19 @@
+---
+title: Machine overview
+description: Daemon inbound commands, heartbeat, and execution pipeline.
+---
+
+The daemon (`runDaemon` in `apps/machine/src/daemon.ts:144`) is a WS client. The server sends **commands**; the machine sends **frames back**. Dispatch is `handleFrame` (`src/daemon.ts:155`):
+
+| Inbound `t` | Handler | Effect |
+| --- | --- | --- |
+| `assign` | `handleAssign` → `executeTask` | run a task in a sandbox |
+| `cancel` | `cancelTask` | stop a running task's sandbox |
+| `reset-config` | `handleResetConfig` → `resetAll` | converge config, ack per key |
+| `UPGRADE_REQUIRED` | `handleUpgrade` | exit `3` on real version shortfall |
+
+Interactive diagram: [/visualize/machine](/visualize/machine). Full wire shapes: [/contracts/machine-server](/contracts/machine-server).
+
+Unknown inbound `t` values never throw: `parseServerFrame` returns `null`, the frame is logged and ignored (`src/ws-client.ts`, `server-frames.ts:64`). Outbound frames are validated before send (`assertMachineFrame` / `validateMachineFrame`).
+
+The daemon also ticks independently of the socket: every `intervalS` it persists a heartbeat to SQLite and opportunistically reaps long-stopped sandboxes (`reapStopped`, `UMA_SANDBOX_TTL_S`, default 1h, never `running`).

@@ -1,0 +1,12 @@
+{
+	"pages": [
+		"index",
+		"heartbeat",
+		"assign",
+		"cancel",
+		"reset-config",
+		"upgrade-required",
+		"execution-pipeline"
+	],
+	"title": "Machine commands"
+}

@@ -1,0 +1,35 @@
+---
+title: Architecture overview
+description: End-to-end connection — CLI, daemon, server, web frontend.
+---
+
+Diagram: [/visualize/architecture](/visualize/architecture).
+
+```text
+operator ── uma-machine enroll ─▶ server (/device/code → /device/token) ─▶ identity.json + limits.json + state.db
+operator ── uma-machine daemon ─▶ ws(s)://server/api/machines/ws (Bearer) ── heartbeat every 30s ─▶ server
+server ── assign/cancel/reset-config/UPGRADE_REQUIRED ─▶ daemon ─▶ microsandbox ─▶ agent ─▶ log/task-done ─▶ server
+browser ── TanStack Start ── POST /api/rpc/* ─▶ web server (Drizzle/Postgres) ─▶ tasks/signals/projects/documents/connections
+```
+
+## Stages
+
+1. **Enroll** (`apps/machine/src/enroll.ts`) — device flow, writes identity (`0600`), limits from `quotaDefaultsFromRam`, SQLite, optional systemd unit. See [/cli/enroll](/cli/enroll).
+2. **Daemon loop** (`apps/machine/src/daemon.ts`) — `connectWithBackoff` + persist-first heartbeat tick + TTL reap. See [/cli/daemon](/cli/daemon), [/machine/heartbeat](/machine/heartbeat).
+3. **Execute** (`apps/machine/src/execution.ts`) — quota → claim (`POST /rpc/tasks.claim`, `409` authoritative) → start → git bind → redacted `execStream` (256 KB chunks) → `task-done` → stop. See [/machine/execution-pipeline](/machine/execution-pipeline).
+4. **Converge** — server `reset-config` → per-key `reset-ack` (+ `sync-ack` for `"*"`). See [/machine/reset-config](/machine/reset-config).
+5. **Web product** (`apps/web`) — user triages a Signal → creates a Task (`queued`) → (once the server implements the WS side; today `server-central` is the test harness) the task is `assign`ed → daemon streams `log`/`task-done` → web shows `running → completed|failed`. Web procedures: [/contracts/server-web](/contracts/server-web).
+6. **Enforcement** — version shortfall → `UPGRADE_REQUIRED` → exit `3`. See [/contracts/versioning](/contracts/versioning).
+
+## Repo map
+
+| Dir | Role |
+| --- | --- |
+| `apps/web` | Product app (routes in `src/routes/`, oRPC in `src/rpc/`, schemas in `src/schemas/db/`) |
+| `apps/machine` | Device agent (`src/`) + local contract test server (`server-central/`, not production) |
+| `apps/orpc-contract` | Frozen `v1` wire (`src/`), imported by machine via relative path, never the reverse |
+| `apps/infra` | Pulumi (OCI + Cloudflare + Docker); `dev` stack skips the VM |
+| `apps/documentation` | This site (Astro + Fumadocs) |
+| `apps/cli` | `uma-docs` MCP/docs CLI — distinct from `uma-machine` |
+
+Known wiring drift (infra moved out of `apps/web`): `apps/web/package.json` `infra:*` scripts, `check-env.ts` import, root `check:env`/`infra:prepare`, and `apps/infra/docker/app.ts` build context still point at old paths — verify before trusting (see root `AGENTS.md`).

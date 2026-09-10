@@ -1,0 +1,35 @@
+---
+title: run
+description: Execute one task once — a manual assign without the server.
+---
+
+Defined in `apps/machine/src/cli.ts:94`, dispatched to `cmdRun` in `apps/machine/src/index.ts:229`, implemented by `executeTask` in `apps/machine/src/execution.ts:309`.
+
+```text
+uma-machine run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [--commit <sha>] [--branch <b>] [--agent <bin>] [--fresh | --fresh-start]
+```
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--task <id>` | or positional `rest[0]`; **required** | Missing → `run requires --task <id>`, exit `1` |
+| `--prompt <text>` | `manual run <taskId>` | Task prompt |
+| `--project <id>` | `null` | Project label on the sandbox |
+| `--repo / --commit / --branch` | `""` / unset | Git binding for the worktree |
+| `--agent <bin>` | `UMA_AGENT_BIN` | Agent binary override |
+| `--fresh` / `--fresh-start` | off | `freshStart: true` — clean worktree before exec |
+
+Builds an `assign`-shaped frame (`{ t: "assign", taskId, prompt, projectId, repoUrl, commit, branch, freshStart }`) and runs the full pipeline: quota pre-check → claim (`POST /rpc/tasks.claim`, `409` authoritative) → `claim-ack` → `start` → `ensureBinding` → `execStream` (redacted, 256 KB chunks) → `task-done` → `stop`. Every emitted frame is printed as JSON (`emit: console.log(JSON.stringify(f))`).
+
+## Exit codes
+
+| Output | Code |
+| --- | --- |
+| `run <id> -> completed (<sandbox>)` | `0` |
+| `run <id> -> refused (quota)` | `1` |
+| `run <id> -> rejected (claim <reason>)` | `1` |
+| any non-`completed` status (`failed`, …) | `1` |
+
+```bash
+uma-machine run --task abc123 --prompt "fix the flaky test"
+uma-machine run abc123 --project proj_1 --fresh
+```

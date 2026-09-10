@@ -1,0 +1,41 @@
+---
+title: enroll
+description: Enroll this machine with the server via OAuth device flow.
+---
+
+Defined in `apps/machine/src/cli.ts:34`, dispatched in `apps/machine/src/index.ts:297`, implemented in `apps/machine/src/enroll.ts:107`.
+
+```text
+uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <id>]
+```
+
+## Flags
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--server <url>` | `serverUrl()` = `UMA_SERVER_URL` \| `UMA_SERVER` \| `http://127.0.0.1:3030` | Target server |
+| `--name <machine>` / `--machine <machine>` | prompted / generated | Validated by `MachineNameSchema` (lowercase slug, 1–64 chars, not in `RESERVED_MACHINE_NAMES`) |
+| `--systemd` | off | Writes a `uma-machine.service` unit (`ExecStart=<exec> daemon`, `Restart=always`) |
+| `--client-id <id>` | `uma-machine` | OAuth client id sent as `client_id` |
+
+## Flow
+
+1. `POST /device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/orpc.ts:5`). Server returns `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
+2. CLI prints the `user_code` + `verification_uri_complete` and asks the operator to approve in a browser.
+3. Polls `POST /device/token` with `{ client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }` until success or a terminal error. Handles `authorization_pending` (keep polling), `slow_down` (back off), `expired_token` / `access_denied` (abort). Jitter + `p-retry` between attempts.
+4. On success (`{ access_token, machine_id, token_type: "Bearer" }`) writes, with `0600` permissions:
+   - `identity.json` — `{ machineId, serverUrl, sessionToken }`
+   - `limits.json` — seeded from `quotaDefaultsFromRam()` (`{ maxRunning: 2×GB, maxTotal: 5×GB }`)
+   - `state.db` — SQLite (migrated/initialized)
+5. With `--systemd`, writes the unit file via `writeUnitFile()` (`src/config/systemd.ts:40`).
+
+## Examples
+
+```bash
+uma-machine enroll --server https://uma.example.com --name worker-01
+uma-machine enroll --server https://uma.example.com --name worker-01 --systemd
+```
+
+## Exit codes
+
+`0` on success; `1` on validation, network, or device-flow errors (`expired_token`, `access_denied`). Re-run `enroll` to retry — it overwrites the previous identity.

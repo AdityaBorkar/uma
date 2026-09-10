@@ -1,0 +1,4 @@
+{
+	"pages": ["machine-server", "server-web", "device-and-claim", "versioning"],
+	"title": "oRPC contracts"
+}

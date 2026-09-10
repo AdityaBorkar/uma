@@ -1,0 +1,17 @@
+---
+title: UPGRADE_REQUIRED
+description: Server-initiated minimum-version enforcement.
+---
+
+Schema `UpgradeRequiredFrameSchema` in `apps/orpc-contract/src/server-frames.ts:48`; handler `handleUpgrade` in `apps/machine/src/daemon.ts:43`; comparison `needsUpgrade` in `apps/orpc-contract/src/utils.ts` (semver with naive fallback).
+
+```ts
+{ t: "UPGRADE_REQUIRED", minVersion: string, reason?: string }
+```
+
+## Behavior
+
+- If `CLI_VERSION >= minVersion` → `UPGRADE_REQUIRED ignored` warning, daemon keeps running.
+- If `CLI_VERSION < minVersion` → `UPGRADE_REQUIRED: daemon <cli> < min <min> (<reason ?? "major mismatch">). Re-run install.sh.` and `process.exit(3)`.
+
+Exit `3` is reserved for this case across the CLI (see [/cli](/cli)). Wire-frame changes require a major version and go through this path — see [/contracts/versioning](/contracts/versioning).

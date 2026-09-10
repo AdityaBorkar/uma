@@ -1,0 +1,14 @@
+{
+	"pages": [
+		"index",
+		"enroll",
+		"daemon",
+		"check",
+		"reset",
+		"sync",
+		"history",
+		"sandbox",
+		"run"
+	],
+	"title": "CLI commands"
+}

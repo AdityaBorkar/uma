@@ -1,0 +1,12 @@
+---
+title: Versioning
+description: Frozen v1 rules — what is safe, what needs a major + UPGRADE_REQUIRED.
+---
+
+Rules live in `apps/orpc-contract/docs/VERSIONING.md`; enforcement is `UPGRADE_REQUIRED` handling in `apps/machine/src/daemon.ts:43` (see [/machine/upgrade-required](/machine/upgrade-required)).
+
+- **Frozen:** `PROTOCOL_VERSION = "v1"`, all frame shapes in `machine-frames.ts` / `server-frames.ts`, `MACHINES_WS_PATH`, the raw-JSON (non-oRPC-envelope) transport, and the constants in `constants.ts`.
+- **Safe (minor):** adding optional fields, adding new `t` values (old peers ignore unknown inbound `t` via `parseServerFrame → null`), loosening validation.
+- **Breaking (major):** renaming/removing frames or fields, changing field types, changing the WS path or envelope, tightening required validation. A major **must** ship with `UPGRADE_REQUIRED { minVersion, reason? }` handling and a migration note.
+- `needsUpgrade(cli, min)` (`src/utils.ts`) uses semver with a naive numeric fallback.
+- The machine agent pins the CLI version (`src/version.ts:1`, `0.1.0`) and sends it on every heartbeat (`cliVersion`), so the server can decide when to push `UPGRADE_REQUIRED`.
