@@ -1,4 +1,11 @@
 {
-	"pages": ["index", "cli", "machine", "contracts", "architecture"],
-	"title": "UMA docs"
+	"pages": [
+		"index",
+		"cli",
+		"machine",
+		"contracts",
+		"architecture",
+		"visualize"
+	],
+	"title": "UMA - Unified Manager for Agents"
 }

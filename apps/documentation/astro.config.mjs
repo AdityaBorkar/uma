@@ -15,7 +15,7 @@ import {
 	remarkStructure,
 } from "fumadocs-core/mdx-plugins";
 
-import { rehypeMermaid } from "./src/plugins/rehype-mermaid.mjs";
+import { rehypeMermaid } from "./src/plugins/mermaid/rehype-mermaid.mjs";
 
 export default defineConfig({
 	integrations: [
@@ -40,8 +40,6 @@ export default defineConfig({
 	vite: {
 		plugins: [tailwindcss()],
 		resolve: {
-			// Mirror tsconfig `paths` (`@/*` → `./src/*`) for the bundler.
-			// `^@/` prefix only, so scoped packages (`@astrojs/*`, …) are untouched.
 			alias: [
 				{
 					find: /^@\//,
