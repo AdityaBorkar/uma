@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
+import type { SandboxInfo } from "@uma/orpc-contract";
 import { nanoid } from "nanoid";
 import writeFileAtomic from "write-file-atomic";
 
-import type { SandboxInfo } from "../../orpc-contract/src/index.ts";
 import { dataDir } from "../env.ts";
 import type {
 	CreateOpts,

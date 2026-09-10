@@ -13,7 +13,7 @@ import {
 	parseServerFrame,
 	ResetConfigFrameSchema,
 	validateMachineFrame,
-} from "../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
 
 describe("protocol v1 frozen rules", () => {
 	test("protocol version frozen", () => {

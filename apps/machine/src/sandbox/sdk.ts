@@ -5,7 +5,8 @@ import {
 	TASK_MAX_MEMORY_MB,
 	TASK_MEMORY_MB,
 	UBUNTU_IMAGE,
-} from "../../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+
 import {
 	isNotFoundError,
 	mapStatus,

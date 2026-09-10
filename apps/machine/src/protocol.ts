@@ -1,16 +1,15 @@
-// Frozen v1 protocol — single source of truth lives in ../orpc-contract.
+// Frozen v1 protocol — single source of truth lives in @uma/orpc-contract.
 // This module re-exports it for machine-side convenience plus local helpers.
-export * from "../orpc-contract/src/index.ts";
-
-import { fromZodError } from "zod-validation-error";
+export * from "@uma/orpc-contract";
 
 import type {
 	ClaimAckFrame,
 	Limits,
 	QuotaExceededFrame,
 	QuotaUsage,
-} from "../orpc-contract/src/index.ts";
-import { validateMachineFrame } from "../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+import { validateMachineFrame } from "@uma/orpc-contract";
+import { fromZodError } from "zod-validation-error";
 
 /** Validate an outbound machine frame; throws on schema violation (never send unknown). */
 export function assertMachineFrame(frame: Record<string, unknown>): void {

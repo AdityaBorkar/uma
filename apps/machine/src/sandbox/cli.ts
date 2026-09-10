@@ -1,11 +1,12 @@
-import type { SandboxInfo } from "../../orpc-contract/src/index.ts";
+import type { SandboxInfo } from "@uma/orpc-contract";
 import {
 	TASK_CPUS,
 	TASK_MAX_CPUS,
 	TASK_MAX_MEMORY_MB,
 	TASK_MEMORY_MB,
 	UBUNTU_IMAGE,
-} from "../../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+
 import {
 	isNotFoundError,
 	mapStatus,

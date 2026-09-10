@@ -1,4 +1,4 @@
-import type { SandboxInfo } from "../../orpc-contract/src/index.ts";
+import type { SandboxInfo } from "@uma/orpc-contract";
 
 /** Secret ref (`--secret NAME@HOST`); value never travels through argv/config. */
 export interface SecretSpec {

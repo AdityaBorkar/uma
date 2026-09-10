@@ -1,4 +1,5 @@
-import { effectiveLimits, type Limits } from "../orpc-contract/src/index.ts";
+import { effectiveLimits, type Limits } from "@uma/orpc-contract";
+
 import { loadLimits } from "./enroll.ts";
 
 /** Fallback when no server override and no limits.json exist. */

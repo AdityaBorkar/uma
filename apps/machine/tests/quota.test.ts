@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-	effectiveLimits,
-	quotaDefaultsFromRam,
-} from "../orpc-contract/src/index.ts";
+import { effectiveLimits, quotaDefaultsFromRam } from "@uma/orpc-contract";
+
 import { isQuotaError, quotaPreCheck } from "../src/sandbox.ts";
 
 describe("quota (2x/5x defaults + server override)", () => {

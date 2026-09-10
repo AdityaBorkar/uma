@@ -1,8 +1,9 @@
 // Test server (temporary, for testing only). Implements the versioned v1
-// contract from ../orpc-contract: device flow, ws at /api/machines/ws,
+// contract from @uma/orpc-contract: device flow, ws at /api/machines/ws,
 // and oRPC-like HTTPS procedures used by the agent + roundtrip script.
 
-import { MachineNameSchema } from "../../orpc-contract/src/index.ts";
+import { MachineNameSchema } from "@uma/orpc-contract";
+
 import { store } from "./store.ts";
 import { handleMachineFrame, sendToMachine, trackSocket } from "./ws.ts";
 

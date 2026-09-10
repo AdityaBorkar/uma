@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { branchForTask } from "../orpc-contract/src/utils.ts";
+import { branchForTask } from "@uma/orpc-contract";
+
 import { Store } from "../server-central/src/store.ts";
 import { sandboxNameFor } from "../src/execution.ts";
 import { validateSandboxName } from "../src/sandbox.ts";

@@ -1,8 +1,5 @@
-import type {
-	Limits,
-	QuotaUsage,
-	SandboxInfo,
-} from "../orpc-contract/src/index.ts";
+import type { Limits, QuotaUsage, SandboxInfo } from "@uma/orpc-contract";
+
 import { driver } from "./sandbox/driver.ts";
 import type {
 	CreateOpts,

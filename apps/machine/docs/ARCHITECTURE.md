@@ -13,13 +13,13 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 - `sandbox.ts`: facade over `sandbox/driver.ts` (SDK → CLI → mock; fails closed when no runtime is installed) + `sandbox/{sdk,cli,mock,shared,types}.ts`; create/start/stop/remove/list/exec/execStream/metrics. `git-binding.ts`: clone/fetch/checkout/fresh-start via `execInSandbox` (driver-agnostic, not SDK-only).
 - `execution.ts`: Sandbox Execution module: admission (quota snapshot + create under an internal lock; server limits from `assign.limits`) → claim → start → bind → exec-stream → task-done → stop; every outbound v1 frame via injected `emit`; failures free the sandbox; cancel via `stop --force` through in-flight state.
 - `sync.ts` + `config/mod.ts` + `config/<key>.ts` (9 keys in `ORDERED_KEYS` order; file `git.ts` exports KEY `git-login`, file `skills.ts` exports KEY `skills`): check/reset + receipts.
-- `db.ts`: SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`.
+- `db.ts`: SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `@uma/orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`.
 
 ## Package
 
 - Runtime deps (`package.json`): `zod` (validation), `microsandbox` SDK (in-process sandbox API). Dev/lint: `@types/bun`, `@biomejs/biome`, `typescript` (peer).
-- System packages (never bundled): `msb` runtime via `install.sh` (`install.microsandbox.dev` / brew, resolved via `MSB_PATH`/`UMA_MSB_BIN`), pinned `UBUNTU_IMAGE=docker.io/library/ubuntu:24.04` (`orpc-contract/src/constants.ts:4`), fixed `1c/1G` + `2x` max.
-- Local package: `orpc-contract/` (frozen v1: `index.ts` barrel + `constants.ts`, `primitives.ts`, `machine-frames.ts`, `server-frames.ts`, `orpc.ts`, `utils.ts`). `server-central/` is dev/staging harness only.
+- System packages (never bundled): `msb` runtime via `install.sh` (`install.microsandbox.dev` / brew, resolved via `MSB_PATH`/`UMA_MSB_BIN`), pinned `UBUNTU_IMAGE=docker.io/library/ubuntu:24.04` (`../orpc-contract/src/constants.ts:4`), fixed `1c/1G` + `2x` max.
+- Local package: `@uma/orpc-contract` (`../orpc-contract/`, frozen v1: `index.ts` barrel + `constants.ts`, `primitives.ts`, `machine-frames.ts`, `server-frames.ts`, `orpc.ts`, `utils.ts`). `server-central/` is dev/staging harness only.
 
 ## Component
 
@@ -48,10 +48,10 @@ Allowed direction (no cycles):
 `execution → sandbox, git-binding, limits, db, redact, enroll, env, config/providers, protocol`
 `heartbeat → sandbox(list/metrics), db, enroll, env, proc, version`
 `config/* → desired, db, env, proc, fs-utils`; `config/mod → 9 keys`; `config/providers → db, redact`
-`all → orpc-contract` (contract has zero deps on `src/`); `sandbox → env, proc, sandbox/*`; `limits → enroll + orpc-contract`
-`db → drizzle-orm/bun-sqlite` + `node:fs/path` only; `ws-client → enroll(identity) + orpc-contract` only.
+`all → @uma/orpc-contract` (contract has zero deps on `src/`); `sandbox → env, proc, sandbox/*`; `limits → enroll + @uma/orpc-contract`
+`db → drizzle-orm/bun-sqlite` + `node:fs/path` only; `ws-client → enroll(identity) + @uma/orpc-contract` only.
 
-Rule: `orpc-contract` never imports from `src/`; `db` never imports drivers; drivers never import `execution`.
+Rule: `@uma/orpc-contract` never imports from `src/`; `db` never imports drivers; drivers never import `execution`.
 
 ## Port
 
@@ -84,14 +84,14 @@ Outbound (driven by us, faked in tests):
 
 ## Contract
 
-- Frozen `v1` (`PROTOCOL_VERSION` in `orpc-contract/src/constants.ts:3`): machine→server `heartbeat|log|task-done|check-ack|reset-ack|sync-ack|claim-ack|quota-exceeded`; server→machine `assign|cancel|reset-config|UPGRADE_REQUIRED`. Change needs major + `UPGRADE_REQUIRED` handling.
+- Frozen `v1` (`PROTOCOL_VERSION` in `../orpc-contract/src/constants.ts:3`): machine→server `heartbeat|log|task-done|check-ack|reset-ack|sync-ack|claim-ack|quota-exceeded`; server→machine `assign|cancel|reset-config|UPGRADE_REQUIRED`. Change needs major + `UPGRADE_REQUIRED` handling.
 - Key clauses: `protocol:"v1"` required; unknown `t` ignored; `projectId null` = global; branch `task/<short>` + commit pin; 256KB log cap; per-key receipts + `sync-ack`; server `limits` override; `QUOTA_EXCEEDED` refusal shape.
 - HTTPS: `tasks.claim` atomic (`UPDATE … WHERE status='queued'` server-side; `res.ok` decides here).
 - CLI UX: tables + `--json`, `--only`, `--dry-run`, `--prune` (default false), exit codes above; `history [--range 24h|30d]` reads 30d raw.
 
 ## Protocol
 
-Wire detail (`src/ws-client.ts`, `orpc-contract/src/*-frames.ts`):
+Wire detail (`src/ws-client.ts`, `../orpc-contract/src/*-frames.ts`):
 
 1. `enroll` → `device.code` → print `user_code + verification_uri` → poll `device.token` (`authorization_pending/slow_down/expired_token/access_denied`) → store Bearer `0600`.
 2. `daemon` opens `ws(s)://<server>/api/machines/ws` with `authorization: Bearer <token>`; jittered backoff reconnect; heartbeat 30s with `quotaUsage + scopeHint`.
@@ -100,7 +100,7 @@ Wire detail (`src/ws-client.ts`, `orpc-contract/src/*-frames.ts`):
 
 ## Boundary
 
-- Repo: `uma-machine` (device executor) vs `uma` (server DB/oRPC/web). Only shared code is the versioned `orpc-contract` shape mirror.
+- Repo: `uma-machine` (device executor) vs `uma` (server DB/oRPC/web). Only shared code is the versioned `@uma/orpc-contract` shape mirror.
 - Process: `bun build --compile src/index.ts → dist/uma-machine` single binary; SDK path needs Node22 natives (Phase-0 gate), CLI fallback covers compiled binary (ADR-0003).
 - Trust: TLS + Bearer + pre-bound `user_id` + `validateClient` allowlist (server-side); `0600` storage + `--secret` refs + dual redaction here. Revoke = session revoke → ws rejected.
 - Filesystem: full XDG (`configDir/dataDir/identityPath/limitsPath/stateDbPath` in `src/env.ts:11`; host `~/` only via `homedir()` fallback, never hardcoded); `msb` root owned by runtime under `~/.microsandbox/`, meta under `dataDir/msb-root-meta/`.

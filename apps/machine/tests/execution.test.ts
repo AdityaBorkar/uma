@@ -8,7 +8,8 @@ import type {
 	ClaimAckFrame,
 	MachineFrame,
 	TaskDoneFrame,
-} from "../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+
 import { saveIdentity } from "../src/enroll.ts";
 import {
 	cancelTask,

@@ -1,8 +1,5 @@
 import { readFile } from "node:fs/promises";
 
-import { maxBy, uniq } from "es-toolkit/array";
-import ms from "ms";
-
 import {
 	type HeartbeatFrame,
 	type HostMetrics,
@@ -10,7 +7,10 @@ import {
 	PRESSURE_THRESHOLD_PCT,
 	type QuotaUsage,
 	type SandboxInfo,
-} from "../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+import { maxBy, uniq } from "es-toolkit/array";
+import ms from "ms";
+
 import {
 	insertHeartbeat,
 	pruneAuxTables,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { compareVersions, needsUpgrade } from "../orpc-contract/src/utils.ts";
+import { compareVersions, needsUpgrade } from "@uma/orpc-contract";
+
 import { Store } from "../server-central/src/store.ts";
 import { pinSatisfied } from "../src/config/adityab-agent.ts";
 

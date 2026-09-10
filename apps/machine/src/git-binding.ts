@@ -1,6 +1,6 @@
+import { branchForTask } from "@uma/orpc-contract";
 import pRetry from "p-retry";
 
-import { branchForTask } from "../orpc-contract/src/index.ts";
 import { execInSandbox } from "./sandbox.ts";
 
 export interface BindingOpts {

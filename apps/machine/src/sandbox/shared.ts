@@ -1,4 +1,5 @@
-import type { SandboxInfo } from "../../orpc-contract/src/index.ts";
+import type { SandboxInfo } from "@uma/orpc-contract";
+
 import { msbBin } from "../env.ts";
 import { runCapture } from "../proc.ts";
 

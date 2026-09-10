@@ -1,13 +1,13 @@
-import { customAlphabet } from "nanoid";
-import pRetry, { AbortError } from "p-retry";
-
 import {
 	type AssignFrame,
 	type Limits,
 	LOG_FRAME_CAP_BYTES,
 	type MachineFrame,
 	type QuotaUsage,
-} from "../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+import { customAlphabet } from "nanoid";
+import pRetry, { AbortError } from "p-retry";
+
 import { buildSecretSpecs, exportProviderEnv } from "./config/providers.ts";
 import {
 	bufferLog,

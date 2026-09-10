@@ -1,7 +1,5 @@
-import {
-	parseServerFrame,
-	type ServerFrame,
-} from "../orpc-contract/src/index.ts";
+import { parseServerFrame, type ServerFrame } from "@uma/orpc-contract";
+
 import { loadIdentity } from "./enroll.ts";
 import { assertMachineFrame } from "./protocol.ts";
 

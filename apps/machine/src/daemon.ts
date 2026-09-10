@@ -1,7 +1,7 @@
+import type { ServerFrame } from "@uma/orpc-contract";
+import { needsUpgrade } from "@uma/orpc-contract";
 import ms from "ms";
 
-import type { ServerFrame } from "../orpc-contract/src/index.ts";
-import { needsUpgrade } from "../orpc-contract/src/index.ts";
 import { loadDesired, saveDesired } from "./config/desired.ts";
 import { resetAll } from "./config/mod.ts";
 import {

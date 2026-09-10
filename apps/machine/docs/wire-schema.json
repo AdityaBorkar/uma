@@ -5,100 +5,100 @@
 		"$schema": "https://json-schema.org/draft/2020-12/schema",
 		"oneOf": [
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
+					"machineId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"protocol": {
+						"type": "string",
+						"const": "v1"
+					},
 					"cliVersion": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"configVersion": {
 						"type": "string"
 					},
-					"machineId": {
-						"minLength": 1,
-						"type": "string"
-					},
 					"metrics": {
-						"additionalProperties": false,
+						"type": "object",
 						"properties": {
 							"cpu": {
-								"maximum": 100,
+								"type": "number",
 								"minimum": 0,
-								"type": "number"
+								"maximum": 100
 							},
 							"disk": {
-								"maximum": 100,
+								"type": "number",
 								"minimum": 0,
-								"type": "number"
+								"maximum": 100
 							},
 							"pids": {
+								"type": "array",
 								"items": {
-									"maximum": 9007199254740991,
+									"type": "integer",
 									"minimum": 1,
-									"type": "integer"
-								},
-								"type": "array"
+									"maximum": 9007199254740991
+								}
 							},
 							"ram": {
-								"maximum": 100,
+								"type": "number",
 								"minimum": 0,
-								"type": "number"
+								"maximum": 100
 							}
 						},
 						"required": ["cpu", "disk", "pids", "ram"],
-						"type": "object"
-					},
-					"protocol": {
-						"const": "v1",
-						"type": "string"
+						"additionalProperties": false
 					},
 					"quotaUsage": {
-						"additionalProperties": false,
+						"type": "object",
 						"properties": {
 							"running": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 0,
-								"type": "integer"
+								"maximum": 9007199254740991
 							},
 							"total": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 0,
-								"type": "integer"
+								"maximum": 9007199254740991
 							}
 						},
 						"required": ["running", "total"],
-						"type": "object"
+						"additionalProperties": false
 					},
 					"sandboxes": {
+						"type": "array",
 						"items": {
-							"additionalProperties": false,
+							"type": "object",
 							"properties": {
 								"id": {
-									"minLength": 1,
-									"type": "string"
+									"type": "string",
+									"minLength": 1
 								},
 								"projectId": {
 									"type": ["string", "null"]
 								},
 								"status": {
-									"enum": ["created", "running", "stopped", "destroyed"],
-									"type": "string"
+									"type": "string",
+									"enum": ["created", "running", "stopped", "destroyed"]
 								},
 								"taskId": {
 									"type": ["string", "null"]
 								}
 							},
 							"required": ["id", "projectId", "status", "taskId"],
-							"type": "object"
-						},
-						"type": "array"
+							"additionalProperties": false
+						}
 					},
 					"scopeHint": {
 						"type": ["string", "null"]
 					},
 					"t": {
-						"const": "heartbeat",
-						"type": "string"
+						"type": "string",
+						"const": "heartbeat"
 					}
 				},
 				"required": [
@@ -112,68 +112,68 @@
 					"scopeHint",
 					"t"
 				],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
-					"chunk": {
-						"description": "Log chunk text. Capped at 256KB UTF-8 bytes on the wire, measured with TextEncoder (byte length, not UTF-16 string length, so multibyte text is capped exactly).",
-						"type": "string"
-					},
 					"machineId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"protocol": {
-						"const": "v1",
-						"type": "string"
+						"type": "string",
+						"const": "v1"
+					},
+					"chunk": {
+						"type": "string",
+						"description": "Log chunk text. Capped at 256KB UTF-8 bytes on the wire, measured with TextEncoder (byte length, not UTF-16 string length, so multibyte text is capped exactly)."
 					},
 					"stream": {
-						"enum": ["stdout", "stderr", "system"],
-						"type": "string"
+						"type": "string",
+						"enum": ["stdout", "stderr", "system"]
 					},
 					"t": {
-						"const": "log",
-						"type": "string"
+						"type": "string",
+						"const": "log"
 					},
 					"taskId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					}
 				},
 				"required": ["machineId", "protocol", "chunk", "t", "taskId"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
 					"machineId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
+					},
+					"protocol": {
+						"type": "string",
+						"const": "v1"
 					},
 					"projectId": {
 						"type": ["string", "null"]
 					},
-					"protocol": {
-						"const": "v1",
-						"type": "string"
-					},
 					"result": {
-						"maxLength": 65536,
-						"type": "string"
+						"type": "string",
+						"maxLength": 65536
 					},
 					"status": {
-						"enum": ["completed", "failed"],
-						"type": "string"
+						"type": "string",
+						"enum": ["completed", "failed"]
 					},
 					"t": {
-						"const": "task-done",
-						"type": "string"
+						"type": "string",
+						"const": "task-done"
 					},
 					"taskId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					}
 				},
 				"required": [
@@ -184,14 +184,23 @@
 					"t",
 					"taskId"
 				],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
+					"machineId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"protocol": {
+						"type": "string",
+						"const": "v1"
+					},
 					"drift": {
+						"type": "array",
 						"items": {
-							"additionalProperties": false,
+							"type": "object",
 							"properties": {
 								"detail": {
 									"type": "string"
@@ -204,81 +213,73 @@
 								}
 							},
 							"required": ["drifted", "key"],
-							"type": "object"
-						},
-						"type": "array"
+							"additionalProperties": false
+						}
 					},
 					"jobId": {
-						"minLength": 1,
-						"type": "string"
-					},
-					"machineId": {
-						"minLength": 1,
-						"type": "string"
-					},
-					"protocol": {
-						"const": "v1",
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"t": {
-						"const": "check-ack",
-						"type": "string"
+						"type": "string",
+						"const": "check-ack"
 					}
 				},
 				"required": ["machineId", "protocol", "drift", "jobId", "t"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
+					"machineId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"protocol": {
+						"type": "string",
+						"const": "v1"
+					},
 					"error": {
 						"type": "string"
 					},
 					"jobId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"key": {
-						"minLength": 1,
-						"type": "string"
-					},
-					"machineId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"ok": {
 						"type": "boolean"
 					},
-					"protocol": {
-						"const": "v1",
-						"type": "string"
-					},
 					"t": {
-						"const": "reset-ack",
-						"type": "string"
+						"type": "string",
+						"const": "reset-ack"
 					}
 				},
 				"required": ["machineId", "protocol", "jobId", "key", "ok", "t"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
-					"jobId": {
-						"minLength": 1,
-						"type": "string"
-					},
 					"machineId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"protocol": {
-						"const": "v1",
-						"type": "string"
+						"type": "string",
+						"const": "v1"
+					},
+					"jobId": {
+						"type": "string",
+						"minLength": 1
 					},
 					"receipts": {
+						"type": "array",
 						"items": {
-							"additionalProperties": false,
+							"type": "object",
 							"properties": {
 								"error": {
 									"type": "string"
@@ -291,121 +292,120 @@
 								}
 							},
 							"required": ["key", "ok"],
-							"type": "object"
-						},
-						"type": "array"
+							"additionalProperties": false
+						}
 					},
 					"t": {
-						"const": "sync-ack",
-						"type": "string"
+						"type": "string",
+						"const": "sync-ack"
 					}
 				},
 				"required": ["machineId", "protocol", "jobId", "receipts", "t"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
+					"machineId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"protocol": {
+						"type": "string",
+						"const": "v1"
+					},
 					"error": {
 						"anyOf": [
 							{
-								"enum": ["QUOTA_EXCEEDED"],
-								"type": "string"
+								"type": "string",
+								"enum": ["QUOTA_EXCEEDED"]
 							},
 							{
 								"type": "string"
 							}
 						]
 					},
-					"machineId": {
-						"minLength": 1,
-						"type": "string"
-					},
 					"ok": {
 						"type": "boolean"
 					},
-					"protocol": {
-						"const": "v1",
-						"type": "string"
-					},
 					"sandboxId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"t": {
-						"const": "claim-ack",
-						"type": "string"
+						"type": "string",
+						"const": "claim-ack"
 					},
 					"taskId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					}
 				},
 				"required": ["machineId", "protocol", "ok", "sandboxId", "t", "taskId"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
+					"machineId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"protocol": {
+						"type": "string",
+						"const": "v1"
+					},
 					"limits": {
-						"additionalProperties": false,
+						"type": "object",
 						"properties": {
 							"cpu": {
 								"type": "number"
 							},
 							"maxRunning": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 1,
-								"type": "integer"
+								"maximum": 9007199254740991
 							},
 							"maxTotal": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 1,
-								"type": "integer"
+								"maximum": 9007199254740991
 							},
 							"ram": {
 								"type": "number"
 							}
 						},
 						"required": ["maxRunning", "maxTotal"],
-						"type": "object"
-					},
-					"machineId": {
-						"minLength": 1,
-						"type": "string"
-					},
-					"protocol": {
-						"const": "v1",
-						"type": "string"
+						"additionalProperties": false
 					},
 					"t": {
-						"const": "quota-exceeded",
-						"type": "string"
+						"type": "string",
+						"const": "quota-exceeded"
 					},
 					"taskId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"usage": {
-						"additionalProperties": false,
+						"type": "object",
 						"properties": {
 							"running": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 0,
-								"type": "integer"
+								"maximum": 9007199254740991
 							},
 							"total": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 0,
-								"type": "integer"
+								"maximum": 9007199254740991
 							}
 						},
 						"required": ["running", "total"],
-						"type": "object"
+						"additionalProperties": false
 					}
 				},
 				"required": ["machineId", "protocol", "limits", "t", "taskId", "usage"],
-				"type": "object"
+				"additionalProperties": false
 			}
 		]
 	},
@@ -414,7 +414,7 @@
 		"$schema": "https://json-schema.org/draft/2020-12/schema",
 		"oneOf": [
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
 					"branch": {
 						"type": "string"
@@ -426,171 +426,171 @@
 						"type": "boolean"
 					},
 					"limits": {
-						"additionalProperties": false,
+						"type": "object",
 						"properties": {
 							"cpu": {
 								"type": "number"
 							},
 							"maxRunning": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 1,
-								"type": "integer"
+								"maximum": 9007199254740991
 							},
 							"maxTotal": {
-								"maximum": 9007199254740991,
+								"type": "integer",
 								"minimum": 1,
-								"type": "integer"
+								"maximum": 9007199254740991
 							},
 							"ram": {
 								"type": "number"
 							}
 						},
-						"type": "object"
+						"additionalProperties": false
 					},
 					"projectId": {
 						"type": ["string", "null"]
 					},
 					"prompt": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"repoUrl": {
 						"default": "",
 						"type": "string"
 					},
 					"t": {
-						"const": "assign",
-						"type": "string"
+						"type": "string",
+						"const": "assign"
 					},
 					"taskId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					}
 				},
 				"required": ["projectId", "prompt", "repoUrl", "t", "taskId"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
 					"t": {
-						"const": "cancel",
-						"type": "string"
+						"type": "string",
+						"const": "cancel"
 					},
 					"taskId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					}
 				},
 				"required": ["t", "taskId"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
 					"jobId": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"keys": {
 						"anyOf": [
 							{
+								"type": "array",
 								"items": {
-									"minLength": 1,
-									"type": "string"
-								},
-								"type": "array"
+									"type": "string",
+									"minLength": 1
+								}
 							},
 							{
-								"const": "*",
-								"type": "string"
+								"type": "string",
+								"const": "*"
 							}
 						]
 					},
 					"payload": {
-						"additionalProperties": false,
+						"type": "object",
 						"properties": {
 							"keys": {
+								"type": "array",
 								"items": {
-									"additionalProperties": false,
+									"type": "object",
 									"properties": {
 										"key": {
-											"minLength": 1,
-											"type": "string"
+											"type": "string",
+											"minLength": 1
 										},
 										"provider": {
-											"minLength": 1,
-											"type": "string"
+											"type": "string",
+											"minLength": 1
 										}
 									},
 									"required": ["key", "provider"],
-									"type": "object"
-								},
-								"type": "array"
+									"additionalProperties": false
+								}
 							},
 							"limits": {
-								"additionalProperties": false,
+								"type": "object",
 								"properties": {
 									"cpu": {
 										"type": "number"
 									},
 									"maxRunning": {
-										"maximum": 9007199254740991,
+										"type": "integer",
 										"minimum": 1,
-										"type": "integer"
+										"maximum": 9007199254740991
 									},
 									"maxTotal": {
-										"maximum": 9007199254740991,
+										"type": "integer",
 										"minimum": 1,
-										"type": "integer"
+										"maximum": 9007199254740991
 									},
 									"ram": {
 										"type": "number"
 									}
 								},
-								"type": "object"
+								"additionalProperties": false
 							},
 							"templates": {
-								"additionalProperties": {
-									"type": "string"
-								},
+								"type": "object",
 								"propertyNames": {
 									"type": "string"
 								},
-								"type": "object"
+								"additionalProperties": {
+									"type": "string"
+								}
 							}
 						},
-						"type": "object"
+						"additionalProperties": false
 					},
 					"t": {
-						"const": "reset-config",
-						"type": "string"
+						"type": "string",
+						"const": "reset-config"
 					},
 					"version": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					}
 				},
 				"required": ["jobId", "keys", "t", "version"],
-				"type": "object"
+				"additionalProperties": false
 			},
 			{
-				"additionalProperties": false,
+				"type": "object",
 				"properties": {
 					"minVersion": {
-						"minLength": 1,
-						"type": "string"
+						"type": "string",
+						"minLength": 1
 					},
 					"reason": {
 						"type": "string"
 					},
 					"t": {
-						"const": "UPGRADE_REQUIRED",
-						"type": "string"
+						"type": "string",
+						"const": "UPGRADE_REQUIRED"
 					}
 				},
 				"required": ["minVersion", "t"],
-				"type": "object"
+				"additionalProperties": false
 			}
 		]
 	}

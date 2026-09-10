@@ -10,16 +10,14 @@
 // The script therefore uses zod 4's built-in `z.toJSONSchema()` as the working
 // alternative. Upgrade path: if zod-to-json-schema ships real zod-4 support,
 // swap the two `z.toJSONSchema(...)` calls below for `zodToJsonSchema(...)`;
-// the LogFrame.chunk `.describe()` in orpc-contract/src/machine-frames.ts flows
+// the LogFrame.chunk `.describe()` in ../orpc-contract/src/machine-frames.ts flows
 // into either engine (zod-to-json-schema copies it via its `addMeta` step).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { MachineFrameSchema, ServerFrameSchema } from "@uma/orpc-contract";
 import { z } from "zod";
-
-import { MachineFrameSchema } from "../orpc-contract/src/machine-frames.ts";
-import { ServerFrameSchema } from "../orpc-contract/src/server-frames.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outPath = join(root, "docs", "wire-schema.json");

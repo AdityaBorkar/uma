@@ -1,18 +1,18 @@
 import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
-import ms from "ms";
-import pRetry from "p-retry";
-import { z } from "zod";
-import { fromZodError } from "zod-validation-error";
-
 import {
 	DeviceCodeResponseSchema,
 	DeviceTokenErrorSchema,
 	DeviceTokenResponseSchema,
 	MachineNameSchema,
 	quotaDefaultsFromRam,
-} from "../orpc-contract/src/index.ts";
+} from "@uma/orpc-contract";
+import ms from "ms";
+import pRetry from "p-retry";
+import { z } from "zod";
+import { fromZodError } from "zod-validation-error";
+
 import { writeUnitFile } from "./config/systemd.ts";
 import { migrate } from "./db.ts";
 import { identityPath, limitsPath, stateDbPath } from "./env.ts";
