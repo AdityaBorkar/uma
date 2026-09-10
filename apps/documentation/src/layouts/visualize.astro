@@ -1,0 +1,37 @@
+---
+import Base from "./base.astro";
+
+interface Props {
+	description?: string;
+	frontmatter?: { description?: string; title?: string };
+	title?: string;
+}
+
+const nav = [
+	{ href: "/", label: "Docs" },
+	{ href: "/visualize", label: "Visualize" },
+	{ href: "/visualize/cli", label: "CLI" },
+	{ href: "/visualize/machine", label: "Machine" },
+	{ href: "/visualize/contract-machine-server", label: "M↔S" },
+	{ href: "/visualize/contract-server-web", label: "S↔W" },
+	{ href: "/visualize/architecture", label: "Arch" },
+];
+
+const title =
+	Astro.props.frontmatter?.title ?? Astro.props.title ?? "Visualize — UMA";
+---
+
+<Base title={title}>
+  <div class="min-h-screen bg-fd-background text-fd-foreground">
+    <header class="border-b border-fd-border">
+      <nav class="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-4 py-3 text-sm">
+        {nav.map((n) => (
+          <a href={n.href} class="rounded-md px-2.5 py-1.5 text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-accent-foreground">{n.label}</a>
+        ))}
+      </nav>
+    </header>
+    <main class="mx-auto max-w-6xl px-4 py-10">
+      <slot />
+    </main>
+  </div>
+</Base>

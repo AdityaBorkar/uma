@@ -3,7 +3,7 @@ import { generate as DefaultImage } from "fumadocs-ui/og/takumi";
 import { createElement } from "react";
 import { ImageResponse } from "takumi-js/response";
 
-import { source } from "@/lib/source.ts";
+import { source } from "@/source";
 
 export function getStaticPaths() {
 	return source.getPages().map((page) => ({

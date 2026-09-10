@@ -1,5 +1,7 @@
 // @ts-check
 
+import { fileURLToPath } from "node:url";
+
 import { unified } from "@astrojs/markdown-remark";
 import mdx from "@astrojs/mdx";
 import react from "@astrojs/react";
@@ -37,5 +39,15 @@ export default defineConfig({
 	outDir: ".output",
 	vite: {
 		plugins: [tailwindcss()],
+		resolve: {
+			// Mirror tsconfig `paths` (`@/*` → `./src/*`) for the bundler.
+			// `^@/` prefix only, so scoped packages (`@astrojs/*`, …) are untouched.
+			alias: [
+				{
+					find: /^@\//,
+					replacement: fileURLToPath(new URL("./src/", import.meta.url)),
+				},
+			],
+		},
 	},
 });

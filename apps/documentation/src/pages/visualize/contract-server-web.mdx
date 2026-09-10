@@ -1,0 +1,104 @@
+---
+layout: ../../layouts/visualize.astro
+title: Visualize server↔web — UMA
+---
+
+import Mermaid from "@/components/Mermaid.astro";
+
+export const groups = [
+	{
+		name: "tasks",
+		procs: [
+			"list → {items, nextCursor}",
+			"stats → {queued…cancelled}",
+			"get → row / NOT_FOUND",
+			"create → row (queued)",
+			"updateStatus → row (guarded transitions)",
+		],
+	},
+	{
+		name: "signals",
+		procs: [
+			"list → joined {items, nextCursor}",
+			"stats → {new, triaged, dismissed}",
+			"get → row / NOT_FOUND",
+			"create → row (new, manual)",
+			"update → row (new→triaged→dismissed)",
+		],
+	},
+	{
+		name: "projects",
+		procs: [
+			"list",
+			"get / getBySlug → row / NOT_FOUND",
+			"create → row (unique slug)",
+			"update → row",
+		],
+	},
+	{
+		name: "documents (+comments)",
+		procs: [
+			"list (FTS)",
+			"get → {…doc, projectName}",
+			"create → row (+opened event)",
+			"update / close / reopen → row",
+			"remove → {ok:true} (closed only)",
+			"comments.create → row (+commented)",
+		],
+	},
+	{
+		name: "connections",
+		procs: [
+			"list → rows",
+			"get → row|null",
+			"getAuthUrl → {url, state, redirectUri}",
+			"providers → {providers}",
+			"disconnect → {success:true}",
+		],
+	},
+];
+
+export const chart = `sequenceDiagram
+    autonumber
+    participant B as browser
+    participant W as web RPCHandler
+    participant D as Postgres
+    B->>W: tasks.list and tasks.create
+    B->>W: signals and projects
+    B->>W: documents plus events
+    B->>W: connections.getAuthUrl
+    W->>D: Drizzle SQL
+    D-->>W: rows
+    W-->>B: rows and pages
+    Note over B,W: every call requires auth, keyset pages`;
+
+export const ascii = `browser (TanStack Start + Query, rpc = createTanstackQueryUtils(client))
+   │  POST /api/rpc/tasks.list {"projectId"?} ───────────▶ tasks.list ──▶ SELECT … (sortAt,id) ──▶ {items, nextCursor}
+   │  POST /api/rpc/tasks.create {title,prompt?…} ───────▶ tasks.create ─▶ INSERT queued ──▶ row
+   │  POST /api/rpc/signals.* / projects.* ──────────────▶ … ──▶ rows / pages
+   │  POST /api/rpc/documents.* ────────────────────────▶ … ──▶ rows + events (opened/closed/commented)
+   │  POST /api/rpc/connections.getAuthUrl {provider} ──▶ … ──▶ {url, state, redirectUri}
+   └── every call: requireUser(headers) → UNAUTHORIZED if signed out`;
+
+<p class="text-sm font-medium text-fd-muted-foreground">visualize/contract-server-web · source: apps/web/src/rpc/router.ts, procedures/*, routes/api/rpc.$.ts</p>
+
+<h1 class="mt-1 text-3xl font-semibold">oRPC contract: server ↔ web</h1>
+
+<p class="mt-2 max-w-2xl text-fd-muted-foreground">TanStack frontend → <code class="font-mono">POST /api/rpc/*</code> (<code class="font-mono">RPCHandler</code>) → Drizzle/Postgres. Auth via <code class="font-mono">requireUser</code>; keyset pagination <code class="font-mono">{"{items, nextCursor}"}</code>. Detail: <a class="text-fd-primary hover:underline" href="/contracts/server-web">/contracts/server-web</a>.</p>
+
+<Mermaid chart={chart} ascii={ascii} />
+
+<div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+  {groups.map((g) => (
+    <div class="rounded-xl border border-fd-border bg-fd-card p-5">
+      <h2 class="font-mono font-semibold">{g.name}</h2>
+      <ul class="mt-2 space-y-1 text-sm text-fd-muted-foreground">
+        {g.procs.map((p) => (<li class="font-mono text-xs">· {p}</li>))}
+      </ul>
+    </div>
+  ))}
+  <div class="rounded-xl border border-dashed border-fd-border p-5">
+    <h2 class="font-mono font-semibold">device.* / machines.*</h2>
+    <p class="mt-2 text-sm text-fd-muted-foreground">Contract-first only (<code class="font-mono">apiContract</code>) — not implemented by web yet. No machine registry, no <code class="font-mono">/api/machines/ws</code> server. See <a class="text-fd-primary hover:underline" href="/contracts/device-and-claim">/contracts/device-and-claim</a>.</p>
+  </div>
+</div>

@@ -1,0 +1,15 @@
+---
+// Compatibility shim: visualize/* and [...slug] pages historically imported
+// `@/components/layout.astro`. The shell lives in `@/layouts/base.astro`
+// (global.css + ClientRouter + mermaid client); this re-exports it so those
+// imports keep resolving.
+import Base from "../layouts/base.astro";
+
+interface Props {
+	title?: string;
+}
+---
+
+<Base title={Astro.props.title}>
+  <slot />
+</Base>

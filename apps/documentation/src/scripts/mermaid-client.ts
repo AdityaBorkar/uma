@@ -1,5 +1,5 @@
 /**
- * Client-side Mermaid renderer, loaded once from `layout.astro`.
+ * Client-side Mermaid renderer, loaded once from `src/layouts/base.astro`.
  *
  * - Dynamically imports `mermaid` only when the current page actually
  *   contains a diagram (keeps diagram-free pages light).

@@ -1,6 +1,7 @@
-import { defineCollection, z } from "astro:content";
+import { defineCollection } from "astro:content";
 
 import { glob } from "astro/loaders";
+import { z } from "astro/zod";
 
 const docs = defineCollection({
 	loader: glob({ base: "./content/docs", pattern: "**/*.{md,mdx}" }),
@@ -21,7 +22,4 @@ const meta = defineCollection({
 	}),
 });
 
-export const collections = {
-	docs,
-	meta,
-};
+export const collections = { docs, meta };

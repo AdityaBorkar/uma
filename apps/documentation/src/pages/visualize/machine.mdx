@@ -1,0 +1,101 @@
+---
+layout: ../../layouts/visualize.astro
+title: Visualize machine — UMA
+---
+
+import Mermaid from "@/components/Mermaid.astro";
+
+export const inbound = [
+	{
+		body: "handleAssign → executeTask: quota → claim → start → bind → exec → task-done → stop",
+		color: "border-l-green-500",
+		doc: "/machine/assign",
+		t: "assign",
+	},
+	{
+		body: "cancelTask(taskId): in-flight map → stopSandbox --force (label fallback)",
+		color: "border-l-yellow-500",
+		doc: "/machine/cancel",
+		t: "cancel",
+	},
+	{
+		body: "resetAll → cache desired.json → persist receipts → reset-ack × N (+ sync-ack if keys=*)",
+		color: "border-l-blue-500",
+		doc: "/machine/reset-config",
+		t: "reset-config",
+	},
+	{
+		body: "needsUpgrade(cli,min) ? exit 3 : warn + ignore",
+		color: "border-l-red-500",
+		doc: "/machine/upgrade-required",
+		t: "UPGRADE_REQUIRED",
+	},
+];
+
+export const steps = [
+	"assign received",
+	"quotaPreCheck → over? [quota-exceeded + claim-ack❌] → refused",
+	"create sandbox",
+	"POST /api/rpc/machines/claim → 409? [claim-ack❌] → rejected, free sandbox",
+	"claim-ack ✅ → start",
+	"ensureBinding (clone / fetch / checkout task/<short>, optional freshStart)",
+	"execStream (redacted, ≤256KB chunks → log frames)",
+	"task-done {completed|failed} → stop (stopped, TTL reap later)",
+];
+
+export const chart = `flowchart TD
+    a["runDaemon (needs identity.json)"] --> b["connectWithBackoff (ws Bearer)"]
+    b --> c["tick: snapshotQuota, buildHeartbeat, persist, send"]
+    c --> d["reapStopped (TTL reap, never running)"]
+    b --> e{"onFrame t?"}
+    e -->|assign| f1["executeTask: quota, claim, start, bind, exec, task-done, stop"]
+    e -->|cancel| f2["cancelTask: stop force"]
+    e -->|reset-config| f3["resetAll: reset-ack per key"]
+    e -->|UPGRADE_REQUIRED| f4["exit 3 when cli below min"]
+    e -->|unknown| f5["log and ignore"]`;
+
+export const ascii = `runDaemon ── requires identity.json ──→ connectWithBackoff(wss://server/api/machines/ws, Bearer)
+    │
+    ├─ every intervalS ──→ snapshotQuota → buildHeartbeat → persistHeartbeat(SQLite) ──→ send (if connected)
+    │                   └─ reapStopped (stopped + idle > UMA_SANDBOX_TTL_S → remove; never running)
+    │
+    └─ onFrame ─┬─ assign ─────────────→ executeTask ──→ claim-ack / log* / task-done / quota-exceeded
+                ├─ cancel ─────────────→ cancelTask ──→ stop --force
+                ├─ reset-config ───────→ resetAll ──→ reset-ack* (+ sync-ack)
+                ├─ UPGRADE_REQUIRED ───→ exit 3 (if cli < min)
+                └─ unknown t ─────────→ log + ignore (parseServerFrame → null)`;
+
+<p class="text-sm font-medium text-fd-muted-foreground">visualize/machine · source: apps/machine/src/daemon.ts, execution.ts, heartbeat.ts</p>
+
+<h1 class="mt-1 text-3xl font-semibold">Machine daemon</h1>
+
+<p class="mt-2 max-w-2xl text-fd-muted-foreground">Dispatch of server→machine commands, the persist-first heartbeat tick, and the execution pipeline.</p>
+
+<Mermaid chart={chart} ascii={ascii} />
+
+<h2 class="mt-8 text-xl font-semibold">Inbound commands</h2>
+
+<div class="mt-4 grid gap-4 md:grid-cols-2">
+  {inbound.map((f) => (
+    <div class={`rounded-xl border border-fd-border border-l-4 ${f.color} bg-fd-card p-5`}>
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="font-mono font-semibold">{f.t}</h3>
+        <a href={f.doc} class="text-sm text-fd-primary hover:underline">docs →</a>
+      </div>
+      <p class="mt-2 text-sm text-fd-muted-foreground">{f.body}</p>
+    </div>
+  ))}
+</div>
+
+<h2 class="mt-8 text-xl font-semibold">Execution pipeline</h2>
+
+<div class="mt-4 flex flex-col gap-2 text-sm">
+  {steps.map((s, i) => (
+    <div class="flex items-start gap-3">
+      <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fd-primary text-xs font-semibold text-fd-primary-foreground">{i + 1}</span>
+      <span class="rounded-lg border border-fd-border bg-fd-card px-3 py-1.5 font-mono text-xs">{s}</span>
+    </div>
+  ))}
+</div>
+
+<p class="mt-4 text-sm text-fd-muted-foreground">Detail: <a class="text-fd-primary hover:underline" href="/machine/execution-pipeline">/machine/execution-pipeline</a> · heartbeat: <a class="text-fd-primary hover:underline" href="/machine/heartbeat">/machine/heartbeat</a></p>
