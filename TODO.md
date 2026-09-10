@@ -1,7 +1,8 @@
 # TODO
 
-Pulumi dev
-Pulumi database
+bun dev
+Pulumi postgres database
+link orpc contract
 
 ---
 

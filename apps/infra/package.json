@@ -5,6 +5,9 @@
 	"imports": {
 		"#/*": "./src/*"
 	},
+	"dependencies": {
+		"@pulumi/local": "^0.1.6"
+	},
 	"devDependencies": {
 		"@clack/prompts": "catalog:",
 		"@pulumi/cloudflare": "^6.20.0",

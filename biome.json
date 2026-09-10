@@ -89,6 +89,18 @@
 		{
 			"assist": { "actions": { "source": { "useSortedKeys": "off" } } },
 			"includes": ["**/package.json"]
+		},
+		{
+			"includes": ["apps/web/src/components/ui/**/*"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"noLabelWithoutControl": "off",
+						"useAltText": "off",
+						"useAriaPropsSupportedByRole": "off"
+					}
+				}
+			}
 		}
 	],
 	"vcs": {
