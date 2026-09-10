@@ -1,0 +1,26 @@
+---
+// Static diagram card for /visualize/* pages. The chart is rendered
+// client-side by src/scripts/mermaid-client.ts (loaded from layout.astro);
+// pre-hydration the raw source shows as styled mono text, and `ascii`
+// preserves the original plain-text diagram in a collapsible fallback.
+interface Props {
+	chart: string;
+	ascii?: string;
+}
+
+const { chart, ascii } = Astro.props;
+---
+
+<figure class="mermaid-figure">
+	<div class="mermaid-scroll">
+		<pre class="mermaid">{chart}</pre>
+	</div>
+	{
+		ascii && (
+			<details class="mermaid-ascii">
+				<summary>Plain-text version</summary>
+				<pre>{ascii}</pre>
+			</details>
+		)
+	}
+</figure>

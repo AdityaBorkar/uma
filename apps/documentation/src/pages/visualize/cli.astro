@@ -1,5 +1,6 @@
 ---
 import Layout from "@/components/layout.astro";
+import Mermaid from "@/components/Mermaid.astro";
 import "@/styles/global.css";
 
 const nav = [
@@ -72,6 +73,34 @@ const commands = [
 			"run --task <id> [--prompt] [--project] [--repo] [--commit] [--branch] [--agent] [--fresh]",
 	},
 ];
+
+const chart = `flowchart TD
+    root["uma-machine"] --> c1["enroll"]
+    root --> c2["daemon"]
+    root --> c3["check"]
+    root --> c4["reset"]
+    root --> c5["sync"]
+    root --> c6["history"]
+    root --> c7["sandbox"]
+    root --> c8["run"]
+    root --> c9["version plus help"]
+    c4 --> r1["default: resetAll to receipts"]
+    c4 --> r2["fresh-start: git clean plus reset hard"]
+    c7 --> s1["list: inventory table"]
+    c7 --> s2["prune: remove stopped"]`;
+
+const ascii = `uma-machine ─┬─ enroll ──→ POST /device/code → poll /device/token → identity.json
+           ├─ daemon ──→ ws://server/api/machines/ws + heartbeat tick
+           ├─ check ───→ checkAll() ──→ table (exit 2 if drifted)
+           ├─ reset ──┬─ (default) resetAll() ──→ receipts
+           │         └─ --fresh-start ──→ git clean -fdx + reset --hard
+           ├─ sync ────→ performSync() ──→ SQLite receipts (jobId local-*)
+           ├─ history ─→ readHistory(range) ──→ table
+           ├─ sandbox ┬─ list ──→ inventory table
+           │         └─ prune ─→ remove stopped
+           ├─ run ─────→ executeTask(manual assign) ──→ completed|failed|refused|rejected
+           ├─ version ─→ uma-machine 0.1.0 (protocol v1)
+           └─ help ────→ helpText() + Keys + Exit codes`;
 ---
 <Layout>
   <title>Visualize CLI — UMA</title>
@@ -88,20 +117,7 @@ const commands = [
       <h1 class="mt-1 text-3xl font-semibold">CLI command tree</h1>
       <p class="mt-2 max-w-2xl text-fd-muted-foreground">Every <code>uma-machine</code> command, its usage shape, output, and exit codes. Detail pages linked per card.</p>
 
-      <div class="mt-8 rounded-xl border border-fd-border bg-fd-card p-5 font-mono text-sm overflow-x-auto">
-        <pre>{`uma-machine ─┬─ enroll ──→ POST /device/code → poll /device/token → identity.json
-           ├─ daemon ──→ ws://server/api/machines/ws + heartbeat tick
-           ├─ check ───→ checkAll() ──→ table (exit 2 if drifted)
-           ├─ reset ──┬─ (default) resetAll() ──→ receipts
-           │         └─ --fresh-start ──→ git clean -fdx + reset --hard
-           ├─ sync ────→ performSync() ──→ SQLite receipts (jobId local-*)
-           ├─ history ─→ readHistory(range) ──→ table
-           ├─ sandbox ┬─ list ──→ inventory table
-           │         └─ prune ─→ remove stopped
-           ├─ run ─────→ executeTask(manual assign) ──→ completed|failed|refused|rejected
-           ├─ version ─→ uma-machine 0.1.0 (protocol v1)
-           └─ help ────→ helpText() + Keys + Exit codes`}</pre>
-      </div>
+      <Mermaid chart={chart} ascii={ascii} />
 
       <div class="mt-6 grid gap-4 md:grid-cols-2">
         {commands.map((c) => (

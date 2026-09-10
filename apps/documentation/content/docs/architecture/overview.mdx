@@ -5,11 +5,13 @@ description: End-to-end connection — CLI, daemon, server, web frontend.
 
 Diagram: [/visualize/architecture](/visualize/architecture).
 
-```text
-operator ── uma-machine enroll ─▶ server (/device/code → /device/token) ─▶ identity.json + limits.json + state.db
-operator ── uma-machine daemon ─▶ ws(s)://server/api/machines/ws (Bearer) ── heartbeat every 30s ─▶ server
-server ── assign/cancel/reset-config/UPGRADE_REQUIRED ─▶ daemon ─▶ microsandbox ─▶ agent ─▶ log/task-done ─▶ server
-browser ── TanStack Start ── POST /api/rpc/* ─▶ web server (Drizzle/Postgres) ─▶ tasks/signals/projects/documents/connections
+```mermaid
+flowchart TD
+    A["operator: uma-machine enroll"] -->|device flow| B["server"]
+    C["operator: uma-machine daemon"] -->|ws heartbeat 30s| B
+    B -->|assign, cancel, reset-config| D["daemon to microsandbox to agent"]
+    D -->|log, task-done| B
+    E["browser (TanStack Start)"] -->|POST rpc| F["web server (Drizzle plus Postgres)"]
 ```
 
 ## Stages

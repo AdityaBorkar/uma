@@ -5,11 +5,17 @@ description: assign → quota → claim → start → bind → exec → task-don
 
 Implemented in `apps/machine/src/execution.ts:309` (`executeTask`), shared by daemon `assign` handling and `uma-machine run`. Diagram: [/visualize/machine](/visualize/machine).
 
-```text
-assign ─▶ quotaPreCheck ─(over)─▶ [quota-exceeded + claim-ack ok:false] ─▶ refused
-   │─(ok)─▶ create sandbox ─▶ POST /api/rpc/machines/claim ─(409/4xx)─▶ [claim-ack ok:false] ─▶ rejected, free sandbox
-   │─(claimed)─▶ [claim-ack ok:true] ─▶ start ─▶ ensureBinding (clone/fetch/checkout task/<short>, optional freshStart)
-   │─▶ execStream (redacted, ≤256KB chunks → log frames) ─▶ task-done {completed|failed} ─▶ stop (stopped, for TTL reap)
+```mermaid
+flowchart TD
+    A["assign"] --> B["quotaPreCheck"]
+    B -->|over| C["quota-exceeded plus claim-ack false to refused"]
+    B -->|ok| D["create sandbox"]
+    D --> E["POST claim"]
+    E -->|conflict or error| F["claim-ack false to rejected"]
+    E -->|claimed| G["claim-ack true to start"]
+    G --> H["ensureBinding"]
+    H --> I["execStream redacted to log frames"]
+    I --> J["task-done to stop"]
 ```
 
 ## Key modules

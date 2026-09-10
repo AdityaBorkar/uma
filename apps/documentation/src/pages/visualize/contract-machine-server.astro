@@ -1,5 +1,6 @@
 ---
 import Layout from "@/components/layout.astro";
+import Mermaid from "@/components/Mermaid.astro";
 import "@/styles/global.css";
 
 const nav = [
@@ -42,6 +43,24 @@ const s2m = [
 	{ fields: "jobId, keys[]|*, version, payload?", t: "reset-config" },
 	{ fields: "minVersion, reason?", t: "UPGRADE_REQUIRED" },
 ];
+
+const chart = `sequenceDiagram
+    autonumber
+    participant M as uma-machine
+    participant S as server ws
+    M->>S: heartbeat every 30s
+    M->>S: log, task-done, claim-ack, quota-exceeded
+    M->>S: reset-ack per key, sync-ack
+    S->>M: assign, cancel
+    S->>M: reset-config, UPGRADE_REQUIRED
+    Note over M,S: frozen v1 raw JSON frames`;
+
+const ascii = `machine ── ws(s):///api/machines/ws (Bearer, protocol v1) ── server
+   │  heartbeat (30s) ──────────────────────────────▶  │
+   │  log / task-done / claim-ack / quota-exceeded ──▶  │
+   │  reset-ack* / sync-ack ────────────────────────▶  │
+   │  ◀────────────────────── assign / cancel ───────  │
+   │  ◀──────────────── reset-config / UPGRADE_REQ ──  │`;
 ---
 <Layout>
   <title>Visualize machine↔server — UMA</title>
@@ -58,14 +77,7 @@ const s2m = [
       <h1 class="mt-1 text-3xl font-semibold">oRPC contract: machine ↔ server</h1>
       <p class="mt-2 max-w-2xl text-fd-muted-foreground">Frozen <code>v1</code> raw-JSON frames at <code class="font-mono">/api/machines/ws</code> (not an oRPC envelope). Every machine→server frame carries <code class="font-mono">machineId + protocol:"v1"</code>. Detail: <a class="text-fd-primary hover:underline" href="/contracts/machine-server">/contracts/machine-server</a>.</p>
 
-      <div class="mt-8 rounded-xl border border-fd-border bg-fd-card p-5 font-mono text-sm overflow-x-auto">
-        <pre>{`machine ── ws(s):///api/machines/ws (Bearer, protocol v1) ── server
-   │  heartbeat (30s) ──────────────────────────────▶  │
-   │  log / task-done / claim-ack / quota-exceeded ──▶  │
-   │  reset-ack* / sync-ack ────────────────────────▶  │
-   │  ◀────────────────────── assign / cancel ───────  │
-   │  ◀──────────────── reset-config / UPGRADE_REQ ──  │`}</pre>
-      </div>
+      <Mermaid chart={chart} ascii={ascii} />
 
       <div class="mt-6 grid gap-6 md:grid-cols-2">
         <div>

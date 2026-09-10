@@ -1,5 +1,6 @@
 ---
 import Layout from "@/components/layout.astro";
+import Mermaid from "@/components/Mermaid.astro";
 import "@/styles/global.css";
 
 const nav = [
@@ -38,6 +39,28 @@ const inbound = [
 		t: "UPGRADE_REQUIRED",
 	},
 ];
+
+const chart = `flowchart TD
+    a["runDaemon (needs identity.json)"] --> b["connectWithBackoff (ws Bearer)"]
+    b --> c["tick: snapshotQuota, buildHeartbeat, persist, send"]
+    c --> d["reapStopped (TTL reap, never running)"]
+    b --> e{"onFrame t?"}
+    e -->|assign| f1["executeTask: quota, claim, start, bind, exec, task-done, stop"]
+    e -->|cancel| f2["cancelTask: stop force"]
+    e -->|reset-config| f3["resetAll: reset-ack per key"]
+    e -->|UPGRADE_REQUIRED| f4["exit 3 when cli below min"]
+    e -->|unknown| f5["log and ignore"]`;
+
+const ascii = `runDaemon ── requires identity.json ──→ connectWithBackoff(wss://server/api/machines/ws, Bearer)
+    │
+    ├─ every intervalS ──→ snapshotQuota → buildHeartbeat → persistHeartbeat(SQLite) ──→ send (if connected)
+    │                   └─ reapStopped (stopped + idle > UMA_SANDBOX_TTL_S → remove; never running)
+    │
+    └─ onFrame ─┬─ assign ─────────────→ executeTask ──→ claim-ack / log* / task-done / quota-exceeded
+                ├─ cancel ─────────────→ cancelTask ──→ stop --force
+                ├─ reset-config ───────→ resetAll ──→ reset-ack* (+ sync-ack)
+                ├─ UPGRADE_REQUIRED ───→ exit 3 (if cli < min)
+                └─ unknown t ─────────→ log + ignore (parseServerFrame → null)`;
 ---
 <Layout>
   <title>Visualize machine — UMA</title>
@@ -54,18 +77,7 @@ const inbound = [
       <h1 class="mt-1 text-3xl font-semibold">Machine daemon</h1>
       <p class="mt-2 max-w-2xl text-fd-muted-foreground">Dispatch of server→machine commands, the persist-first heartbeat tick, and the execution pipeline.</p>
 
-      <div class="mt-8 rounded-xl border border-fd-border bg-fd-card p-5 font-mono text-sm overflow-x-auto">
-        <pre>{`runDaemon ── requires identity.json ──→ connectWithBackoff(wss://server/api/machines/ws, Bearer)
-    │
-    ├─ every intervalS ──→ snapshotQuota → buildHeartbeat → persistHeartbeat(SQLite) ──→ send (if connected)
-    │                   └─ reapStopped (stopped + idle > UMA_SANDBOX_TTL_S → remove; never running)
-    │
-    └─ onFrame ─┬─ assign ─────────────→ executeTask ──→ claim-ack / log* / task-done / quota-exceeded
-                ├─ cancel ─────────────→ cancelTask ──→ stop --force
-                ├─ reset-config ───────→ resetAll ──→ reset-ack* (+ sync-ack)
-                ├─ UPGRADE_REQUIRED ───→ exit 3 (if cli < min)
-                └─ unknown t ─────────→ log + ignore (parseServerFrame → null)`}</pre>
-      </div>
+      <Mermaid chart={chart} ascii={ascii} />
 
       <h2 class="mt-8 text-xl font-semibold">Inbound commands</h2>
       <div class="mt-4 grid gap-4 md:grid-cols-2">

@@ -1,5 +1,6 @@
 ---
 import Layout from "@/components/layout.astro";
+import Mermaid from "@/components/Mermaid.astro";
 import "@/styles/global.css";
 
 const nav = [
@@ -11,6 +12,33 @@ const nav = [
 	{ href: "/visualize/contract-server-web", label: "S↔W" },
 	{ href: "/visualize/architecture", label: "Arch" },
 ];
+
+const chart = `flowchart TD
+    op["operator (uma-machine CLI)"] -->|enroll: device code to token| srv["server (auth plus tasks queue)"]
+    srv <-->|ws /api/machines/ws: heartbeat, log, done| dae["uma-machine daemon plus microsandbox"]
+    dae -->|quota, claim, exec| sbx["sandbox (agent binary)"]
+    srv -->|POST /api/rpc| web["web oRPC server"]
+    web <-->|TanStack Query| bro["browser (TanStack Start)"]
+    web -->|Drizzle| pg[("Postgres")]
+    inf["apps/infra (Pulumi)"] -. provisions .-> pg`;
+
+const ascii = `┌──────────┐  enroll (/device/code→/token)  ┌────────┐  ws /api/machines/ws   ┌─────────────────┐
+│ operator │ ───────────────────────────────▶ │ server │ ◀═════════════════════ │ uma-machine daemon │
+│ (CLI)    │  identity.json/limits/state.db   │ (auth) │  heartbeat/log/done   │  + microsandbox    │
+└──────────┘                                  │ tasks  │ ─── assign/cancel ───▶ │  + agent binary    │
+                                              │ queue  │ ◀── claim (409 wins)── │  (quota→claim→exec)│
+                                              └───┬────┘                         └─────────────────┘
+                                                  │ POST /api/rpc/*
+                                                  ▼
+                                              ┌────────┐  TanStack Query  ┌─────────┐
+                                              │  web   │ ◀══════════════ │ browser │
+                                              │ (oRPC) │  tasks/signals/… │ (Start) │
+                                              └───┬────┘                  └─────────┘
+                                                  │ Drizzle
+                                                  ▼
+                                              ┌──────────┐      Pulumi (OCI+CF+Docker)
+                                              │ Postgres │ ◀──── apps/infra ── dev: local Docker
+                                              └──────────┘`;
 ---
 <Layout>
   <title>Visualize architecture — UMA</title>
@@ -27,25 +55,7 @@ const nav = [
       <h1 class="mt-1 text-3xl font-semibold">Connection & architecture</h1>
       <p class="mt-2 max-w-2xl text-fd-muted-foreground">End-to-end flow from operator to sandbox to browser. Detail: <a class="text-fd-primary hover:underline" href="/architecture/overview">/architecture/overview</a>.</p>
 
-      <div class="mt-8 rounded-xl border border-fd-border bg-fd-card p-5 font-mono text-xs md:text-sm overflow-x-auto">
-        <pre>{`┌──────────┐  enroll (/device/code→/token)  ┌────────┐  ws /api/machines/ws   ┌─────────────────┐
-│ operator │ ───────────────────────────────▶ │ server │ ◀═════════════════════ │ uma-machine daemon │
-│ (CLI)    │  identity.json/limits/state.db   │ (auth) │  heartbeat/log/done   │  + microsandbox    │
-└──────────┘                                  │ tasks  │ ─── assign/cancel ───▶ │  + agent binary    │
-                                              │ queue  │ ◀── claim (409 wins)── │  (quota→claim→exec)│
-                                              └───┬────┘                         └─────────────────┘
-                                                  │ POST /api/rpc/*
-                                                  ▼
-                                              ┌────────┐  TanStack Query  ┌─────────┐
-                                              │  web   │ ◀══════════════ │ browser │
-                                              │ (oRPC) │  tasks/signals/… │ (Start) │
-                                              └───┬────┘                  └─────────┘
-                                                  │ Drizzle
-                                                  ▼
-                                              ┌──────────┐      Pulumi (OCI+CF+Docker)
-                                              │ Postgres │ ◀──── apps/infra ── dev: local Docker
-                                              └──────────┘`}</pre>
-      </div>
+      <Mermaid chart={chart} ascii={ascii} />
 
       <div class="mt-6 grid gap-4 md:grid-cols-2">
         <div class="rounded-xl border border-fd-border bg-fd-card p-5">

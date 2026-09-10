@@ -12,6 +12,7 @@ import {
 	remarkNpm,
 	remarkStructure,
 } from "fumadocs-core/mdx-plugins";
+import { rehypeMermaid } from "./src/plugins/rehype-mermaid.mjs";
 
 export default defineConfig({
 	integrations: [
@@ -23,7 +24,7 @@ export default defineConfig({
 	],
 	markdown: {
 		processor: unified({
-			rehypePlugins: [rehypeCode],
+			rehypePlugins: [rehypeMermaid, rehypeCode],
 			remarkPlugins: [
 				remarkHeading,
 				remarkCodeTab,
