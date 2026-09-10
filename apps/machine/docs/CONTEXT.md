@@ -11,7 +11,7 @@ The `uma` server (Tasks, Signals, Projects, machine registry) is an external ups
 ## Context Map
 
 - **Machine Execution (this repo, downstream / conformist)** → **uma Server (external upstream, sole owner)**:
-  Consumes `machines.*` + `/api/machines/ws` as frozen `v1` JSON frames (`../orpc-contract/src/machine-frames.ts`, `../orpc-contract/src/server-frames.ts`).
+  Consumes `machines.*` + `/api/machines/ws` as frozen `v1` JSON frames (`../orpc-contract/src/schemas/machine-frames.ts`, `../orpc-contract/src/schemas/server-frames.ts`).
   ACL = `src/ws-client.ts` + `parseServerFrame` / `validateMachineFrame` (unknown `t` logged + ignored, never sent).
 - Server wins on conflict: `assign.limits` / `reset-config` override local `limits.json`; `tasks.claim` `409` is authoritative; `UPGRADE_REQUIRED` on major forces reinstall.
 
@@ -93,7 +93,7 @@ _Avoid_: limit (verb), throttle
 
 ### Known code gaps
 
-- Strict binding: `SandboxInfoSchema` (`../orpc-contract/src/primitives.ts`) allows `taskId: string | null` and `projectId: string | null`, and the `sandbox list` command prints `global` for null. Per grill 2026-09-10 the domain invariant is strict (exactly one Task, exactly one Scope; `null` projectId is the wire encoding of global Scope, not an unbound sandbox). `taskId: null` only occurs for foreign/unlabeled sandboxes seen via list. Idle `stopped` sandboxes awaiting TTL reap remain bound to their last Task. Do not create unbound sandboxes.
+- Strict binding: `SandboxInfoSchema` (`../orpc-contract/src/schemas/primitives.ts`) allows `taskId: string | null` and `projectId: string | null`, and the `sandbox list` command prints `global` for null. Per grill 2026-09-10 the domain invariant is strict (exactly one Task, exactly one Scope; `null` projectId is the wire encoding of global Scope, not an unbound sandbox). `taskId: null` only occurs for foreign/unlabeled sandboxes seen via list. Idle `stopped` sandboxes awaiting TTL reap remain bound to their last Task. Do not create unbound sandboxes.
 - Pressure attribution: `sandboxMetricsForPressure` joins `task.id`/`project.id` labels, but the SDK is the only driver exposing metrics — CLI/mock report `[]`, so scoped hints degrade to host-global there.
 - Unsent contract frames: `check-ack` is defined but never sent (contract-only). `validateMachineFrame` is now enforced on every outbound `send` via `assertMachineFrame`. Buffered logs replay via `resendBufferedLogs` (peek → send → delete-through, at-least-once).
 - Quota refusal shape: the quota-path `claim-ack` carries a generated placeholder `sandboxId` (no sandbox is created), satisfying `ClaimAckFrameSchema(min(1))`.

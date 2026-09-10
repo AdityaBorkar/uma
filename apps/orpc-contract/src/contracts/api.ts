@@ -1,6 +1,13 @@
 import { oc } from "@orpc/contract";
 
 import {
+	DeviceCodeRequestSchema,
+	DeviceCodeResponseSchema,
+	DeviceTokenRequestSchema,
+	DeviceTokenResponseSchema,
+	TaskClaimRequestSchema,
+} from "../orpc.ts";
+import {
 	CheckStateResponseSchema,
 	CommentCreateInputSchema,
 	ConnectionAuthUrlOutputSchema,
@@ -36,14 +43,7 @@ import {
 	TaskListInputSchema,
 	TaskStatsOutputSchema,
 	TaskUpdateStatusInputSchema,
-} from "../api-schemas.ts";
-import {
-	DeviceCodeRequestSchema,
-	DeviceCodeResponseSchema,
-	DeviceTokenRequestSchema,
-	DeviceTokenResponseSchema,
-	TaskClaimRequestSchema,
-} from "../orpc.ts";
+} from "../schemas/index.ts";
 
 export const apiContract = {
 	connections: {

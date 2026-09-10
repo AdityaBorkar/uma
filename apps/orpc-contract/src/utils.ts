@@ -1,6 +1,6 @@
 import { clean, coerce, compare, lt, valid } from "semver";
 
-import type { Limits } from "./primitives.ts";
+import type { Limits } from "./schemas/primitives.ts";
 
 /** Branch default: task/<short> unless explicit. */
 export function branchForTask(taskId: string, explicit?: string): string {

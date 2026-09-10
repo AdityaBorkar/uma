@@ -19,7 +19,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 
 - Runtime deps (`package.json`): `zod` (validation), `microsandbox` SDK (in-process sandbox API), plus CLI/store/util deps (`cac`, `cli-table3`, `drizzle-orm`, `env-paths`, `es-toolkit`, `fast-redact`, `ms`, `nanoid`, `p-retry`, `picocolors`, `semver`, `write-file-atomic`, `zod-validation-error`; `drizzle-kit` is currently listed under dependencies but used as a dev tool). Dev: `@types/*`, `typescript`, `zod-to-json-schema`.
 - System packages (never bundled): `msb` runtime via `install.sh` (`install.microsandbox.dev` / brew, resolved via `MSB_PATH`/`UMA_MSB_BIN`), pinned `UBUNTU_IMAGE=docker.io/library/ubuntu:24.04` (`orpc-contract/src/constants.ts`), fixed `1c/1G` + `2x` max.
-- Local package: `orpc-contract/` (frozen v1: `index.ts` barrel + `constants.ts`, `primitives.ts`, `machine-frames.ts`, `server-frames.ts`, `orpc.ts`, `utils.ts`). `server-central/` is dev/staging harness only.
+- Local package: `orpc-contract/` (frozen v1: `index.ts` barrel + `constants.ts`, `schemas/` (`primitives.ts`, `machine-frames.ts`, `server-frames.ts`, …), `orpc.ts`, `utils.ts`). `server-central/` is dev/staging harness only.
 
 ## Component
 

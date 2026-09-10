@@ -3,7 +3,7 @@ title: UPGRADE_REQUIRED
 description: Server-initiated minimum-version enforcement.
 ---
 
-Schema `UpgradeRequiredFrameSchema` in `apps/orpc-contract/src/server-frames.ts:48`; handler `handleUpgrade` in `apps/machine/src/daemon.ts:43`; comparison `needsUpgrade` in `apps/orpc-contract/src/utils.ts` (semver with naive fallback).
+Schema `UpgradeRequiredFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:48`; handler `handleUpgrade` in `apps/machine/src/daemon.ts:43`; comparison `needsUpgrade` in `apps/orpc-contract/src/utils.ts` (semver with naive fallback).
 
 ```ts
 { t: "UPGRADE_REQUIRED", minVersion: string, reason?: string }

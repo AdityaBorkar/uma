@@ -1,7 +1,7 @@
 import { eventIterator, oc } from "@orpc/contract";
 
-import { WsSendAckSchema, WsSubscribeInputSchema } from "../api-schemas.ts";
 import { MACHINES_WS_PATH, PROTOCOL_VERSION } from "../constants.ts";
+import { WsSendAckSchema, WsSubscribeInputSchema } from "../schemas/index.ts";
 import {
 	CheckAckFrameSchema,
 	ClaimAckFrameSchema,
@@ -12,14 +12,14 @@ import {
 	ResetAckFrameSchema,
 	SyncAckFrameSchema,
 	TaskDoneFrameSchema,
-} from "../machine-frames.ts";
+} from "../schemas/machine-frames.ts";
 import {
 	AssignFrameSchema,
 	CancelFrameSchema,
 	ResetConfigFrameSchema,
 	ServerFrameSchema,
 	UpgradeRequiredFrameSchema,
-} from "../server-frames.ts";
+} from "../schemas/server-frames.ts";
 
 export const wsMessagesContract = {
 	machineToServer: {

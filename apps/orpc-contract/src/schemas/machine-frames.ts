@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { LOG_FRAME_CAP_BYTES, PROTOCOL_VERSION } from "./constants.ts";
+import { LOG_FRAME_CAP_BYTES, PROTOCOL_VERSION } from "../constants.ts";
 import {
 	HostMetricsSchema,
 	LimitsSchema,

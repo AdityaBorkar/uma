@@ -5,11 +5,11 @@ Single source of truth for machine↔server wire shapes. Imported by `apps/machi
 ## Layout
 
 - `src/constants.ts` — frozen `v1` values: `PROTOCOL_VERSION`, `UBUNTU_IMAGE`, task CPU/RAM sizes, heartbeat cadence/retention, `LOG_FRAME_CAP_BYTES` (256KB UTF-8), pressure thresholds/windows, `MACHINES_WS_PATH`, `RESERVED_MACHINE_NAMES`.
-- `src/primitives.ts` — shared primitives: `Limits`, `QuotaUsage`, `HostMetrics`, `SandboxInfo`, `MachineName`, `ConnectionStatus`.
-- `src/machine-frames.ts` — machine→server frames (all carry `machineId` + `protocol: "v1"`). See `FRAMES.md`.
-- `src/server-frames.ts` — server→machine frames. See `FRAMES.md`.
+- `src/schemas/primitives.ts` — shared primitives: `Limits`, `QuotaUsage`, `HostMetrics`, `SandboxInfo`, `MachineName`, `ConnectionStatus`.
+- `src/schemas/machine-frames.ts` — machine→server frames (all carry `machineId` + `protocol: "v1"`). See `FRAMES.md`.
+- `src/schemas/server-frames.ts` — server→machine frames. See `FRAMES.md`.
 - `src/orpc.ts` — HTTPS/oRPC shapes: device-code flow (`DeviceCode*`, `DeviceToken*`, `DeviceTokenError`) and `TaskClaimRequest`, `DriftEntry`, `Receipt`.
-- `src/api-schemas.ts` — API I/O schemas for the contract routers: web-domain inputs (mirroring `apps/web/src/schemas/schema.ts`), loose row/page/stats outputs, machine HTTPS responses (`TaskClaimResponse`, `LatestVersionResponse`, …), and WS channel I/O (`WsSendAck`, `WsSubscribeInput`).
+- `src/schemas/` — API I/O schemas for the contract routers: web-domain inputs (mirroring `apps/web/src/schemas/schema.ts`), loose row/page/stats outputs, machine HTTPS responses (`TaskClaimResponse`, `LatestVersionResponse`, …), WS channel I/O (`WsSendAck`, `WsSubscribeInput`), shared primitives (`primitives.ts`), and WS frames (`machine-frames.ts`, `server-frames.ts`). Split per domain: `common.ts` (DbRecord/page/stats/id/remove envelopes), `projects.ts`, `connections.ts`, `signals.ts`, `tasks.ts`, `documents.ts` (incl. comments), `machines.ts`, `ws.ts`; re-exported via `schemas/index.ts`.
 - `src/contracts/api.ts` — `apiContract`: `oc` router (from `@orpc/contract`) over the schemas above. Namespaces `tasks/signals/projects/documents/connections` mirror `apps/web/src/rpc/router.ts`; `device`/`machines` cover machine enrollment + claim/version/history. Implement with `implement(apiContract)` from `@orpc/server`.
 - `src/contracts/ws.ts` — WS messages contract (frozen v1): `wsMessagesContract` is the raw-frame registry (`path`, `protocol`, per-`t` schemas for both directions); `wsContract` models the same channel as `oc` procedures (`machines.send` for machine→server frames, `machines.stream` as an `eventIterator(ServerFrameSchema)` for server→machine). Transport stays raw JSON frames, not an oRPC envelope.
 - `src/contracts/index.ts` + `src/index.ts` — barrel re-exports: schemas and contracts are both exported from the package root.

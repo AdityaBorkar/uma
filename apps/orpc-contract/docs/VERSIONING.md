@@ -6,7 +6,7 @@ Wire-frame changes require a major version. `PROTOCOL_VERSION` lives in `src/con
 
 ## What is frozen
 
-- Frame names (`t`), required fields, and validation semantics in `src/machine-frames.ts` / `src/server-frames.ts`.
+- Frame names (`t`), required fields, and validation semantics in `src/schemas/machine-frames.ts` / `src/schemas/server-frames.ts`.
 - Constants in `src/constants.ts`: task sizing (`TASK_CPUS`, `TASK_MEMORY_MB`, `TASK_MAX_CPUS`, `TASK_MAX_MEMORY_MB`), heartbeat cadence/retention (`HEARTBEAT_INTERVAL_S`, `HEARTBEAT_RETENTION_DAYS`), log cap (`LOG_FRAME_CAP_BYTES`), pressure policy (`PRESSURE_THRESHOLD_PCT`, `PRESSURE_SUSTAINED_S`, `PRESSURE_ATTRIBUTION_PCT`, `PRESSURE_COOLDOWN_S`), ws path (`MACHINES_WS_PATH`), reserved names (`RESERVED_MACHINE_NAMES`).
 - Branch default (`branchForTask`: `task/<short>` unless explicit) and quota defaults (`quotaDefaultsFromRam`: `2×/5×` per GB RAM, floor 1) in `src/utils.ts`.
 

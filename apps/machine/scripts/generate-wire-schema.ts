@@ -10,7 +10,7 @@
 // The script therefore uses zod 4's built-in `z.toJSONSchema()` as the working
 // alternative. Upgrade path: if zod-to-json-schema ships real zod-4 support,
 // swap the two `z.toJSONSchema(...)` calls below for `zodToJsonSchema(...)`;
-// the LogFrame.chunk `.describe()` in ../orpc-contract/src/machine-frames.ts flows
+// the LogFrame.chunk `.describe()` in ../orpc-contract/src/schemas/machine-frames.ts flows
 // into either engine (zod-to-json-schema copies it via its `addMeta` step).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

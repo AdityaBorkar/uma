@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { RESERVED_MACHINE_NAMES } from "./constants.ts";
+import { RESERVED_MACHINE_NAMES } from "../constants.ts";
 
 export const LimitsSchema = z.object({
 	cpu: z.number().optional(),

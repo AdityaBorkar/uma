@@ -2,7 +2,7 @@
 
 All ws frames are JSON with `protocol: "v1"`. Machine→server frames also carry `machineId`.
 
-## Machine → server (`src/machine-frames.ts`)
+## Machine → server (`src/schemas/machine-frames.ts`)
 
 | `t` | Purpose | Key fields |
 |---|---|---|
@@ -17,7 +17,7 @@ All ws frames are JSON with `protocol: "v1"`. Machine→server frames also carry
 
 Validation: `MachineFrameSchema` (discriminated union on `t`); outbound enforced via `validateMachineFrame` / `assertMachineFrame` on every send.
 
-## Server → machine (`src/server-frames.ts`)
+## Server → machine (`src/schemas/server-frames.ts`)
 
 | `t` | Purpose | Key fields |
 |---|---|---|
@@ -28,7 +28,7 @@ Validation: `MachineFrameSchema` (discriminated union on `t`); outbound enforced
 
 Parsing: `parseServerFrame` returns `ServerFrame | null`; unknown `t` maps to `null` (logged + ignored).
 
-## Primitives (`src/primitives.ts`)
+## Primitives (`src/schemas/primitives.ts`)
 
 - `Limits` (`maxRunning/maxTotal` required, `cpu/ram` optional), `QuotaUsage` (`running/total`), `HostMetrics` (`cpu/ram/disk` 0–100, `pids`).
 - `SandboxInfo` (`id`, `status: created | running | stopped | destroyed`, `taskId: string | null`, `projectId: string | null`). `taskId: null` only occurs for foreign/unlabeled sandboxes seen via list; the agent never creates unbound sandboxes.
