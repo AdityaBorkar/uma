@@ -1,8 +1,8 @@
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-import { badgeVariants } from "#/components/ui/badge-variants";
-import { cn } from "#/lib/utils";
+import { badgeVariants } from "#/components/ui/badge-variants.ts";
+import { cn } from "#/lib/utils.ts";
 
 function Badge({
 	className,

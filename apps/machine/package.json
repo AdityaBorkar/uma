@@ -1,5 +1,5 @@
 {
-	"name": "uma-machine",
+	"name": "@uma/machine",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
@@ -8,21 +8,17 @@
 		"uma": "./src/index.ts"
 	},
 	"scripts": {
-		"build": "bun build --compile src/index.ts --outfile dist/uma-machine",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "bun run scripts/db-migrate.ts",
-		"db:push": "drizzle-kit push",
-		"db:studio": "drizzle-kit studio",
+		"build": "bun build --compile src/index.ts --outfile .output/uma-machine",
+		"dev": "bun run src/index.ts",
 		"docs:wire": "bun run scripts/generate-wire-schema.ts",
 		"roundtrip": "bun run scripts/machine.roundtrip.ts",
 		"server": "bun run server-central/src/index.ts",
-		"start": "bun run src/index.ts",
 		"test": "bun test"
 	},
 	"dependencies": {
-		"@biomejs/biome": "^2.5.12",
 		"cac": "^7.0.0",
 		"cli-table3": "~0.6.5",
+		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
 		"env-paths": "4.0.0",
 		"es-toolkit": "1.52.0",
@@ -44,10 +40,7 @@
 		"@types/ms": "2.1.0",
 		"@types/semver": "^7.8.0",
 		"@types/write-file-atomic": "4.0.3",
-		"drizzle-kit": "^0.31.10",
+		"typescript": "^7.0.2",
 		"zod-to-json-schema": "^3.25.2"
-	},
-	"peerDependencies": {
-		"typescript": "^7.0.2"
 	}
 }

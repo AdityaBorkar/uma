@@ -1,31 +1,32 @@
 {
-  "name": "@uma/monorepo",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "check:env": "bun run scripts/check-env.ts",
-    "check:lint": "biome check --fix .",
-    "check:types": "tsc --noEmit",
-    "clean": "bunx rimraf --glob \"**/{node_modules,.output,.local,.tanstack,.wrangler,bun.lockb}\"",
-    "format": "biome format --fix .",
-    "infra:destroy": "pulumi destroy --stack",
-    "infra:prepare": "bun run:dev -- bun ./scripts/prepare-infra.ts",
-    "infra:preview": "pulumi preview --stack",
-    "infra:refresh": "pulumi refresh --stack",
-    "infra:up": "pulumi up --stack",
-    "prepare": "husky",
-    "update-deps": "taze -rw && bun install"
-  },
-
-  "dependencies": {
-    "@biomejs/biome": "^2.5.12",
-    "@clack/prompts": "^1.7.0",
-    "@commitlint/cli": "^21.2.2",
-    "@commitlint/config-conventional": "^21.2.2",
-    "@types/bun": "^1.4.1",
-    "commander": "^15.0.0",
-    "commitlint": "^21.2.2",
-    "husky": "^9.1.7",
-    "typescript": "^7.0.2"
-  }
+	"name": "@uma/monorepo",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"apps/*"
+	],
+	"scripts": {
+		"check:lint": "biome check --fix .",
+		"check:types": "tsc --noEmit",
+		"clean": "bunx rimraf --glob \"**/{node_modules,.output,.local,.tanstack,.wrangler,bun.lockb}\"",
+		"format": "biome format --fix .",
+		"infra:destroy": "pulumi destroy --stack",
+		"infra:preview": "pulumi preview --stack",
+		"infra:refresh": "pulumi refresh --stack",
+		"infra:up": "pulumi up --stack",
+		"prepare": "husky",
+		"update-deps": "taze -rw --maturity-period 3 && bun install"
+	},
+	"dependencies": {
+		"@biomejs/biome": "^2.5.12",
+		"@clack/prompts": "^1.7.0",
+		"@commitlint/cli": "^21.2.2",
+		"@commitlint/config-conventional": "^21.2.2",
+		"@types/bun": "^1.4.1",
+		"commander": "^15.0.0",
+		"commitlint": "^21.2.2",
+		"husky": "^9.1.7",
+		"taze": "^21.1.0",
+		"typescript": "^7.0.2"
+	}
 }

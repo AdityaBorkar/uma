@@ -89,10 +89,6 @@
 		{
 			"assist": { "actions": { "source": { "useSortedKeys": "off" } } },
 			"includes": ["**/package.json"]
-		},
-		{
-			"includes": ["./src/components/ui/**"],
-			"linter": { "enabled": false }
 		}
 	],
 	"vcs": {

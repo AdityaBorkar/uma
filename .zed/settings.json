@@ -1,33 +1,33 @@
 {
-  "file_scan_exclusions": [
-    "**/.agents",
-    "**/.git",
-    "**/.local",
-    "**/.output",
-    "**/.tanstack",
-    "**/.coverage",
-    "**/node_modules",
-    "tsconfig.tsbuildinfo"
-  ],
-  "format_on_save": "on",
-  "formatter": [
-    { "code_action": "source.fixAll.biome" },
-    { "code_action": "source.organizeImports.biome" },
-    { "code_action": "source.action.useSortedAttributes.biome" },
-    { "code_action": "source.action.useSortedKeys.biome" },
-    { "code_action": "source.action.useSortedPackageJson.biome" },
-    { "code_action": "source.action.useSortedProperties.biome" },
-    { "code_action": "source.action.useSortedInterfaceMembers.biome" },
-    { "code_action": "source.action.useSortedEnumMembers.biome" },
-    { "code_action": "source.action.noDuplicateClasses.biome" },
-    { "language_server": { "name": "biome" } }
-  ],
-  "lsp": {
-    "biome": {
-      "binary": {
-        "arguments": ["lsp-proxy"],
-        "path": "./node_modules/.bin/biome"
-      }
-    }
-  }
+	"file_scan_exclusions": [
+		"**/.agents",
+		"**/.git",
+		"**/.local",
+		"**/.output",
+		"**/.tanstack",
+		"**/.coverage",
+		"**/node_modules",
+		"tsconfig.tsbuildinfo"
+	],
+	"format_on_save": "on",
+	"formatter": [
+		{ "code_action": "source.fixAll.biome" },
+		{ "code_action": "source.organizeImports.biome" },
+		{ "code_action": "source.action.useSortedAttributes.biome" },
+		{ "code_action": "source.action.useSortedKeys.biome" },
+		{ "code_action": "source.action.useSortedPackageJson.biome" },
+		{ "code_action": "source.action.useSortedProperties.biome" },
+		{ "code_action": "source.action.useSortedInterfaceMembers.biome" },
+		{ "code_action": "source.action.useSortedEnumMembers.biome" },
+		{ "code_action": "source.action.noDuplicateClasses.biome" },
+		{ "language_server": { "name": "biome" } }
+	],
+	"lsp": {
+		"biome": {
+			"binary": {
+				"arguments": ["lsp-proxy"],
+				"path": "./node_modules/.bin/biome"
+			}
+		}
+	}
 }

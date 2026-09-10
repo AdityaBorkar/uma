@@ -1,7 +1,7 @@
 import type * as React from "react";
 
 import { X } from "#/components/icons.tsx";
-import { cn } from "#/lib/utils";
+import { cn } from "#/lib/utils.ts";
 
 interface DialogProps {
 	children: React.ReactNode;

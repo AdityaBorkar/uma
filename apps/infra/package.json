@@ -1,10 +1,10 @@
 {
-  "name": "@uma/infra",
-  "imports": {
-		"#/*": "./src/*"
-	},
+	"name": "@uma/infra",
 	"private": true,
 	"type": "module",
+	"imports": {
+		"#/*": "./src/*"
+	},
 	"devDependencies": {
 		"@clack/prompts": "^1.7.0",
 		"@pulumi/cloudflare": "^6.20.0",
