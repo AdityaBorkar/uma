@@ -4,14 +4,12 @@ bun dev
 Pulumi postgres database
 link orpc contract
 
----
+retire all old-repo except webapp
 
-- Deploy on Cloudflare Network
-- CockroachDB as database
+prepare a www/ for documentation
+
 - orpc v2
 - drizzle v2
-
----
 
 - DB -> remote-servers
 - Gain FS Access (uma-projects) (flat-file-structure)
@@ -21,6 +19,8 @@ link orpc contract
   - agents.config.CRUD
   - sessions.CRUD
 
----
+## Later
 
+- Deploy on Cloudflare Network
+- CockroachDB as database
 - Do not use Cloudflare SSL Termination (it is insecure and gives CF access to MITM)

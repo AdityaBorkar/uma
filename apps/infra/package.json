@@ -6,7 +6,7 @@
 		"#/*": "./src/*"
 	},
 	"dependencies": {
-		"@pulumi/local": "^0.1.6"
+		"@pulumi/local": "catalog:"
 	},
 	"devDependencies": {
 		"@clack/prompts": "catalog:",

@@ -14,9 +14,9 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.30.0",
-		"cac": "^7.0.0",
-		"es-toolkit": "1.52.0",
-		"picocolors": "^1.1.1",
+		"cac": "catalog:",
+		"es-toolkit": "catalog:",
+		"picocolors": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
