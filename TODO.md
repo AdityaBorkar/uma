@@ -2,7 +2,9 @@
 
 bun dev
 Pulumi postgres database
+
 link orpc contract
+rest like contract
 
 retire all old-repo except webapp
 
