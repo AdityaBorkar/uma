@@ -1,11 +1,11 @@
 {
 	"pages": [
 		"index",
-		"cli",
-		"machine",
-		"contracts",
 		"architecture",
-		"visualize"
+		"visualize",
+		"contracts",
+		"machine",
+		"cli"
 	],
 	"title": "UMA - Unified Manager for Agents"
 }

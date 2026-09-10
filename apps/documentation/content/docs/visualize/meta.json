@@ -1,0 +1,10 @@
+{
+	"pages": [
+		"architecture",
+		"machine",
+		"contract-machine-server",
+		"contract-server-web",
+		"cli"
+	],
+	"title": "Visualize"
+}
