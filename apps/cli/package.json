@@ -1,0 +1,26 @@
+{
+	"name": "@uma/cli",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"module": "src/index.ts",
+	"bin": {
+		"uma": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "bun build --compile src/index.ts --outfile .output/uma",
+		"dev": "bun run src/index.ts",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.30.0",
+		"cac": "^7.0.0",
+		"es-toolkit": "1.52.0",
+		"picocolors": "^1.1.1",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@types/bun": "catalog:",
+		"typescript": "catalog:"
+	}
+}

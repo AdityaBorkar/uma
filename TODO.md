@@ -1,9 +1,16 @@
 # TODO
 
+Pulumi dev
+Pulumi database
+
+---
+
 - Deploy on Cloudflare Network
 - CockroachDB as database
 - orpc v2
 - drizzle v2
+
+---
 
 - DB -> remote-servers
 - Gain FS Access (uma-projects) (flat-file-structure)

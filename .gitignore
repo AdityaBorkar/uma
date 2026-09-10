@@ -1,13 +1,16 @@
 node_modules
 
+.local
+.output
 .nitro
 .tanstack
-.output
+.coverage
 
-.env
-.env.*
+.env*
+*.env
 *.pem
 *.gen.ts
+tsconfig.tsbuildinfo
 
 .DS_Store
 

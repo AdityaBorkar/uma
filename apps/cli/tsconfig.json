@@ -1,0 +1,6 @@
+{
+	"compilerOptions": {
+		"declarationDir": "../../.local/types/cli"
+	},
+	"extends": "../../tsconfig.json"
+}

@@ -5,7 +5,7 @@
 	"type": "module",
 	"module": "src/index.ts",
 	"bin": {
-		"uma": "./src/index.ts"
+		"uma-machine": "./src/index.ts"
 	},
 	"scripts": {
 		"build": "bun build --compile src/index.ts --outfile .output/uma-machine",

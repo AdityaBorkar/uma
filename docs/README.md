@@ -9,6 +9,7 @@ Bun monorepo: product web app, device agent, frozen wire contract, and Pulumi in
 - `apps/orpc-contract` — frozen `v1` machine↔server wire frames. `apps/machine` imports it by relative path (`../orpc-contract/src/index.ts`); it never imports from `apps/machine/src`. Policy and frame catalog in `apps/orpc-contract/docs/`. Wire-frame changes require a major version and `UPGRADE_REQUIRED` handling.
 - `apps/infra` — Pulumi program (OCI VM + Cloudflare DNS + Docker containers + pgBackRest) and the app env manifest. `Pulumi.yaml` at the repo root points at `apps/infra/index.ts`. Stack `dev` skips the VM and uses local Docker; other stacks provision an OCI VM.
 - `docs/do-not-touch-ai/` — frozen product theory (`PRINCIPLES.md`, `REFERENCE.md`) and backup runbook (`BACKUPS.md`). Do not restructure; `REFERENCE.md` links assume a pre-move layout (`src/lib/*`, `infra/*`) and are aspirational for future engines.
+- `apps/cli` — `uma` repo CLI + docs MCP server (`uma mcp start`, `uma docs …`). Tools `read_docs` / `query_docs` serve all repo markdown; see `apps/cli/README.md`.
 
 ## Context map
 

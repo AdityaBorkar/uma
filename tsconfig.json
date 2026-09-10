@@ -49,6 +49,7 @@
 	},
 	"exclude": ["**/node_modules", "**/.output", "**/.tanstack"],
 	"references": [
+		{ "path": "./apps/cli" },
 		{ "path": "./apps/infra" },
 		{ "path": "./apps/machine" },
 		{ "path": "./apps/orpc-contract" },
