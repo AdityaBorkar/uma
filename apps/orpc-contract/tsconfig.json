@@ -1,1 +1,6 @@
-{}
+{
+	"compilerOptions": {
+		"declarationDir": "../../.local/types/orpc-contract"
+	},
+	"extends": "../../tsconfig.json"
+}

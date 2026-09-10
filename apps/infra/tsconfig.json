@@ -1,1 +1,6 @@
-{}
+{
+	"compilerOptions": {
+		"declarationDir": "../../.local/types/infra"
+	},
+	"extends": "../../tsconfig.json"
+}

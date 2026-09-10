@@ -2,9 +2,27 @@
 	"name": "@uma/monorepo",
 	"private": true,
 	"type": "module",
-	"workspaces": [
-		"apps/*"
-	],
+	"workspaces": {
+		"packages": [
+			"apps/*"
+		],
+		"catalog": {
+			"@biomejs/biome": "^2.5.12",
+			"@clack/prompts": "^1.7.0",
+			"@commitlint/cli": "^21.2.2",
+			"@commitlint/config-conventional": "^21.2.2",
+			"@types/bun": "^1.4.2",
+			"commander": "^15.0.0",
+			"commitlint": "^21.2.2",
+			"drizzle-kit": "^0.31.10",
+			"drizzle-orm": "^0.45.2",
+			"husky": "^9.1.7",
+			"nanoid": "^6.0.1",
+			"semver": "^7.8.5",
+			"typescript": "^7.0.2",
+			"zod": "^4.6.1"
+		}
+	},
 	"scripts": {
 		"check:lint": "biome check --fix .",
 		"check:types": "tsc --noEmit",
@@ -18,15 +36,15 @@
 		"update-deps": "taze -rw --maturity-period 3 && bun install"
 	},
 	"dependencies": {
-		"@biomejs/biome": "^2.5.12",
-		"@clack/prompts": "^1.7.0",
-		"@commitlint/cli": "^21.2.2",
-		"@commitlint/config-conventional": "^21.2.2",
-		"@types/bun": "^1.4.1",
-		"commander": "^15.0.0",
-		"commitlint": "^21.2.2",
-		"husky": "^9.1.7",
+		"@biomejs/biome": "catalog:",
+		"@clack/prompts": "catalog:",
+		"@commitlint/cli": "catalog:",
+		"@commitlint/config-conventional": "catalog:",
+		"@types/bun": "catalog:",
+		"commander": "catalog:",
+		"commitlint": "catalog:",
+		"husky": "catalog:",
 		"taze": "^21.1.0",
-		"typescript": "^7.0.2"
+		"typescript": "catalog:"
 	}
 }

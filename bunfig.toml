@@ -9,6 +9,6 @@ bun = true
 silent = false
 
 [install]
-minimumReleaseAge = 259200 # 3 days
+# minimumReleaseAge = 259200 # 3 days
 saveTextLockfile = false
 ignore-scripts = true

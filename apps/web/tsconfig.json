@@ -1,23 +1,8 @@
 {
 	"compilerOptions": {
-		"allowImportingTsExtensions": true,
-		"jsx": "react-jsx",
+		"declarationDir": "../../.local/types/orpc-contract",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"noEmit": true,
-		"noFallthroughCasesInSwitch": true,
-		"noUncheckedSideEffectImports": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"paths": {
-			"#/*": ["./src/*"]
-		},
-		"skipLibCheck": true,
-		"strict": true,
-		"target": "ES2022",
-		"types": ["vite/client", "@types/bun"],
-		"verbatimModuleSyntax": true
+		"types": ["vite/client", "bun"]
 	},
-	"include": ["**/*.ts", "**/*.tsx"]
+	"extends": "../../tsconfig.json"
 }
