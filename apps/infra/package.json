@@ -15,7 +15,7 @@
 		"@pulumi/oci": "^4.22.0",
 		"@pulumi/pulumi": "^3.261.0",
 		"@types/bun": "catalog:",
-		"commander": "catalog:",
+		"cac": "catalog:",
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:"
 	}

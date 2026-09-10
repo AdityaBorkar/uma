@@ -3,7 +3,6 @@
 .github
 .zed
 .agents
-.husky
 
 # Local env & secrets — must never be baked into the image
 .env

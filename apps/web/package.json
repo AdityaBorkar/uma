@@ -13,7 +13,6 @@
 		"dev": "bun run:dev -- vite dev --port 3000",
 		"gen:auth-schema": "bun run:dev -- bunx auth generate --config src/lib/auth/server.ts --output src/schemas/db/auth.gen.ts",
 		"gen:routes": "tsr generate",
-		"prepare": "husky",
 		"preview": "bun run:dev -- vite preview",
 		"run:dev": "bun ../infra/utils/run-command.ts --verbose --stack dev"
 	},
@@ -93,7 +92,6 @@
 		"commitlint": "catalog:",
 		"dotenv": "^17.4.2",
 		"drizzle-kit": "catalog:",
-		"husky": "catalog:",
 		"react-doctor": "^0.9.13",
 		"react-grab": "^0.2.0",
 		"react-scan": "^0.5.7",
