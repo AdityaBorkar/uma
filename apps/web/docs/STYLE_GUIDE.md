@@ -155,10 +155,10 @@ Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/cor
 
 ## Deviations (code wins — fix code or accept)
 
-- Forced dark: `src/routes/__root.tsx:37` renders `<body className="dark">`, overriding the `light dark` meta. Guide norm is no forced dark.
+- Forced dark: `src/routes/__root.tsx` renders `<body className="dark">`, overriding the `light dark` meta. Guide norm is no forced dark.
 - Sidebar: no brand P-mark, no chat actions, and no avatar/user footer.
-- Shadows: `dialog.tsx:38 shadow-sm`, `documents/Editor.tsx:323 shadow-md`, `ui/toaster.tsx:40 shadow-lg + rounded-lg` violate the no-shadow / `rounded-md` rule.
-- Badge: `DocumentHeader.tsx:76` uses `<Badge variant="secondary">`, not the guide's `variant="outline"` + `className` helper pattern.
+- Shadows: `src/components/ui/dialog.tsx` (`shadow-sm`), `src/components/documents/Editor.tsx` (`shadow-md`), `src/components/ui/toaster.tsx` (`shadow-lg + rounded-lg`) violate the no-shadow / `rounded-md` rule.
+- Badge: `src/components/documents/DocumentHeader.tsx` uses `<Badge variant="secondary">`, not the guide's `variant="outline"` + `className` helper pattern.
 
 ## Do / Don’t
 

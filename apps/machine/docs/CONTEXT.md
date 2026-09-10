@@ -97,4 +97,4 @@ _Avoid_: limit (verb), throttle
 - Pressure attribution: `sandboxMetricsForPressure` joins `task.id`/`project.id` labels, but the SDK is the only driver exposing metrics — CLI/mock report `[]`, so scoped hints degrade to host-global there.
 - Unsent contract frames: `check-ack` is defined but never sent (contract-only). `validateMachineFrame` is now enforced on every outbound `send` via `assertMachineFrame`. Buffered logs replay via `resendBufferedLogs` (peek → send → delete-through, at-least-once).
 - Quota refusal shape: the quota-path `claim-ack` carries a generated placeholder `sandboxId` (no sandbox is created), satisfying `ClaimAckFrameSchema(min(1))`.
-- Planned-not-implemented policy (plan §11): per-Task `--net/--no-net`, refusing `reset` while a sandbox is `running`, and Ubuntu pre-pull inside `enroll` (pre-pull lives in `install.sh` today; `programs.reset` only probes).
+- Planned-not-implemented policy (historical remote-machine plan §11, file no longer in tree): per-Task `--net/--no-net`, refusing `reset` while a sandbox is `running`, and Ubuntu pre-pull inside `enroll` (pre-pull lives in `install.sh` today; `programs.reset` only probes).

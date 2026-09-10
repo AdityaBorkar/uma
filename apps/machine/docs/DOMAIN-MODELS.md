@@ -2,14 +2,14 @@
 
 Single aggregate family on the device. Server owns Task lifecycle, Signal triage, Projects; here Task is an external reference (`AssignFrame.taskId`), Heartbeat is an outbound event (grill 2026-09-10).
 
-Source anchors: `../orpc-contract/src/` (contract), `src/sandbox.ts`, `src/execution.ts`, `src/heartbeat.ts`, `src/db.ts`, `src/config/mod.ts`, `src/sync.ts`, `src/git-binding.ts`.
+Source anchors: `../../orpc-contract/src/` (contract), `src/sandbox.ts`, `src/execution.ts`, `src/heartbeat.ts`, `src/db.ts` + `src/db/schema.ts`, `src/config/mod.ts`, `src/sync.ts`, `src/git-binding.ts`.
 
 ## Entity
 
 Identity by stable id, mutable lifecycle.
 
 - **RemoteMachine** (`identity.json` via `src/enroll.ts`): id = server `machineId` (uuid) + user-scoped `name`. Tracks `serverUrl`, `sessionToken`, `enrolledAt`.
-- **Microsandbox** (`src/sandbox.ts`, `SandboxInfo` in `../orpc-contract/src/primitives.ts`): id = sandbox `name` (`task-<short>-<rand>`, ≤128 UTF-8 bytes). Lifecycle `created → running → stopped → destroyed` (`stop --force` = cancel, `remove --force` = reap; no `kill`/`destroy`). SDK uses `stopWithTimeout(0)` + `remove()`; CLI uses `stop --force` / `remove --force`.
+- **Microsandbox** (`src/sandbox.ts`, `SandboxInfo` in `../../orpc-contract/src/primitives.ts`): id = sandbox `name` (`task-<short>-<rand>`, ≤128 UTF-8 bytes). Lifecycle `created → running → stopped → destroyed` (`stop --force` = cancel, `remove --force` = reap; no `kill`/`destroy`). SDK uses `stopWithTimeout(0)` + `remove()`; CLI uses `stop --force` / `remove --force`.
 - **ProviderKey** (`provider_keys` in `src/db/schema.ts`): id = `provider`. Holds `fingerprint` + `secret` + `updatedAt`.
 - **ConvergenceReceipt** (`config_receipts` in `src/db/schema.ts`): id = `(jobId, key, ts)`. Holds `ok` + `error`.
 
@@ -18,9 +18,9 @@ Identity by stable id, mutable lifecycle.
 Immutable, compared by value, no lifecycle.
 
 - **WorktreeBinding**: `(sandboxName, repoUrl, branch, commit)` tuple bound inside the sandbox (`src/git-binding.ts`). Fresh-start = `clean -fdx + reset --hard <commit>`; re-clone only if `.git` corrupt.
-- **HostMetrics** (`../orpc-contract/src/primitives.ts`): `{cpu, ram, disk, pids}` with `0–100` range. `pids` is currently the agent PID allowlist only (`collectPids([process.pid])`) — sandbox PIDs are not collected yet.
-- **QuotaUsage** (`../orpc-contract/src/primitives.ts`): `{running, total}` counts derived from `listSandboxes()` via `snapshotQuota` (`src/sandbox.ts`).
-- **LogChunk**: redacted string ≤ `LOG_FRAME_CAP_BYTES` (256KB, `../orpc-contract/src/constants.ts`). Split via `src/redact.ts:splitChunks`, buffered to `log_buffer` on send failure.
+- **HostMetrics** (`../../orpc-contract/src/primitives.ts`): `{cpu, ram, disk, pids}` with `0–100` range. `pids` is currently the agent PID allowlist only (`collectPids([process.pid])`) — sandbox PIDs are not collected yet.
+- **QuotaUsage** (`../../orpc-contract/src/primitives.ts`): `{running, total}` counts derived from `listSandboxes()` via `snapshotQuota` (`src/sandbox.ts`).
+- **LogChunk**: redacted string ≤ `LOG_FRAME_CAP_BYTES` (256KB, `../../orpc-contract/src/constants.ts`). Split via `splitChunks` in `src/redact.ts`, buffered to `log_buffer` on send failure.
 - **DriftReport**: `{key, drifted, detail?}` from `checkAll` (`src/config/mod.ts`).
 
 ## Aggregate
@@ -50,17 +50,17 @@ Stateless operations spanning entities.
 
 Outbound facts, persisted before send (send failure ≠ loss).
 
-- **Heartbeat** (`../orpc-contract/src/machine-frames.ts`): `{machineId, cliVersion, configVersion, metrics, sandboxes, quotaUsage, scopeHint}` every 30s; SQLite-persisted first (`src/heartbeat.ts`), 30d raw retention.
+- **Heartbeat** (`../../orpc-contract/src/machine-frames.ts`): `{machineId, cliVersion, configVersion, metrics, sandboxes, quotaUsage, scopeHint}` every 30s; SQLite-persisted first (`src/heartbeat.ts`), 30d raw retention.
 - **SandboxLifecycle**: `created / running / completed|failed / stopped / destroyed` rows in `sandbox_events` (destroyed recorded on failure cleanup and reap); TTL reap age comes from the batched `lastSandboxEventTsBatch` (`src/db.ts`).
-- **TaskDone** (`../orpc-contract/src/machine-frames.ts`): `{taskId, status: completed|failed, projectId}`; server enforces terminal + `finishedAt`.
-- **QuotaExceeded** (`../orpc-contract/src/machine-frames.ts` + `claim-ack ok:false`): typed `QuotaExceededError` from `quotaPreCheck`, mapped by `quotaRefusalFrames` (`src/protocol.ts`); no exec, no sandbox created. The refusal `claim-ack` carries a generated placeholder id to satisfy `ClaimAckFrameSchema(min(1))`.
+- **TaskDone** (`../../orpc-contract/src/machine-frames.ts`): `{taskId, status: completed|failed, projectId}`; server enforces terminal + `finishedAt`.
+- **QuotaExceeded** (`../../orpc-contract/src/machine-frames.ts` + `claim-ack ok:false`): typed `QuotaExceededError` from `quotaPreCheck`, mapped by `quotaRefusalFrames` (`src/protocol.ts`); no exec, no sandbox created. The refusal `claim-ack` carries a generated placeholder id to satisfy `ClaimAckFrameSchema(min(1))`.
 - **ConfigConverged**: `reset-ack` per key + `sync-ack` with `receipts[]` on the daemon `reset-config` path; desired state is cached before acks. `check-ack` exists in the contract but is never sent; buffered logs replay through `resendBufferedLogs` (peek → send → delete-through, at-least-once).
 
 ## Domain Policy
 
 Higher-level rules with trade-offs.
 
-- **Pressure policy**: disk>90% or cpu>90% sustained 10min → server Signal; 60% attribution decides scoped (`projectId`) vs global (`null`); 10min cooldown per scope (`../orpc-contract/src/constants.ts`).
+- **Pressure policy**: disk>90% or cpu>90% sustained 10min → server Signal; 60% attribution decides scoped (`projectId`) vs global (`null`); 10min cooldown per scope (`../../orpc-contract/src/constants.ts`).
 - **Retention policy**: `heartbeats` 30d raw + vacuum only when rows were actually deleted (steady state ≈ one vacuum at the retention boundary, no rollup v1, ~86k rows max); `sandbox_events` + `config_receipts` 90d; `log_buffer` 7d (`src/db.ts`, `src/db/schema.ts`).
 - **Quota policy**: effective = server override ?? `limits.json` install defaults (`2×/5× GB RAM`); agent enforces locally, server wins on conflict (`src/heartbeat.ts`).
 - **Secret policy**: full-keys push only; fingerprint-only check; `--secret NAME@HOST` refs only (inline `NAME=VALUE@HOST` forbidden); redaction pre-send + server second pass (`src/config/providers.ts`, `src/redact.ts`).
@@ -71,9 +71,9 @@ Boolean predicates, unit-testable.
 
 - **QuotaSatisfied**: `running+1 <= maxRunning && total+1 <= maxTotal` else throw `QUOTA_EXCEEDED` (`src/sandbox.ts`).
 - **SandboxNameValid**: non-empty, ≤128 UTF-8 bytes (`src/sandbox.ts`).
-- **MachineNameValid**: slug-like lowercase `1–64` chars, not in `RESERVED_MACHINE_NAMES` (`../orpc-contract/src/primitives.ts`, `../orpc-contract/src/constants.ts`).
+- **MachineNameValid**: slug-like lowercase `1–64` chars, not in `RESERVED_MACHINE_NAMES` (`../../orpc-contract/src/primitives.ts`, `../../orpc-contract/src/constants.ts`).
 - **PressureAttributable**: top sandbox `cpu > 60% hostCpu || disk > 60% hostDisk` (`src/heartbeat.ts`).
-- **LogFrameValid**: `chunk ≤ 256KB UTF-8 bytes`, `protocol:"v1"` required (`../orpc-contract/src/machine-frames.ts`). Code splits on UTF-8 bytes (`splitChunks`); the schema enforces the same byte length via a `TextEncoder` refine.
+- **LogFrameValid**: `chunk ≤ 256KB UTF-8 bytes`, `protocol:"v1"` required (`../../orpc-contract/src/machine-frames.ts`). Code splits on UTF-8 bytes (`splitChunks`); the schema enforces the same byte length via a `TextEncoder` refine.
 
 ## Factory
 
@@ -91,19 +91,19 @@ SQLite via `drizzle-orm` + `bun:sqlite` (`src/db.ts` + `src/db/schema.ts`), file
 - **ProviderKeyStore**: `setProviderKey / getProviderKeys / getProviderSecret` (secret never logged).
 - **LogBuffer**: `bufferLog / peekLogBuffer / deleteLogBufferThrough / drainLogBuffer / bufferedLogCount` (rowid-ordered, at-least-once replay, 7d prune).
 
-Migrations are `drizzle-kit` SQL in `drizzle/` (baseline `0000_*` uses `IF NOT EXISTS` so pre-drizzle `state.db` files upgrade in place); `withDb` owns open/close (`src/db/client.ts`). Schema source of truth is `src/db/schema.ts` (`bun run db:generate` after edits, `bun run db:migrate` for manual ops).
+Schema source of truth is `src/db/schema.ts` (tables) with open/migrate in `src/db/client.ts` (`withDb` owns open/close). `drizzle.config.ts` points at `./drizzle` but no committed migrations directory exists yet; helper `scripts/db-migrate.ts` exists but is unwired (no `db:*` npm scripts). Baseline intent is `IF NOT EXISTS` so pre-drizzle `state.db` files upgrade in place.
 
 ## Domain Primitive
 
 Smallest typed values with validation.
 
-- **MachineId**: non-empty string (server uuid). **TaskId**: non-empty string. **ProjectId**: `string | null` where `null` = global Scope (`../orpc-contract/src/server-frames.ts`).
-- **ConnectionStatus**: `enrolled | connected | disconnected | revoked` (`../orpc-contract/src/primitives.ts`); never `state`.
-- **SandboxStatus**: `created | running | stopped | destroyed`; `mapStatus` normalizes SDK/CLI variants (`src/sandbox.ts`).
+- **MachineId**: non-empty string (server uuid). **TaskId**: non-empty string. **ProjectId**: `string | null` where `null` = global Scope (`../../orpc-contract/src/server-frames.ts`).
+- **ConnectionStatus**: `enrolled | connected | disconnected | revoked` (`../../orpc-contract/src/primitives.ts`); never `state`.
+- **SandboxStatus**: `created | running | stopped | destroyed`; `mapStatus` in `src/sandbox/shared.ts` normalizes SDK/CLI variants.
 - **CpuPct / RamPct / DiskPct**: `0–100` numbers (`HostMetricsSchema`).
 - **Fingerprint**: truncated SHA-256 hex of provider secret (`src/redact.ts`); stored alongside the secret, only the fingerprint is compared (`src/config/providers.ts`, `src/db.ts`).
 - **SecretRef**: `NAME@HOST` string; value travels in-process (SDK `secretEnv`) or resolved from host env at start (CLI), never argv/config (`src/sandbox.ts`).
-- **Branch**: defaults `task/<short>` unless explicit; always pinned to `commit` (`../orpc-contract/src/server-frames.ts`).
+- **Branch**: defaults `task/<short>` unless explicit; always pinned to `commit` (`../../orpc-contract/src/server-frames.ts`).
 
 ## Invariant
 
@@ -127,6 +127,6 @@ Executable form of invariants (code → rule).
 - R3 Server `limits` override `limits.json`; agent reports `quotaUsage` every heartbeat (`src/heartbeat.ts`).
 - R4 Heartbeat persist-then-send; `history` queryable after restart (`src/heartbeat.ts`, `src/daemon.ts`).
 - R5 `UPGRADE_REQUIRED` on major → log + exit `3` (systemd backs off; user re-runs `install.sh`) (`src/daemon.ts`).
-- R6 `prune:false` default (`performSync` forces it; `parsePruneFlag` defaults false). Refusing `reset` while a sandbox is `running` is plan §11 policy, not implemented — `resetAll` does not inspect sandbox state today.
-- R7 Sandbox names ≤128 UTF-8 bytes; machine names slug-like + not reserved (`src/sandbox.ts`, `../orpc-contract/src/primitives.ts`).
+- R6 `prune:false` default (`performSync` forces it; `parsePruneFlag` defaults false). Refusing `reset` while a sandbox is `running` is historical plan policy (remote-machine plan §11, file no longer in tree), not implemented — `resetAll` does not inspect sandbox state today.
+- R7 Sandbox names ≤128 UTF-8 bytes; machine names slug-like + not reserved (`src/sandbox.ts`, `../../orpc-contract/src/primitives.ts`).
 - R8 No configured agent (`UMA_AGENT_BIN` or `--agent`) → Sandbox Execution fails closed (system log + `task-done failed`); the `sh` echo stub runs only when explicitly selected (`src/execution.ts`).
