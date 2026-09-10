@@ -1,4 +1,6 @@
 "use client";
+import { useDocsSearch } from "fumadocs-core/search/client";
+import { staticClient } from "fumadocs-core/search/client/orama-static";
 import {
 	SearchDialog,
 	SearchDialogClose,
@@ -10,8 +12,6 @@ import {
 	SearchDialogOverlay,
 	type SharedProps,
 } from "fumadocs-ui/components/dialog/search";
-import { useDocsSearch } from "fumadocs-core/search/client";
-import { staticClient } from "fumadocs-core/search/client/orama-static";
 import { useI18n } from "fumadocs-ui/contexts/i18n";
 
 export default function DefaultSearchDialog(props: SharedProps) {
@@ -24,9 +24,9 @@ export default function DefaultSearchDialog(props: SharedProps) {
 
 	return (
 		<SearchDialog
-			search={search}
-			onSearchChange={setSearch}
 			isLoading={query.isLoading}
+			onSearchChange={setSearch}
+			search={search}
 			{...props}
 		>
 			<SearchDialogOverlay />

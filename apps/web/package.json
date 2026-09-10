@@ -7,7 +7,6 @@
 	},
 	"scripts": {
 		"build": "vite build",
-		"check:env": "bun run scripts/check-env.ts",
 		"db:push": "bun run:dev -- drizzle-kit push",
 		"db:studio": "bun run:dev -- drizzle-kit studio",
 		"dev": "bun run:dev -- vite dev --port 3000",

@@ -1,4 +1,4 @@
-@import "@fontsource-variable/scoutie-sans";
+@import "@fontsource-variable/valley-sans";
 @import "@fontsource-variable/jetbrains-mono";
 @import "tailwindcss";
 @import "fumadocs-ui/css/neutral.css";
@@ -6,7 +6,7 @@
 
 @theme {
 	--font-sans:
-		"Scoutie Sans Variable", "Scoutie Sans", ui-sans-serif, system-ui,
+		"Valley Sans Variable", "Valley Sans", ui-sans-serif, system-ui,
 		-apple-system, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif,
 		"Apple Color Emoji", "Segoe UI Emoji";
 	--font-mono:
@@ -19,8 +19,8 @@ html {
 }
 
 html > body[data-scroll-locked] {
-	margin-right: 0px !important;
 	--removed-body-scroll-bar-size: 0px !important;
+	margin-right: 0px !important;
 }
 
 @layer base {
@@ -43,14 +43,14 @@ html > body[data-scroll-locked] {
 .mermaid-figure {
 	margin-top: 2rem;
 	overflow: hidden;
+	background: var(--fd-card, #161b22);
 	border: 1px solid var(--fd-border, #30363d);
 	border-radius: 0.75rem;
-	background: var(--fd-card, #161b22);
 }
 
 .mermaid-scroll {
-	overflow-x: auto;
 	padding: 1.25rem;
+	overflow-x: auto;
 }
 
 /* Raw chart source shown pre-hydration / with JS disabled: readable mono. */
@@ -60,8 +60,8 @@ div.mermaid:not([data-processed]) {
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
 	line-height: 1.6;
-	white-space: pre;
 	color: var(--fd-muted-foreground, #7d8590);
+	white-space: pre;
 }
 
 /* Rendered output: scale to the card, never overflow the viewport. */
@@ -77,23 +77,23 @@ div.mermaid:not([data-processed]) {
 }
 
 .mermaid-error {
-	border: 1px dashed var(--fd-border, #30363d);
-	border-radius: 0.5rem;
 	padding: 0.75rem;
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
 	color: #f85149;
 	white-space: pre-wrap;
+	border: 1px dashed var(--fd-border, #30363d);
+	border-radius: 0.5rem;
 }
 
 /* Converted ```mermaid blocks in docs prose get the same card treatment. */
 .mermaid-md {
+	padding: 1.25rem;
 	margin-block: 1.5rem;
 	overflow-x: auto;
+	background: var(--fd-card, #161b22);
 	border: 1px solid var(--fd-border, #30363d);
 	border-radius: 0.75rem;
-	background: var(--fd-card, #161b22);
-	padding: 1.25rem;
 }
 
 .mermaid-md .mermaid svg {
@@ -105,10 +105,10 @@ div.mermaid:not([data-processed]) {
 
 /* Collapsible plain-text fallback under each diagram. */
 .mermaid-ascii {
-	border-top: 1px solid var(--fd-border, #30363d);
 	padding: 0.75rem 1.25rem;
 	font-size: 0.8125rem;
 	color: var(--fd-muted-foreground, #7d8590);
+	border-top: 1px solid var(--fd-border, #30363d);
 }
 
 .mermaid-ascii summary {

@@ -1,8 +1,9 @@
 import type { APIRoute } from "astro";
+import { generate as DefaultImage } from "fumadocs-ui/og/takumi";
 import { createElement } from "react";
 import { ImageResponse } from "takumi-js/response";
-import { generate as DefaultImage } from "fumadocs-ui/og/takumi";
-import { source } from "@/lib/source";
+
+import { source } from "@/lib/source.ts";
 
 export function getStaticPaths() {
 	return source.getPages().map((page) => ({
@@ -20,14 +21,14 @@ export const GET: APIRoute = ({ params }) => {
 
 	return new ImageResponse(
 		createElement(DefaultImage, {
-			title: page.data.title,
 			description: page.data.description,
 			site: "Astro",
+			title: page.data.title,
 		}),
 		{
-			width: 1200,
-			height: 630,
 			format: "webp",
+			height: 630,
+			width: 1200,
 		},
 	);
 };

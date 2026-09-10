@@ -1,22 +1,23 @@
-import { glob } from "astro/loaders";
 import { defineCollection, z } from "astro:content";
 
+import { glob } from "astro/loaders";
+
 const docs = defineCollection({
-	loader: glob({ pattern: "**/*.{md,mdx}", base: "./content/docs" }),
+	loader: glob({ base: "./content/docs", pattern: "**/*.{md,mdx}" }),
 	schema: z.object({
-		title: z.string(),
 		description: z.string().optional(),
 		icon: z.string().optional(),
+		title: z.string(),
 	}),
 });
 
 const meta = defineCollection({
-	loader: glob({ pattern: "**/*.{json,yaml}", base: "./content/docs" }),
+	loader: glob({ base: "./content/docs", pattern: "**/*.{json,yaml}" }),
 	schema: z.object({
-		title: z.string().optional(),
 		description: z.string().optional(),
-		pages: z.array(z.string()).optional(),
 		icon: z.string().optional(),
+		pages: z.array(z.string()).optional(),
+		title: z.string().optional(),
 	}),
 });
 

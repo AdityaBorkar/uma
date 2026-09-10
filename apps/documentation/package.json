@@ -18,6 +18,7 @@
 		"@astrojs/react": "^6.0.5",
 		"@fontsource-variable/jetbrains-mono": "^5.3.0",
 		"@fontsource-variable/scoutie-sans": "^5.3.1",
+		"@fontsource-variable/valley-sans": "^5.3.1",
 		"astro": "^7.3.1",
 		"fumadocs-core": "16.15.8",
 		"fumadocs-ui": "npm:@fumadocs/base-ui@16.15.8",

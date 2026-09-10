@@ -1,11 +1,13 @@
+import { navigate } from "astro:transitions/client";
+
+import type { AstroProviderProps } from "fumadocs-core/framework/astro";
+import type { Root } from "fumadocs-core/page-tree";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { DocsPage, type DocsPageProps } from "fumadocs-ui/layouts/docs/page";
-import type { Root } from "fumadocs-core/page-tree";
-import type { ReactNode } from "react";
-import { navigate } from "astro:transitions/client";
 import { RootProvider } from "fumadocs-ui/provider/astro";
-import type { AstroProviderProps } from "fumadocs-core/framework/astro";
-import SearchDialog from "./search";
+import type { ReactNode } from "react";
+
+import SearchDialog from "./search.tsx";
 
 export function Docs({
 	tree,
@@ -22,20 +24,20 @@ export function Docs({
 }) {
 	return (
 		<RootProvider
-			pathname={pathname}
-			params={params}
 			navigate={navigate}
-			theme={{ enabled: false }}
+			params={params}
+			pathname={pathname}
 			search={{ SearchDialog }}
+			theme={{ enabled: false }}
 		>
 			<DocsLayout
-				tree={tree}
-				themeSwitch={{
-					enabled: false,
-				}}
 				nav={{
 					title: "Fumadocs on Astro",
 				}}
+				themeSwitch={{
+					enabled: false,
+				}}
+				tree={tree}
 			>
 				<DocsPage {...page}>{children}</DocsPage>
 			</DocsLayout>

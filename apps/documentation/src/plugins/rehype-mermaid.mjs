@@ -43,24 +43,24 @@ export function rehypeMermaid() {
 			const code = isMermaidCodeBlock(node);
 			if (!code) return;
 			parent.children[index] = {
-				type: "element",
-				tagName: "figure",
-				properties: { className: ["mermaid-figure"] },
 				children: [
 					{
-						type: "element",
-						tagName: "div",
-						properties: { className: ["mermaid-scroll"] },
 						children: [
 							{
-								type: "element",
-								tagName: "div",
-								properties: { className: ["mermaid"] },
 								children: [{ type: "text", value: extractText(code) }],
+								properties: { className: ["mermaid"] },
+								tagName: "div",
+								type: "element",
 							},
 						],
+						properties: { className: ["mermaid-scroll"] },
+						tagName: "div",
+						type: "element",
 					},
 				],
+				properties: { className: ["mermaid-figure"] },
+				tagName: "figure",
+				type: "element",
 			};
 		});
 	};

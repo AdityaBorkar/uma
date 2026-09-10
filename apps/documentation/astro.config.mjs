@@ -12,6 +12,7 @@ import {
 	remarkNpm,
 	remarkStructure,
 } from "fumadocs-core/mdx-plugins";
+
 import { rehypeMermaid } from "./src/plugins/rehype-mermaid.mjs";
 
 export default defineConfig({
@@ -31,7 +32,6 @@ export default defineConfig({
 				remarkNpm,
 				[remarkStructure, { exportAs: "structuredData" }],
 			],
-			syntaxHighlight: false,
 		}),
 	},
 	outDir: ".output",

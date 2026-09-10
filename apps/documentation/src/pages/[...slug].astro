@@ -1,11 +1,15 @@
 ---
-import { render, type CollectionEntry } from "astro:content";
-import { Docs } from "@/components/docs";
+import { type CollectionEntry, render } from "astro:content";
+
 import defaultMdxComponents from "fumadocs-ui/mdx";
+
+import { Docs } from "@/components/docs.tsx";
 import "@/styles/global.css";
-import { getPageImageUrl, source } from "@/lib/source";
-import Layout from "@/components/layout.astro";
+
 import type { TOCItemType } from "fumadocs-core/toc";
+
+import Layout from "@/components/layout.astro";
+import { getPageImageUrl, source } from "@/lib/source.ts";
 
 interface Props {
 	page: CollectionEntry<"docs">;

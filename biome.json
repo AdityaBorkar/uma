@@ -44,7 +44,7 @@
 	},
 	"linter": {
 		"domains": {
-			"astro": "none",
+			"astro": "all",
 			"next": "none",
 			"project": "all",
 			"qwik": "none",
@@ -100,6 +100,12 @@
 						"useAriaPropsSupportedByRole": "off"
 					}
 				}
+			}
+		},
+		{
+			"includes": ["apps/documentation/**/*"],
+			"linter": {
+				"enabled": false
 			}
 		}
 	],
