@@ -41,4 +41,4 @@ Parse inbound with `parseServerFrame()` — unknown `t` → `null` (logged + ign
 
 - `LimitsSchema { maxRunning ≥1, maxTotal ≥1, cpu?, ram? }`, `QuotaUsageSchema { running, total }`, `HostMetricsSchema { cpu/ram/disk 0–100, pids }`, `SandboxInfoSchema { id, status, taskId, projectId }`, `MachineNameSchema` (slug 1–64, not reserved), `ConnectionStatusSchema` (`src/schemas/primitives.ts`).
 - `UBUNTU_IMAGE`, `TASK_CPUS=1`, `TASK_MEMORY_MB=1024`, `TASK_MAX_CPUS=2`, `TASK_MAX_MEMORY_MB=2048`, `LOG_FRAME_CAP_BYTES=256KB`, pressure + heartbeat constants, `RESERVED_MACHINE_NAMES` (`src/constants.ts`).
-- Frame catalog: `apps/orpc-contract/docs/FRAMES.md`. Test server implementing this contract locally: `apps/machine/server-central/` (`bun run server`, :3030).
+- Frame catalog: `apps/orpc-contract/docs/FRAMES.md`. Production server implementing this contract: `apps/web` (`src/lib/machines/`, `/api/machines/ws` Nitro websocket, `device.*`/`machines.*` oRPC procedures).

@@ -34,6 +34,6 @@ Parsing: `parseServerFrame` returns `ServerFrame | null`; unknown `t` maps to `n
 - `SandboxInfo` (`id`, `status: created | running | stopped | destroyed`, `taskId: string | null`, `projectId: string | null`). `taskId: null` only occurs for foreign/unlabeled sandboxes seen via list; the agent never creates unbound sandboxes.
 - `MachineName` (slug-like lowercase 1–64, not in `RESERVED_MACHINE_NAMES`), `ConnectionStatus` (`enrolled | connected | disconnected | revoked`).
 
-## HTTPS/oRPC (`src/orpc.ts`)
+## HTTPS/oRPC (`src/schemas/device.ts`)
 
 Device-code enrollment (`DeviceCodeRequest/Response`, `DeviceTokenRequest/Response`, `DeviceTokenError`: `authorization_pending | slow_down | expired_token | access_denied`), atomic claim (`TaskClaimRequest`: `machineId/sandboxId/taskId`), and shared `DriftEntry` / `Receipt` shapes reused by `check-ack` / `reset-ack` / `sync-ack`.

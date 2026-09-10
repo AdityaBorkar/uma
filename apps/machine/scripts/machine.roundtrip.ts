@@ -1,5 +1,8 @@
-// heartbeat -> claim -> log -> done vs staging/test server.
-// Usage: bun run scripts/machine.roundtrip.ts --server http://127.0.0.1:3030
+// heartbeat -> claim -> log -> done vs the web server (E2E_SEED=1).
+// Usage: bun run scripts/machine.roundtrip.ts --server http://127.0.0.1:3000
+// The web server must run with E2E_SEED=1 so the /api/test/* seed helpers
+// (approve, queue-task, task, heartbeats) are enabled. Production refuses
+// them with 404.
 import cac from "cac";
 
 const roundtripCli = cac("machine.roundtrip");
@@ -10,7 +13,7 @@ const rawServer = roundtripCli.options.server as string | number | undefined;
 const SERVER = String(
 	typeof rawServer === "string" || typeof rawServer === "number"
 		? rawServer
-		: (process.env.UMA_SERVER_URL ?? "http://127.0.0.1:3030"),
+		: (process.env.UMA_SERVER_URL ?? "http://127.0.0.1:3000"),
 ).replace(/\/$/, "");
 const WS_URL =
 	SERVER.replace("https://", "wss://").replace("http://", "ws://") +
@@ -40,13 +43,17 @@ const code = (await codeRes.json()) as {
 };
 console.log(`[roundtrip] code=${code.user_code}`);
 
-// 2. auto-approve via test endpoint (stands in for browser approval)
-const approveRes = await fetch(`${SERVER}/device/approve`, {
+// 2. approve via dev seed endpoint (stands in for the browser approval UI at
+// /device; 404 unless the server runs with E2E_SEED=1).
+const approveRes = await fetch(`${SERVER}/api/test/approve`, {
 	body: JSON.stringify({ approve: true, user_code: code.user_code }),
 	headers: { "content-type": "application/json" },
 	method: "POST",
 });
-assert(approveRes.ok, `approve HTTP ${approveRes.status}`);
+assert(
+	approveRes.ok,
+	`approve HTTP ${approveRes.status} (is E2E_SEED=1 set on the server?)`,
+);
 console.log(`[roundtrip] approved`);
 
 // 3. device.token
@@ -66,6 +73,10 @@ assert(
 );
 const tok = JSON.parse(tokText) as { access_token: string; machine_id: string };
 console.log(`[roundtrip] token machine=${tok.machine_id}`);
+const auth = {
+	authorization: `Bearer ${tok.access_token}`,
+	"content-type": "application/json",
+};
 
 // 4. ws connect (Bearer session auth)
 const ws = new WebSocket(WS_URL, {
@@ -106,54 +117,45 @@ send({
 	scopeHint: null,
 	t: "heartbeat",
 });
-await new Promise((r) => setTimeout(r, 500));
+await new Promise((r) => setTimeout(r, 800));
 const hb = (await fetch(
-	`${SERVER}/test/heartbeats?machineId=${tok.machine_id}`,
+	`${SERVER}/api/test/heartbeats?machineId=${tok.machine_id}`,
+	{ headers: auth },
 ).then((r) => r.json())) as {
 	heartbeats: unknown[];
 };
 assert(hb.heartbeats.length >= 1, "heartbeat not recorded server-side");
 console.log(`[roundtrip] heartbeat ack (${hb.heartbeats.length} rows)`);
 
-// 6. queue task + claim (atomic UPDATE WHERE queued)
-const q = (await fetch(`${SERVER}/test/queue-task`, {
-	body: JSON.stringify({
-		projectId: null,
-		prompt: "roundtrip hello",
-		repoUrl: "",
-	}),
-	headers: { "content-type": "application/json" },
+// 6. queue task + claim (atomic queued -> running, guarded server-side)
+const q = (await fetch(`${SERVER}/api/test/queue-task`, {
+	body: JSON.stringify({ prompt: "roundtrip hello" }),
+	headers: auth,
 	method: "POST",
 }).then((r) => r.json())) as { task: { id: string } };
 const taskId = q.task.id;
 console.log(`[roundtrip] queued ${taskId}`);
 
-const claim = await fetch(`${SERVER}/rpc/tasks.claim`, {
+const claim = await fetch(`${SERVER}/api/machines/claim`, {
 	body: JSON.stringify({
 		machineId: tok.machine_id,
 		sandboxId: "sbx-roundtrip",
 		taskId,
 	}),
-	headers: {
-		authorization: `Bearer ${tok.access_token}`,
-		"content-type": "application/json",
-	},
+	headers: auth,
 	method: "POST",
 });
 assert(claim.ok, `claim HTTP ${claim.status}`);
 console.log(`[roundtrip] claim queued->running`);
 
 // double-claim must 409 (authoritative)
-const claim2 = await fetch(`${SERVER}/rpc/tasks.claim`, {
+const claim2 = await fetch(`${SERVER}/api/machines/claim`, {
 	body: JSON.stringify({
 		machineId: tok.machine_id,
 		sandboxId: "sbx-other",
 		taskId,
 	}),
-	headers: {
-		authorization: `Bearer ${tok.access_token}`,
-		"content-type": "application/json",
-	},
+	headers: auth,
 	method: "POST",
 });
 assert(claim2.status === 409, `double claim should 409, got ${claim2.status}`);
@@ -176,7 +178,7 @@ send({
 	t: "log",
 	taskId,
 });
-await new Promise((r) => setTimeout(r, 500));
+await new Promise((r) => setTimeout(r, 800));
 
 // 8. task-done terminal + finishedAt
 send({
@@ -187,18 +189,18 @@ send({
 	t: "task-done",
 	taskId,
 });
-await new Promise((r) => setTimeout(r, 500));
-const done = (await fetch(`${SERVER}/test/task?id=${taskId}`).then((r) =>
-	r.json(),
-)) as {
+await new Promise((r) => setTimeout(r, 800));
+const done = (await fetch(`${SERVER}/api/test/task?id=${taskId}`, {
+	headers: auth,
+}).then((r) => r.json())) as {
 	task: {
 		status: string;
-		finishedAt?: number;
+		finishedAt?: string | null;
 		logs: { stream: string }[];
 	} | null;
 };
 assert(done.task?.status === "completed", `task status ${done.task?.status}`);
-assert(typeof done.task?.finishedAt === "number", "finishedAt missing");
+assert(done.task?.finishedAt, "finishedAt missing");
 assert(
 	done.task?.logs.some((l) => l.stream === "stdout"),
 	"stdout log missing",

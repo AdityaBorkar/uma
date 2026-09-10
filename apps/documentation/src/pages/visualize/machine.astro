@@ -82,7 +82,7 @@ const inbound = [
 
       <h2 class="mt-8 text-xl font-semibold">Execution pipeline</h2>
       <div class="mt-4 flex flex-col gap-2 text-sm">
-        {["assign received", "quotaPreCheck → over? [quota-exceeded + claim-ack❌] → refused", "create sandbox", "POST /rpc/tasks.claim → 409? [claim-ack❌] → rejected, free sandbox", "claim-ack ✅ → start", "ensureBinding (clone / fetch / checkout task/<short>, optional freshStart)", "execStream (redacted, ≤256KB chunks → log frames)", "task-done {completed|failed} → stop (stopped, TTL reap later)"].map((s, i) => (
+        {["assign received", "quotaPreCheck → over? [quota-exceeded + claim-ack❌] → refused", "create sandbox", "POST /api/rpc/machines/claim → 409? [claim-ack❌] → rejected, free sandbox", "claim-ack ✅ → start", "ensureBinding (clone / fetch / checkout task/<short>, optional freshStart)", "execStream (redacted, ≤256KB chunks → log frames)", "task-done {completed|failed} → stop (stopped, TTL reap later)"].map((s, i) => (
           <div class="flex items-start gap-3">
             <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fd-primary text-xs font-semibold text-fd-primary-foreground">{i + 1}</span>
             <span class="rounded-lg border border-fd-border bg-fd-card px-3 py-1.5 font-mono text-xs">{s}</span>

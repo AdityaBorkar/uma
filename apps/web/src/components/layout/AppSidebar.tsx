@@ -191,8 +191,10 @@ export function AppSidebar({
 											"bg-sidebar-accent text-sidebar-accent-foreground font-medium",
 									}}
 									className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-muted-foreground text-sm hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
-									params={isScoped ? { projectSlug: currentScope } : undefined}
 									to={item.to}
+									{...(isScoped
+										? { params: { projectSlug: currentScope } }
+										: {})}
 								>
 									{item.icon ? (
 										<item.icon className="size-4.25 shrink-0" />

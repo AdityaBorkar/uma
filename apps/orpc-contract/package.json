@@ -7,6 +7,7 @@
 	"types": "./src/index.ts",
 	"dependencies": {
 		"@orpc/contract": "^1.15.0",
+		"nanoid": "catalog:",
 		"semver": "catalog:",
 		"zod": "catalog:"
 	},

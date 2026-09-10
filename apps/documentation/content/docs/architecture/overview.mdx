@@ -16,9 +16,9 @@ browser ── TanStack Start ── POST /api/rpc/* ─▶ web server (Drizzle/
 
 1. **Enroll** (`apps/machine/src/enroll.ts`) — device flow, writes identity (`0600`), limits from `quotaDefaultsFromRam`, SQLite, optional systemd unit. See [/cli/enroll](/cli/enroll).
 2. **Daemon loop** (`apps/machine/src/daemon.ts`) — `connectWithBackoff` + persist-first heartbeat tick + TTL reap. See [/cli/daemon](/cli/daemon), [/machine/heartbeat](/machine/heartbeat).
-3. **Execute** (`apps/machine/src/execution.ts`) — quota → claim (`POST /rpc/tasks.claim`, `409` authoritative) → start → git bind → redacted `execStream` (256 KB chunks) → `task-done` → stop. See [/machine/execution-pipeline](/machine/execution-pipeline).
+3. **Execute** (`apps/machine/src/execution.ts`) — quota → claim (`POST /api/rpc/machines/claim`, `409` authoritative) → start → git bind → redacted `execStream` (256 KB chunks) → `task-done` → stop. See [/machine/execution-pipeline](/machine/execution-pipeline).
 4. **Converge** — server `reset-config` → per-key `reset-ack` (+ `sync-ack` for `"*"`). See [/machine/reset-config](/machine/reset-config).
-5. **Web product** (`apps/web`) — user triages a Signal → creates a Task (`queued`) → (once the server implements the WS side; today `server-central` is the test harness) the task is `assign`ed → daemon streams `log`/`task-done` → web shows `running → completed|failed`. Web procedures: [/contracts/server-web](/contracts/server-web).
+5. **Web product** (`apps/web`) — user triages a Signal → creates a Task (`queued`) → the task is `assign`ed over the machine WS (`/api/machines/ws`) → daemon streams `log`/`task-done` → web shows `running → completed|failed`. Device enrollment at `/device`, machine registry at `/settings/machines`. Web procedures: [/contracts/server-web](/contracts/server-web).
 6. **Enforcement** — version shortfall → `UPGRADE_REQUIRED` → exit `3`. See [/contracts/versioning](/contracts/versioning).
 
 ## Repo map
@@ -26,7 +26,7 @@ browser ── TanStack Start ── POST /api/rpc/* ─▶ web server (Drizzle/
 | Dir | Role |
 | --- | --- |
 | `apps/web` | Product app (routes in `src/routes/`, oRPC in `src/rpc/`, schemas in `src/schemas/db/`) |
-| `apps/machine` | Device agent (`src/`) + local contract test server (`server-central/`, not production) |
+| `apps/machine` | Device agent (`src/`); its server side lives in `apps/web` |
 | `apps/orpc-contract` | Frozen `v1` wire (`src/`), imported by machine via relative path, never the reverse |
 | `apps/infra` | Pulumi (OCI + Cloudflare + Docker); `dev` stack skips the VM |
 | `apps/documentation` | This site (Astro + Fumadocs) |

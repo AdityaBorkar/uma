@@ -19,10 +19,12 @@ export const env = createEnv({
 		DB_PORT: z.coerce.number().min(1024),
 		DB_SSL: z.stringbool(),
 		DB_USER: z.string().min(1),
+		E2E_SEED: z.stringbool().default(false),
 		GITHUB_CLIENT_ID: z.string().min(1),
 		GITHUB_CLIENT_SECRET: z.string().min(1),
 		GOOGLE_CLIENT_ID: z.string().min(1),
 		GOOGLE_CLIENT_SECRET: z.string().min(1),
+		MACHINE_CLIENT_ALLOWLIST: z.string().optional(),
 	},
 });
 

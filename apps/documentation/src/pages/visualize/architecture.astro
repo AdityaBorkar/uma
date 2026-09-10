@@ -67,7 +67,7 @@ const nav = [
       </div>
 
       <div class="mt-6 rounded-xl border border-dashed border-fd-border p-5 text-sm text-fd-muted-foreground">
-        <span class="font-semibold text-fd-foreground">Status gaps (verified):</span> web has no machine registry or WS server yet (<code class="font-mono">settings/machines.tsx</code> placeholder; <code class="font-mono">server-central/</code> is the local test harness). Contract-first <code class="font-mono">device.* / machines.*</code> await <code class="font-mono">implement(apiContract)</code>. Infra paths still reference pre-move locations — see <a class="text-fd-primary hover:underline" href="/architecture/overview">/architecture/overview</a>.
+        <span class="font-semibold text-fd-foreground">Status (verified):</span> web owns the machine server (<code class="font-mono">src/lib/machines/</code>, <code class="font-mono">device.* / machines.*</code> oRPC procedures on contract schemas, <code class="font-mono">/api/machines/ws</code> Nitro websocket, <code class="font-mono">/settings/machines</code> registry). Infra paths still reference pre-move locations — see <a class="text-fd-primary hover:underline" href="/architecture/overview">/architecture/overview</a>.
       </div>
     </main>
   </div>

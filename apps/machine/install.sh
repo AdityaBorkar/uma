@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # uma-machine install.sh — curl-pipe installer (test + staging).
-# Usage: curl -fsSL <server>/install.sh | bash -s -- --server http://127.0.0.1:3030
+# Usage: curl -fsSL <server>/install.sh | bash -s -- --server http://127.0.0.1:3000
 set -euo pipefail
 
-SERVER="${UMA_SERVER_URL:-http://127.0.0.1:3030}"
+SERVER="${UMA_SERVER_URL:-http://127.0.0.1:3000}"
 MSB_VERSION="${MSB_VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 

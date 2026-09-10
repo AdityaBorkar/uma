@@ -20,6 +20,10 @@ ENV PUBLIC_WEB_DOMAIN=$PUBLIC_WEB_DOMAIN \
     PUBLIC_WEB_SSL=$PUBLIC_WEB_SSL \
     PUBLIC_POSTHOG_KEY=$PUBLIC_POSTHOG_KEY \
     PUBLIC_POSTHOG_HOST=$PUBLIC_POSTHOG_HOST
+# The runtime stage runs under Bun, so build the Bun Nitro preset (required
+# for the /api/machines/ws websocket handler — the default node preset's
+# crossws adapter refuses to start under Bun).
+ENV NITRO_PRESET=bun
 
 RUN bun vite build
 

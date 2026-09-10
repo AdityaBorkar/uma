@@ -263,7 +263,7 @@ export async function claimTask(req: ClaimRequest): Promise<ClaimResult> {
 	try {
 		const res = await pRetry(
 			async () => {
-				const r = await fetch(`${req.serverUrl}/rpc/tasks.claim`, {
+				const r = await fetch(`${req.serverUrl}/api/machines/claim`, {
 					body: JSON.stringify({
 						machineId: req.machineId,
 						sandboxId: req.sandboxId,

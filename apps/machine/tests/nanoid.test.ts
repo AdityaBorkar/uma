@@ -3,9 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { branchForTask } from "@uma/orpc-contract";
+import {
+	branchForTask,
+	deviceCode,
+	sessionToken,
+	userCode,
+} from "@uma/orpc-contract";
 
-import { Store } from "../server-central/src/store.ts";
 import { sandboxNameFor } from "../src/execution.ts";
 import { validateSandboxName } from "../src/sandbox.ts";
 
@@ -91,26 +95,19 @@ describe("nanoid migration", () => {
 		expect(branchForTask("t", "custom")).toBe("custom");
 	});
 
-	test("store ids preserve prefixes/lengths/formats", () => {
-		const s = new Store();
-		const d = s.createDevice("cid");
-		expect(d.device_code).toMatch(/^dev_[A-Z2-9]{24}$/);
-		expect(d.device_code.length).toBe(4 + 24);
-		expect(d.user_code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
-		for (const ch of d.user_code.replace("-", ""))
-			expect(UPPER_NL).toContain(ch);
-		const t = s.queueTask({ projectId: null, prompt: "hi", repoUrl: "" });
-		expect(t.id).toMatch(/^task_[a-z2-9]{8}$/);
-		s.approveDevice(d.user_code);
-		const tok = s.pollToken(d.device_code, "cid");
-		expect(tok.ok).toBe(true);
-		if (tok.ok) expect(tok.token).toMatch(/^sess_[A-Z2-9]{32}$/);
+	test("wire ids preserve prefixes/lengths/formats", () => {
+		const d = deviceCode();
+		expect(d).toMatch(/^dev_[A-Z2-9]{24}$/);
+		expect(d.length).toBe(4 + 24);
+		const u = userCode();
+		expect(u).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+		for (const ch of u.replace("-", "")) expect(UPPER_NL).toContain(ch);
+		expect(sessionToken()).toMatch(/^sess_[A-Z2-9]{32}$/);
 	});
 
-	test("store user_codes unique over bursts", () => {
-		const s = new Store();
+	test("user_codes unique over bursts", () => {
 		const seen = new Set<string>();
-		for (let i = 0; i < 200; i++) seen.add(s.createDevice("c").user_code);
+		for (let i = 0; i < 200; i++) seen.add(userCode());
 		expect(seen.size).toBe(200);
 	});
 });

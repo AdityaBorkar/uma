@@ -18,7 +18,7 @@ uma-machine run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [-
 | `--agent <bin>` | `UMA_AGENT_BIN` | Agent binary override |
 | `--fresh` / `--fresh-start` | off | `freshStart: true` — clean worktree before exec |
 
-Builds an `assign`-shaped frame (`{ t: "assign", taskId, prompt, projectId, repoUrl, commit, branch, freshStart }`) and runs the full pipeline: quota pre-check → claim (`POST /rpc/tasks.claim`, `409` authoritative) → `claim-ack` → `start` → `ensureBinding` → `execStream` (redacted, 256 KB chunks) → `task-done` → `stop`. Every emitted frame is printed as JSON (`emit: console.log(JSON.stringify(f))`).
+Builds an `assign`-shaped frame (`{ t: "assign", taskId, prompt, projectId, repoUrl, commit, branch, freshStart }`) and runs the full pipeline: quota pre-check → claim (`POST /api/rpc/machines/claim`, `409` authoritative) → `claim-ack` → `start` → `ensureBinding` → `execStream` (redacted, 256 KB chunks) → `task-done` → `stop`. Every emitted frame is printed as JSON (`emit: console.log(JSON.stringify(f))`).
 
 ## Exit codes
 

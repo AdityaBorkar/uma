@@ -9,7 +9,16 @@ import { defineConfig } from "vite";
 const config = defineConfig({
 	plugins: [
 		devtools(),
-		nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+		nitro({
+			features: { websocket: true },
+			handlers: [
+				{
+					handler: "./server/machines-ws.ts",
+					route: "/api/machines/ws",
+				},
+			],
+			rollupConfig: { external: [/^@sentry\//] },
+		}),
 		tailwindcss(),
 		tanstackStart(),
 		viteReact(),

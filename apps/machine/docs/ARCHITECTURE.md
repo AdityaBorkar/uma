@@ -19,7 +19,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 
 - Runtime deps (`package.json`): `zod` (validation), `microsandbox` SDK (in-process sandbox API), plus CLI/store/util deps (`cac`, `cli-table3`, `drizzle-orm`, `env-paths`, `es-toolkit`, `fast-redact`, `ms`, `nanoid`, `p-retry`, `picocolors`, `semver`, `write-file-atomic`, `zod-validation-error`; `drizzle-kit` is currently listed under dependencies but used as a dev tool). Dev: `@types/*`, `typescript`, `zod-to-json-schema`.
 - System packages (never bundled): `msb` runtime via `install.sh` (`install.microsandbox.dev` / brew, resolved via `MSB_PATH`/`UMA_MSB_BIN`), pinned `UBUNTU_IMAGE=docker.io/library/ubuntu:24.04` (`orpc-contract/src/constants.ts`), fixed `1c/1G` + `2x` max.
-- Local package: `orpc-contract/` (frozen v1: `index.ts` barrel + `constants.ts`, `schemas/` (`primitives.ts`, `machine-frames.ts`, `server-frames.ts`, …), `orpc.ts`, `utils.ts`). `server-central/` is dev/staging harness only.
+- Local package: `orpc-contract/` (frozen v1: `index.ts` barrel + `constants.ts`, `ids.ts`, `schemas/`, `contracts/`, `utils.ts`). The machine server lives in `apps/web` (`src/lib/machines/`, `device.*`/`machines.*` oRPC procedures, `/api/machines/ws` Nitro websocket); the contract package never imports from either app.
 
 ## Component
 
@@ -62,7 +62,7 @@ Inbound (driven by outside):
 
 Outbound (driven by us, faked in tests):
 
-- Server port: ws frames + `POST /rpc/tasks.claim` (`claimTask` in `src/execution.ts`, injectable via `ExecutionDeps.claim`; non-ok frees the sandbox).
+- Server port: ws frames + `POST /api/rpc/machines/claim` (`claimTask` in `src/execution.ts`, injectable via `ExecutionDeps.claim`; non-ok frees the sandbox).
 - Sandbox port: `createSandbox/startSandbox/stopSandbox/removeSandbox/listSandboxes/snapshotQuota/execInSandbox/execStreamInSandbox/sandboxMetricsForPressure` (`src/sandbox.ts`, backed by the `SandboxDriver` port).
 - Store port: `withDb` + `insert*/query*/persist*/record*` (`src/db.ts`, `src/db/client.ts`, `src/db/schema.ts`).
 - Clock/Random port: `Date.now()`, `customAlphabet` (names), `setInterval` (tick); `evaluateScopeHint` is pure and clock-free (server owns sustain/cooldown).

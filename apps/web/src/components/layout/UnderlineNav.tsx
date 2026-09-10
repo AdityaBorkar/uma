@@ -49,12 +49,10 @@ export function UnderlineNav({
 							}}
 							className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-transparent border-b-2 px-3 py-3 text-muted-foreground text-sm hover:text-foreground"
 							key={item.to}
-							params={
-								isScoped && currentScope
-									? { projectSlug: currentScope }
-									: undefined
-							}
 							to={item.to}
+							{...(isScoped && currentScope
+								? { params: { projectSlug: currentScope } }
+								: {})}
 						>
 							{item.icon ? <item.icon className="size-4.25" /> : null}
 							{item.label}

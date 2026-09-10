@@ -6,7 +6,7 @@ import {
 	DeviceTokenRequestSchema,
 	DeviceTokenResponseSchema,
 	TaskClaimRequestSchema,
-} from "../orpc.ts";
+} from "../schemas/device.ts";
 import {
 	CheckStateResponseSchema,
 	CommentCreateInputSchema,

@@ -7,7 +7,7 @@ Implemented in `apps/machine/src/execution.ts:309` (`executeTask`), shared by da
 
 ```text
 assign ─▶ quotaPreCheck ─(over)─▶ [quota-exceeded + claim-ack ok:false] ─▶ refused
-   │─(ok)─▶ create sandbox ─▶ POST /rpc/tasks.claim ─(409/4xx)─▶ [claim-ack ok:false] ─▶ rejected, free sandbox
+   │─(ok)─▶ create sandbox ─▶ POST /api/rpc/machines/claim ─(409/4xx)─▶ [claim-ack ok:false] ─▶ rejected, free sandbox
    │─(claimed)─▶ [claim-ack ok:true] ─▶ start ─▶ ensureBinding (clone/fetch/checkout task/<short>, optional freshStart)
    │─▶ execStream (redacted, ≤256KB chunks → log frames) ─▶ task-done {completed|failed} ─▶ stop (stopped, for TTL reap)
 ```

@@ -51,6 +51,9 @@ export const APP_ENV_VARS: AppEnvVar[] = [
 	{ name: "GOOGLE_CLIENT_SECRET", secret: true, source: "app" },
 	{ name: "GITHUB_CLIENT_ID", secret: true, source: "app" },
 	{ name: "GITHUB_CLIENT_SECRET", secret: true, source: "app" },
+	// Optional machine-server vars (dev defaults apply when unset).
+	{ name: "MACHINE_CLIENT_ALLOWLIST", optional: true, source: "app" },
+	{ name: "E2E_SEED", optional: true, source: "app" },
 	{ name: "DB_USER", secret: true, source: "postgres" },
 	{ name: "DB_PASSWORD", secret: true, source: "postgres" },
 	// Derived by the infra layer, not read from Pulumi config.

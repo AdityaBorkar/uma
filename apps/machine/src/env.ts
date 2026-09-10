@@ -64,7 +64,7 @@ export function stateDbPath(): string {
 export function serverUrl(): string {
 	return (
 		first(process.env.UMA_SERVER_URL, process.env.UMA_SERVER) ??
-		"http://127.0.0.1:3030"
+		"http://127.0.0.1:3000"
 	);
 }
 

@@ -6,6 +6,7 @@
 
 export * from "./common.ts";
 export * from "./connections.ts";
+export * from "./device.ts";
 export * from "./documents.ts";
 export * from "./machine-frames.ts";
 export * from "./machines.ts";

@@ -30,6 +30,7 @@ export default defineConfig({
 				remarkNpm,
 				[remarkStructure, { exportAs: "structuredData" }],
 			],
+			syntaxHighlight: false,
 		}),
 	},
 	outDir: ".output",

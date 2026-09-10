@@ -13,14 +13,14 @@ uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <i
 
 | Flag | Default | Notes |
 | --- | --- | --- |
-| `--server <url>` | `serverUrl()` = `UMA_SERVER_URL` \| `UMA_SERVER` \| `http://127.0.0.1:3030` | Target server |
+| `--server <url>` | `serverUrl()` = `UMA_SERVER_URL` \| `UMA_SERVER` \| `http://127.0.0.1:3000` | Target server |
 | `--name <machine>` / `--machine <machine>` | prompted / generated | Validated by `MachineNameSchema` (lowercase slug, 1–64 chars, not in `RESERVED_MACHINE_NAMES`) |
 | `--systemd` | off | Writes a `uma-machine.service` unit (`ExecStart=<exec> daemon`, `Restart=always`) |
 | `--client-id <id>` | `uma-machine` | OAuth client id sent as `client_id` |
 
 ## Flow
 
-1. `POST /device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/orpc.ts:5`). Server returns `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
+1. `POST /device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/schemas/device.ts`). Server returns `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
 2. CLI prints the `user_code` + `verification_uri_complete` and asks the operator to approve in a browser.
 3. Polls `POST /device/token` with `{ client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }` until success or a terminal error. Handles `authorization_pending` (keep polling), `slow_down` (back off), `expired_token` / `access_denied` (abort). Jitter + `p-retry` between attempts.
 4. On success (`{ access_token, machine_id, token_type: "Bearer" }`) writes, with `0600` permissions:

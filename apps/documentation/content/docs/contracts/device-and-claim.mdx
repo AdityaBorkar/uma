@@ -3,7 +3,7 @@ title: Device flow & claim
 description: Enrollment HTTPS and the atomic task claim.
 ---
 
-Schemas in `apps/orpc-contract/src/orpc.ts`; machine side in `apps/machine/src/enroll.ts` and `execution.ts`; contract wiring `device.*` / `machines.claim` in `apps/orpc-contract/src/contracts/api.ts:132`. Local test server: `apps/machine/server-central/src/index.ts` (`bun run server`, :3030).
+Schemas in `apps/orpc-contract/src/schemas/device.ts`; machine side in `apps/machine/src/enroll.ts` and `execution.ts`; contract wiring `device.*` / `machines.claim` in `apps/orpc-contract/src/contracts/api.ts`. Production server: `apps/web` (`src/lib/machines/service.ts`, `src/rpc/procedures/device.ts`, `src/rpc/procedures/machines.ts`).
 
 ## Device authorization (`device.code` → `device.token`)
 
@@ -25,14 +25,14 @@ Contract errors map to `AUTHORIZATION_PENDING | SLOW_DOWN | EXPIRED_TOKEN | ACCE
 ## Task claim (`machines.claim`)
 
 ```text
-POST /rpc/tasks.claim  { machineId, sandboxId, taskId }   (all min-1 strings)
+POST /api/rpc/machines/claim  { machineId, sandboxId, taskId }   (all min-1 strings)
   → { ok, startedAt? }            (contract: TaskClaimResponseSchema)
-  → CONFLICT on double-claim      (contract error)
+  → CONFLICT (409) on double-claim (contract error)
 ```
 
 The claim is **atomic and authoritative**: `409` means the server gave the task to someone else — the machine frees its sandbox and emits `claim-ack { ok: false }` (`rejected`). Network failure after retries → `CLAIM_UNREACHABLE`. Only a claimed task proceeds to `start`. Used by both daemon `assign` handling and `uma-machine run`.
 
-## Other `machines.*` HTTPS (contract-first, test-server implemented)
+## Other `machines.*` HTTPS (implemented in `apps/web`)
 
 | Procedure | Input | Output |
 | --- | --- | --- |

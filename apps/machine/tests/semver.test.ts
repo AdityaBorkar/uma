@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 
 import { compareVersions, needsUpgrade } from "@uma/orpc-contract";
 
-import { Store } from "../server-central/src/store.ts";
 import { pinSatisfied } from "../src/config/adityab-agent.ts";
 
 describe("semver migration", () => {
@@ -40,11 +39,9 @@ describe("semver migration", () => {
 		expect(pinSatisfied("anything-at-all", "latest")).toBe(true);
 	});
 
-	test("store isUpgradeRequired uses semver majors", () => {
-		const s = new Store();
-		s.minCliVersion = "1.0.0";
-		expect(s.isUpgradeRequired("0.9.0")).toBe(true);
-		expect(s.isUpgradeRequired("1.1.0")).toBe(false);
-		expect(s.isUpgradeRequired("v0.5.0")).toBe(true);
+	test("server upgrade gate uses semver (contract needsUpgrade)", () => {
+		expect(needsUpgrade("0.9.0", "1.0.0")).toBe(true);
+		expect(needsUpgrade("1.1.0", "1.0.0")).toBe(false);
+		expect(needsUpgrade("v0.5.0", "1.0.0")).toBe(true);
 	});
 });
