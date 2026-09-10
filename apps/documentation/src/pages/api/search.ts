@@ -6,7 +6,7 @@ import { getStructuredData, source } from "@/source";
 const server = createFromSource(source, {
 	buildIndex(page) {
 		const { url } = page;
-		const { description, title, _raw } = page.data;
+		const { description = "", title, _raw } = page.data;
 		const structuredData = getStructuredData(_raw);
 		return { description, id: _raw.id, structuredData, title, url };
 	},
