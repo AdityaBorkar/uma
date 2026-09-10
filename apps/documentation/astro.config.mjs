@@ -1,9 +1,10 @@
 // @ts-check
-import { defineConfig } from "astro/config";
+
+import { unified } from "@astrojs/markdown-remark";
+import mdx from "@astrojs/mdx";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
-import mdx from "@astrojs/mdx";
-import { unified } from "@astrojs/markdown-remark";
+import { defineConfig } from "astro/config";
 import {
 	rehypeCode,
 	remarkCodeTab,
@@ -12,22 +13,7 @@ import {
 	remarkStructure,
 } from "fumadocs-core/mdx-plugins";
 
-const remarkPlugins = [
-	remarkHeading,
-	remarkCodeTab,
-	remarkNpm,
-	[remarkStructure, { exportAs: "structuredData" }],
-];
-const rehypePlugins = [rehypeCode];
-
 export default defineConfig({
-	markdown: {
-		processor: unified({
-			syntaxHighlight: false,
-			remarkPlugins,
-			rehypePlugins,
-		}),
-	},
 	integrations: [
 		react(),
 		mdx({
@@ -35,6 +21,18 @@ export default defineConfig({
 			syntaxHighlight: false,
 		}),
 	],
+	markdown: {
+		processor: unified({
+			rehypePlugins: [rehypeCode],
+			remarkPlugins: [
+				remarkHeading,
+				remarkCodeTab,
+				remarkNpm,
+				[remarkStructure, { exportAs: "structuredData" }],
+			],
+		}),
+	},
+	outDir: ".output",
 	vite: {
 		plugins: [tailwindcss()],
 	},
