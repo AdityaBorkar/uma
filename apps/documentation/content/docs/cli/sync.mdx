@@ -1,15 +1,15 @@
 ---
 title: sync
-description: Converge local config and record per-key receipts in SQLite.
+description: Bring local config up to date and save receipts.
 ---
 
-Defined in `apps/machine/src/cli.ts:75`, dispatched to `cmdSync` in `apps/machine/src/index.ts:130`, implemented in `apps/machine/src/sync.ts:17` (`performSync`).
+`sync` converges your local config and keeps the receipts in SQLite so you can prove it later. Defined in `apps/machine/src/cli.ts:75`, handled by `cmdSync` in `apps/machine/src/index.ts:130`, implemented in `apps/machine/src/sync.ts:17` (`performSync`).
 
 ```text
 uma-machine sync [--dry-run] [--json] [--only <k1,k2>]
 ```
 
-Runs `resetAll({ prune: false })` in `ORDERED_KEYS` order, then `persistReceiptsBestEffort` with `jobId = local-<timestamp>-<nanoid>`. Human output:
+We run `resetAll({ prune: false })` in `ORDERED_KEYS` order, then save receipts with `persistReceiptsBestEffort` and a job id like `local-<timestamp>-<nanoid>`. You'll see:
 
 ```text
 sync local-1725800000000-Ab3k:
@@ -17,11 +17,11 @@ sync local-1725800000000-Ab3k:
   systemd: FAILED — unit not found
 ```
 
-Exit via `syncExitCode(receipts)`: `0` all ok, else `2`.
+Exit `0` when all is well, else `2` (via `syncExitCode(receipts)`).
 
-## Relation to the WS contract
+## How this relates to the server
 
-Local `sync` only writes SQLite rows. The **WS `sync-ack` half** of the contract is sent by the daemon's `reset-config` handler when the server sends `reset-config { keys: "*" }` (`src/daemon.ts:121`) — same `performSync` ordering, but acked over the socket with the server's `jobId`. See [/machine/reset-config](/machine/reset-config).
+Local `sync` only writes SQLite rows on your machine. The **server-acknowledged** half happens when the daemon gets `reset-config { keys: "*" }` (`src/daemon.ts:121`) — same `performSync` ordering, but acked over the socket with the server's `jobId` as `sync-ack`. See [/machine/reset-config](/machine/reset-config).
 
 ```bash
 uma-machine sync --dry-run

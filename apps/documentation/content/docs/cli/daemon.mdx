@@ -1,9 +1,9 @@
 ---
 title: daemon
-description: Run the device daemon — WebSocket client, heartbeat tick, and frame dispatcher.
+description: Keep your machine online, heartbeat, and ready for work.
 ---
 
-Defined in `apps/machine/src/cli.ts:45`, dispatched in `apps/machine/src/index.ts:308`, implemented in `apps/machine/src/daemon.ts:144` (`runDaemon`).
+The `daemon` keeps your machine connected and helpful. Defined in `apps/machine/src/cli.ts:45`, run from `apps/machine/src/index.ts:308`, implemented in `apps/machine/src/daemon.ts:144` (`runDaemon`).
 
 ```text
 uma-machine daemon [--interval <seconds>]
@@ -13,25 +13,25 @@ uma-machine daemon [--interval <seconds>]
 
 | Flag | Default | Notes |
 | --- | --- | --- |
-| `--interval <seconds>` | `heartbeatIntervalS()` = `UMA_HEARTBEAT_INTERVAL_S` or `30` | Coerced by `daemonIntervalS()` (`src/env.ts:112`): floor `2s`, invalid → default |
+| `--interval <seconds>` | `heartbeatIntervalS()` = `UMA_HEARTBEAT_INTERVAL_S` or `30` | How often to check in. Coerced by `daemonIntervalS()` (`src/env.ts:112`): floor `2s`, invalid values fall back to the default |
 
-Startup prints `uma-machine daemon ${CLI_VERSION} starting...`, installs `SIGINT`/`SIGTERM` handlers, then blocks forever (`await new Promise(() => {})`).
+On startup you'll see `uma-machine daemon ${CLI_VERSION} starting...`. We install `SIGINT`/`SIGTERM` handlers so Ctrl-C shuts down gracefully, then the daemon runs until stopped.
 
-## What the daemon does
+## What the daemon does for you
 
-1. **Requires enrollment.** `loadIdentity()` must return `{ machineId, serverUrl, sessionToken }` or it throws `not enrolled — run uma-machine enroll first` (`src/daemon.ts:145`).
-2. **Seeds the redactor** with `sessionToken` + `GH_TOKEN`/`GITHUB_TOKEN` so secrets never reach logs.
-3. **Opens the WS** with `connectWithBackoff` (`src/ws-client.ts:40`): `ws(s)://<server>/api/machines/ws`, `Authorization: Bearer <sessionToken>`, jittered backoff `1s → 30s`. Unknown inbound `t` values are logged and ignored (`parseServerFrame` → `null`).
-4. **Ticks every `intervalS`.** Each tick calls `sendHeartbeat(lastSend)` + `reapStopped()`:
-   - `sendHeartbeat` snapshots quota, builds the frame (`buildHeartbeat`), persists it to SQLite **even when WS is down**, then sends if connected. Send failure never loses data.
-   - `reapStopped` removes `stopped` sandboxes idle longer than `UMA_SANDBOX_TTL_S` (default 1h). Never touches `running` sandboxes.
-5. **Dispatches inbound frames** (`handleFrame`, `src/daemon.ts:155`): `UPGRADE_REQUIRED` → `handleUpgrade`, `assign` → `handleAssign` → `executeTask`, `cancel` → `cancelTask`, `reset-config` → `handleResetConfig`. See [/machine](/machine) for each.
+1. **Checks enrollment first.** `loadIdentity()` must find `{ machineId, serverUrl, sessionToken }`, or you'll see `not enrolled — run uma-machine enroll first` (`src/daemon.ts:145`).
+2. **Keeps secrets safe** by seeding the redactor with your `sessionToken` + `GH_TOKEN`/`GITHUB_TOKEN`, so secrets never leak into logs.
+3. **Stays connected** with `connectWithBackoff` (`src/ws-client.ts:40`): `ws(s)://<server>/api/machines/ws` with `Authorization: Bearer <sessionToken>` and jittered backoff from `1s` to `30s`. Unknown message types are logged and ignored (`parseServerFrame` returns `null`).
+4. **Checks in regularly.** Each tick runs `sendHeartbeat(lastSend)` + `reapStopped()`:
+   - `sendHeartbeat` snapshots quota, builds the frame (`buildHeartbeat`), saves it to SQLite **even when offline**, then sends if connected. A failed send never loses data.
+   - `reapStopped` removes `stopped` sandboxes idle longer than `UMA_SANDBOX_TTL_S` (default 1h). `running` sandboxes are always left alone.
+5. **Handles server commands** (`handleFrame`, `src/daemon.ts:155`): `UPGRADE_REQUIRED` goes to `handleUpgrade`, `assign` goes to `handleAssign` then `executeTask`, `cancel` goes to `cancelTask`, `reset-config` goes to `handleResetConfig`. Learn more in [/machine](/machine).
 
-## Test hook
+## For tests
 
-`runDaemon({ once: true })` sends a single heartbeat and returns a noop stop — used by tests, not by the CLI.
+`runDaemon({ once: true })` sends a single heartbeat and returns a noop stop — handy for tests, not used by the CLI.
 
-## Examples
+## Try it
 
 ```bash
 uma-machine daemon

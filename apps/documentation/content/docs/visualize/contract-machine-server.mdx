@@ -1,5 +1,4 @@
 ---
-layout: ../../../src/layouts/visualize.astro
 title: Machine ↔ Server
 ---
 
@@ -57,9 +56,9 @@ export const ascii = `machine ── ws(s):///api/machines/ws (Bearer, protocol 
 
 <p class="text-sm font-medium text-fd-muted-foreground">visualize/contract-machine-server · source: apps/orpc-contract/src/schemas/machine-frames.ts, schemas/server-frames.ts, contracts/ws.ts</p>
 
-<h1 class="mt-1 text-3xl font-semibold">oRPC contract: machine ↔ server</h1>
+<h1 class="mt-1 text-3xl font-semibold">How machines and servers talk</h1>
 
-<p class="mt-2 max-w-2xl text-fd-muted-foreground">Frozen <code>v1</code> raw-JSON frames at <code class="font-mono">/api/machines/ws</code> (not an oRPC envelope). Every machine→server frame carries <code class="font-mono">machineId + protocol:"v1"</code>. Detail: <a class="text-fd-primary hover:underline" href="/contracts/machine-server">/contracts/machine-server</a>.</p>
+<p class="mt-2 max-w-2xl text-fd-muted-foreground">Frozen <code>v1</code> raw-JSON frames at <code class="font-mono">/api/machines/ws</code> (not an oRPC envelope). Every machine → server frame carries <code class="font-mono">machineId + protocol:"v1"</code>. Full detail: <a class="text-fd-primary hover:underline" href="/contracts/machine-server">/contracts/machine-server</a>.</p>
 
 <Mermaid chart={chart} ascii={ascii} />
 
@@ -88,9 +87,9 @@ export const ascii = `machine ── ws(s):///api/machines/ws (Bearer, protocol 
     <h2 class="mt-6 text-lg font-semibold">Device + claim HTTPS</h2>
     <div class="mt-3 flex flex-col gap-2 font-mono text-xs">
       <div class="rounded-lg border border-fd-border bg-fd-card p-3">POST /device/code → POST /device/token<br/><span class="text-fd-muted-foreground">user_code approval, Bearer session</span></div>
-      <div class="rounded-lg border border-fd-border bg-fd-card p-3">POST /api/rpc/machines/claim {"{machineId, sandboxId, taskId}"}<br/><span class="text-fd-muted-foreground">409 = someone else won → free sandbox</span></div>
+      <div class="rounded-lg border border-fd-border bg-fd-card p-3">POST /api/machines/claim {"{machineId, sandboxId, taskId}"}<br/><span class="text-fd-muted-foreground">409 = someone else won → free sandbox</span></div>
     </div>
   </div>
 </div>
 
-<p class="mt-6 text-sm text-fd-muted-foreground">Parsers: <code class="font-mono">validateMachineFrame</code> (outbound, throws) · <code class="font-mono">parseServerFrame</code> (inbound, unknown t → null). Registry: <code class="font-mono">wsMessagesContract</code> in contracts/ws.ts.</p>
+<p class="mt-6 text-sm text-fd-muted-foreground">Friendly parsers: <code class="font-mono">validateMachineFrame</code> checks outbound frames (throws on trouble) · <code class="font-mono">parseServerFrame</code> reads inbound frames (unknown t → null, logged and ignored). Registry: <code class="font-mono">wsMessagesContract</code> in contracts/ws.ts. Live server: <code class="font-mono">server/machines-ws.ts</code> in apps/web.</p>

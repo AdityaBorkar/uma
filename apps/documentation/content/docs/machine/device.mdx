@@ -1,45 +1,51 @@
 ---
-title: Device Flow
-description: Enrollment HTTPS and the atomic task claim.
+title: Device flow and claim
+description: How machines enroll over HTTPS and win tasks fairly.
 ---
 
-Schemas in `apps/orpc-contract/src/schemas/device.ts`; machine side in `apps/machine/src/enroll.ts` and `execution.ts`; contract wiring `device.*` / `machines.claim` in `apps/orpc-contract/src/contracts/api.ts`. Production server: `apps/web` (`src/lib/machines/service.ts`, `src/rpc/procedures/device.ts`, `src/rpc/procedures/machines.ts`).
+Machines join over plain HTTPS first, then claim work fairly. Schemas live in `apps/orpc-contract/src/schemas/device.ts`; the machine side lives in `apps/machine/src/enroll.ts` and `execution.ts`; contract wiring is `device.*` / `machines.claim` in `apps/orpc-contract/src/contracts/api.ts`. The production server lives in `apps/web` (`src/lib/machines/service.ts`, `src/rpc/procedures/device.ts`, `src/rpc/procedures/machines.ts`).
 
-## Device authorization (`device.code` → `device.token`)
+## Joining with a device code (`device.code` to `device.token`)
 
-OAuth-style device flow (plain HTTPS, not an oRPC envelope):
+A familiar OAuth-style device flow over plain HTTPS (not an oRPC envelope):
 
 ```text
 POST /device/code   { client_id, machineName?, scope? }
   → { device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }
 
-(operator approves user_code in a browser)
+(you approve the user_code in a browser at /device)
 
 POST /device/token  { client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }
   → { access_token, machine_id, token_type: "Bearer", expires_in? }
   → error { error: authorization_pending | slow_down | expired_token | access_denied, error_description? }
 ```
 
-Contract errors map to `AUTHORIZATION_PENDING | SLOW_DOWN | EXPIRED_TOKEN | ACCESS_DENIED` on `device.token`. Machine behavior: `authorization_pending` → keep polling, `slow_down` → back off, `expired_token`/`access_denied` → abort. See [/cli/enroll](/cli/enroll) for the file writes.
+Contract errors map to `AUTHORIZATION_PENDING | SLOW_DOWN | EXPIRED_TOKEN | ACCESS_DENIED` on `device.token`. Your machine handles them kindly: `authorization_pending` means keep polling, `slow_down` means back off, `expired_token` / `access_denied` means stop and let you retry. See [/cli/enroll](/cli/enroll) for the files we save.
 
-## Task claim (`machines.claim`)
+The browser approval lives at `/device` (`apps/web/src/routes/(app)/device.tsx`), and the raw shims are `POST /device/code` and `POST /device/token` (the binary uses plain `fetch`, not the oRPC envelope).
+
+## Winning a task fairly (`machines.claim`)
 
 ```text
-POST /api/rpc/machines/claim  { machineId, sandboxId, taskId }   (all min-1 strings)
+POST /api/machines/claim  { machineId, sandboxId, taskId }   (all min-1 strings)
   → { ok, startedAt? }            (contract: TaskClaimResponseSchema)
   → CONFLICT (409) on double-claim (contract error)
 ```
 
-The claim is **atomic and authoritative**: `409` means the server gave the task to someone else — the machine frees its sandbox and emits `claim-ack { ok: false }` (`rejected`). Network failure after retries → `CLAIM_UNREACHABLE`. Only a claimed task proceeds to `start`. Used by both daemon `assign` handling and `uma-machine run`.
+The claim is **atomic and authoritative**: a `409` simply means the server gave the task to someone else — your machine frees its sandbox and emits `claim-ack { ok: false }` (`rejected`). Network failure after retries gives `CLAIM_UNREACHABLE`. Only a claimed task moves on to `start`. Both daemon `assign` handling and `uma-machine run` use this path.
 
-## Other `machines.*` HTTPS (implemented in `apps/web`)
+The binary also talks to a raw `POST /api/machines/claim` shim (`apps/web/src/routes/api.machines.claim.ts`) — same service, same contract schemas.
 
-| Procedure | Input | Output |
+## Other `machines.*` HTTPS endpoints (served by `apps/web`)
+
+| Procedure | Input | You'll get |
 | --- | --- | --- |
 | `machines.checkState` | `void` | `{ drift: DbRecord[], version }` |
 | `machines.heartbeatHistory` | `void` | `{ heartbeats: DbRecord[] }` |
 | `machines.sandboxList` | `void` | `{ sandboxes: DbRecord[] }` |
 | `machines.latestVersion` | `void` | `{ latest, min }` |
-| `machines.resetState` | `{ keys?: string[]\|"*" }` | `{ jobId, keys }` |
+| `machines.resetState` | `{ keys?: string[]\|"*" }` | `{ jobId, keys }` — fans out `reset-config` over the socket |
 
-`check-ack` / `reset-ack` / `sync-ack` WS frames are the async halves of `checkState` / `resetState`; see [/machine/reset-config](/machine/reset-config).
+Plus browser-only registry helpers (`list`, `get`, `revoke`) for `/settings/machines`.
+
+The `check-ack` / `reset-ack` / `sync-ack` WebSocket frames are the async halves of `checkState` / `resetState`; see [/machine/reset-config](/machine/reset-config).

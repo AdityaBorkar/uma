@@ -1,9 +1,9 @@
 ---
 title: run
-description: Execute one task once — a manual assign without the server.
+description: Try one task right now, without waiting for the server.
 ---
 
-Defined in `apps/machine/src/cli.ts:94`, dispatched to `cmdRun` in `apps/machine/src/index.ts:229`, implemented by `executeTask` in `apps/machine/src/execution.ts:309`.
+Want to test a task manually? `run` executes one task once — like a local `assign`. Defined in `apps/machine/src/cli.ts:94`, handled by `cmdRun` in `apps/machine/src/index.ts:229`, powered by `executeTask` in `apps/machine/src/execution.ts:309`.
 
 ```text
 uma-machine run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [--commit <sha>] [--branch <b>] [--agent <bin>] [--fresh | --fresh-start]
@@ -11,23 +11,23 @@ uma-machine run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [-
 
 | Flag | Default | Notes |
 | --- | --- | --- |
-| `--task <id>` | or positional `rest[0]`; **required** | Missing → `run requires --task <id>`, exit `1` |
-| `--prompt <text>` | `manual run <taskId>` | Task prompt |
+| `--task <id>` | or pass it positionally; **required** | Missing it gives `run requires --task <id>` and exit `1` |
+| `--prompt <text>` | `manual run <taskId>` | What to ask the agent to do |
 | `--project <id>` | `null` | Project label on the sandbox |
-| `--repo / --commit / --branch` | `""` / unset | Git binding for the worktree |
-| `--agent <bin>` | `UMA_AGENT_BIN` | Agent binary override |
-| `--fresh` / `--fresh-start` | off | `freshStart: true` — clean worktree before exec |
+| `--repo / --commit / --branch` | `""` / unset | Git source for the worktree |
+| `--agent <bin>` | `UMA_AGENT_BIN` | Which agent binary to run |
+| `--fresh` / `--fresh-start` | off | Clean the worktree before running (`freshStart: true`) |
 
-Builds an `assign`-shaped frame (`{ t: "assign", taskId, prompt, projectId, repoUrl, commit, branch, freshStart }`) and runs the full pipeline: quota pre-check → claim (`POST /api/rpc/machines/claim`, `409` authoritative) → `claim-ack` → `start` → `ensureBinding` → `execStream` (redacted, 256 KB chunks) → `task-done` → `stop`. Every emitted frame is printed as JSON (`emit: console.log(JSON.stringify(f))`).
+We build an `assign`-shaped frame (`{ t: "assign", taskId, prompt, projectId, repoUrl, commit, branch, freshStart }`) and run the full pipeline: reserve a sandbox, atomically claim it (`POST /api/machines/claim`, `409` means someone else won), replay buffered logs, start, bind git, stream redacted `execStream` output in 256 KB chunks, report `task-done`, then stop. Every emitted frame is printed as JSON (`emit: console.log(JSON.stringify(f))`).
 
-## Exit codes
+## What the exits mean
 
-| Output | Code |
+| You'll see | Code |
 | --- | --- |
-| `run <id> -> completed (<sandbox>)` | `0` |
-| `run <id> -> refused (quota)` | `1` |
-| `run <id> -> rejected (claim <reason>)` | `1` |
-| any non-`completed` status (`failed`, …) | `1` |
+| `run <id> -> completed (<sandbox>)` | `0` — success! |
+| `run <id> -> refused (quota)` | `1` — over quota, try later |
+| `run <id> -> rejected (claim <reason>)` | `1` — someone else claimed it |
+| any non-`completed` status (`failed`, ...) | `1` |
 
 ```bash
 uma-machine run --task abc123 --prompt "fix the flaky test"

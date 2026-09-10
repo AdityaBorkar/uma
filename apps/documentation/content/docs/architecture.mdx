@@ -1,37 +1,37 @@
 ---
 title: Architecture
-description: End-to-end connection — CLI, daemon, server, web frontend.
+description: How your CLI, daemon, server, and browser work together.
 ---
 
-Diagram: [/visualize/architecture](/visualize/architecture).
+New here? This is the big picture. For the picture version, see [/visualize/architecture](/visualize/architecture).
 
 ```mermaid
 flowchart TD
-    A["operator: uma-machine enroll"] -->|device flow| B["server"]
-    C["operator: uma-machine daemon"] -->|ws heartbeat 30s| B
-    B -->|assign, cancel, reset-config| D["daemon to microsandbox to agent"]
+    A["you: uma-machine enroll"] -->|device flow| B["server"]
+    C["you: uma-machine daemon"] -->|heartbeat every 30s| B
+    B -->|assign, cancel, reset-config| D["daemon → microsandbox → agent"]
     D -->|log, task-done| B
-    E["browser (TanStack Start)"] -->|POST rpc| F["web server (Drizzle plus Postgres)"]
+    E["browser (TanStack Start)"] -->|POST rpc| F["web server (Drizzle + Postgres)"]
 ```
 
-## Stages
+## The journey of a task
 
-1. **Enroll** (`apps/machine/src/enroll.ts`) — device flow, writes identity (`0600`), limits from `quotaDefaultsFromRam`, SQLite, optional systemd unit. See [/cli/enroll](/cli/enroll).
-2. **Daemon loop** (`apps/machine/src/daemon.ts`) — `connectWithBackoff` + persist-first heartbeat tick + TTL reap. See [/cli/daemon](/cli/daemon), [/machine/heartbeat](/machine/heartbeat).
-3. **Execute** (`apps/machine/src/execution.ts`) — quota → claim (`POST /api/rpc/machines/claim`, `409` authoritative) → start → git bind → redacted `execStream` (256 KB chunks) → `task-done` → stop. See [/machine/execution-pipeline](/machine/execution-pipeline).
-4. **Converge** — server `reset-config` → per-key `reset-ack` (+ `sync-ack` for `"*"`). See [/machine/reset-config](/machine/reset-config).
-5. **Web product** (`apps/web`) — user triages a Signal → creates a Task (`queued`) → the task is `assign`ed over the machine WS (`/api/machines/ws`) → daemon streams `log`/`task-done` → web shows `running → completed|failed`. Device enrollment at `/device`, machine registry at `/settings/machines`. Web procedures: [/contracts/server-web](/contracts/server-web).
-6. **Enforcement** — version shortfall → `UPGRADE_REQUIRED` → exit `3`. See [/contracts/versioning](/contracts/versioning).
+1. **Enroll** (`apps/machine/src/enroll.ts`) — you approve a device code in the browser, and the machine saves its identity (`0600`), limits from `quotaDefaultsFromRam`, SQLite, and optionally a systemd unit. Start at [/cli/enroll](/cli/enroll).
+2. **Stay in touch** (`apps/machine/src/daemon.ts`) — the daemon connects with backoff, sends a persist-first heartbeat every tick, and reaps old stopped sandboxes. See [/cli/daemon](/cli/daemon) and [/machine/heartbeat](/machine/heartbeat).
+3. **Run work** (`apps/machine/src/execution.ts`) — on `assign`, the machine reserves a sandbox, atomically claims the task (`POST /api/machines/claim`, `409` means someone else won), starts the sandbox, binds git, streams redacted logs in 256 KB chunks, then reports `task-done` and stops. See [/machine/execution-pipeline](/machine/execution-pipeline).
+4. **Stay converged** — the server can send `reset-config`, and the machine converges config then acks each key (plus `sync-ack` for `"*"`). See [/machine/reset-config](/machine/reset-config).
+5. **Watch in the browser** (`apps/web`) — triage a Signal, create a Task (`queued`), watch it go `running → completed | failed` as `log` / `task-done` frames arrive over `/api/machines/ws`. Enroll devices at `/device`, manage machines at `/settings/machines`. Web procedures: [/contracts/server-web](/contracts/server-web).
+6. **Stay compatible** — if the machine is too old, the server sends `UPGRADE_REQUIRED` and the daemon exits `3`. See [/contracts/versioning](/contracts/versioning).
 
-## Repo map
+## Where code lives
 
-| Dir | Role |
+| Dir | What you'll find there |
 | --- | --- |
-| `apps/web` | Product app (routes in `src/routes/`, oRPC in `src/rpc/`, schemas in `src/schemas/db/`) |
+| `apps/web` | Product app (routes in `src/routes/`, oRPC in `src/rpc/`, machine server in `src/lib/machines/` + `server/machines-ws.ts`, schemas in `src/schemas/db/`) |
 | `apps/machine` | Device agent (`src/`); its server side lives in `apps/web` |
 | `apps/orpc-contract` | Frozen `v1` wire (`src/`), imported by machine via relative path, never the reverse |
 | `apps/infra` | Pulumi (OCI + Cloudflare + Docker); `dev` stack skips the VM |
 | `apps/documentation` | This site (Astro + Fumadocs) |
-| `apps/cli` | `uma-docs` MCP/docs CLI — distinct from `uma-machine` |
+| `apps/cli` | `uma-docs` MCP/docs CLI — a different tool from `uma-machine` |
 
-Known wiring drift (infra moved out of `apps/web`): `apps/web/package.json` `infra:*` scripts, `check-env.ts` import, root `check:env`/`infra:prepare`, and `apps/infra/docker/app.ts` build context still point at old paths — verify before trusting (see root `AGENTS.md`).
+Known wiring drift (infra moved out of `apps/web`): `apps/web/package.json` `infra:*` scripts, `check-env.ts` import, root `check:env`/`infra:prepare`, and `apps/infra/docker/app.ts` build context still point at old paths — please double-check them (see root `AGENTS.md`).

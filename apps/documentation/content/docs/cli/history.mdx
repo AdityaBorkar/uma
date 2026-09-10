@@ -1,9 +1,9 @@
 ---
 title: history
-description: Show persisted heartbeat history from SQLite.
+description: Look back at your machine's past heartbeats.
 ---
 
-Defined in `apps/machine/src/cli.ts:82`, dispatched to `cmdHistory` in `apps/machine/src/index.ts:145`, read path in `apps/machine/src/heartbeat.ts:206` (`readHistory` → `queryHistory`).
+Curious how your machine has been doing? `history` shows past heartbeats saved in SQLite. Defined in `apps/machine/src/cli.ts:82`, handled by `cmdHistory` in `apps/machine/src/index.ts:145`, read via `readHistory` then `queryHistory` in `apps/machine/src/heartbeat.ts:206`.
 
 ```text
 uma-machine history [--range 24h|30d] [--json]
@@ -11,10 +11,10 @@ uma-machine history [--range 24h|30d] [--json]
 
 | Flag | Default | Notes |
 | --- | --- | --- |
-| `--range <range>` | `24h` | Parsed by `ms()` — e.g. `24h`, `7d`, `30d`. |
-| `--json` | off | Raw rows instead of the table. |
+| `--range <range>` | `24h` | How far back to look — parsed by `ms()`, e.g. `24h`, `7d`, `30d`. |
+| `--json` | off | Get raw rows instead of the friendly table. |
 
-Human output is a `ts | cpu | ram | disk` table over the last 50 rows in range, plus `(N rows in range <range>)`. Always exits `0`.
+You'll see a `ts | cpu | ram | disk` table over the last 50 rows in range, plus `(N rows in range <range>)`. Always exits `0`.
 
 ```bash
 uma-machine history
@@ -22,4 +22,4 @@ uma-machine history --range 30d
 uma-machine history --range 24h --json
 ```
 
-Rows are written by every heartbeat tick (`persistHeartbeat`), so history is queryable even for periods when the WS was down.
+Rows are written on every heartbeat tick (`persistHeartbeat`), so you can browse history even for times when the network was down.

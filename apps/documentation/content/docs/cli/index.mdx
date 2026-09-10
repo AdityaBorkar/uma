@@ -1,27 +1,27 @@
 ---
-title: Overview
-description: All uma-machine commands, global flags, config keys, and exit codes.
+title: CLI overview
+description: Meet uma-machine — what each command is for and how to use it.
 ---
 
-The `uma-machine` binary is defined in `apps/machine/src/cli.ts` (`buildCli`, `parseCli`, `helpText`) and dispatched in `apps/machine/src/index.ts` (`main`). Parser is `cac("uma-machine")` with pure `parse()` — global `-h/--help` and `-v/--version` print help/version instead of running a command.
+Welcome to `uma-machine`! The binary is defined in `apps/machine/src/cli.ts` (`buildCli`, `parseCli`, `helpText`) and run from `apps/machine/src/index.ts` (`main`). It uses `cac("uma-machine")` with a pure `parse()` — global `-h/--help` and `-v/--version` just print help or the version.
 
-Interactive diagram: [/visualize/cli](/visualize/cli).
+Prefer a diagram? See [/visualize/cli](/visualize/cli).
 
-## Command index
+## Which command do I need?
 
-| Command | Purpose | Handler |
+| Command | Use it when you want to… | Handled by |
 | --- | --- | --- |
-| `enroll` | Device-flow enrollment, writes identity + limits + SQLite | `enroll()` in `src/enroll.ts:107` |
-| `daemon` | Run the device daemon (WS + heartbeat tick) | `runDaemon()` in `src/daemon.ts:144` |
-| `check` | Check config drift against desired state | `cmdCheck` in `src/index.ts:66` |
-| `reset` | Reset drifted config, or `--fresh-start` a worktree | `cmdReset` in `src/index.ts:87` |
-| `sync` | Reset + persist per-key receipts locally | `cmdSync` → `performSync` in `src/sync.ts:17` |
-| `history` | Show persisted heartbeat history | `cmdHistory` → `readHistory` in `src/heartbeat.ts:206` |
-| `sandbox` | `sandbox list` / `sandbox prune` | `cmdSandbox` in `src/index.ts:184` |
-| `run` | Execute one task once (manual `assign`) | `cmdRun` → `executeTask` in `src/execution.ts:309` |
-| `version` / `help` | Version string / help text | `main()` in `src/index.ts:267` |
+| `enroll` | Connect this machine to a server for the first time | `enroll()` in `src/enroll.ts:107` |
+| `daemon` | Keep the machine online, heartbeat, and run tasks | `runDaemon()` in `src/daemon.ts:144` |
+| `check` | See what drifted, without changing anything | `cmdCheck` in `src/index.ts:66` |
+| `reset` | Fix drifted config, or clean a worktree with `--fresh-start` | `cmdReset` in `src/index.ts:87` |
+| `sync` | Converge config and save receipts locally | `cmdSync` → `performSync` in `src/sync.ts:17` |
+| `history` | Look back at past heartbeats | `cmdHistory` → `readHistory` in `src/heartbeat.ts:206` |
+| `sandbox` | List sandboxes or clean up stopped ones | `cmdSandbox` in `src/index.ts:184` |
+| `run` | Try one task right now, without waiting for the server | `cmdRun` → `executeTask` in `src/execution.ts:309` |
+| `version` / `help` | Check the version or get help | `main()` in `src/index.ts:267` |
 
-Full usage template (`helpText()`, `src/cli.ts:186`):
+Quick copy-paste reference (`helpText()`, `src/cli.ts:186`):
 
 ```text
 uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <id>]
@@ -39,43 +39,43 @@ uma-machine version
 
 ## Global flags
 
-| Flag | Effect |
+| Flag | What it does |
 | --- | --- |
-| `-h, --help` / `help [command]` | Global help, or per-command cac help when a subcommand is given (`src/index.ts:274`) |
-| `-v, --version` / `version` | Prints `uma-machine ${CLI_VERSION} (protocol v1)` (`src/version.ts:1`, `CLI_VERSION = "0.1.0"`) |
+| `-h, --help` / `help [command]` | Show overall help, or help for one command (`src/index.ts:274`) |
+| `-v, --version` / `version` | Show `uma-machine ${CLI_VERSION} (protocol v1)` (`src/version.ts:1`, `CLI_VERSION = "0.1.0"`) |
 
-Numeric-looking flag values are normalized back to strings by `parseCli` (`src/cli.ts:146`); repeated `--only a --only b` joins to `"a,b"`.
+Tip: numbers that look numeric stay strings (`parseCli`, `src/cli.ts:146`), and repeating `--only a --only b` joins to `"a,b"`.
 
 ## Config keys (`--only`)
 
-Dependency order in `src/config/mod.ts:22` (`ORDERED_KEYS`):
+Checked in dependency order (`ORDERED_KEYS`, `src/config/mod.ts:22`):
 
 `programs, git-login, adityab-agent, agents, files, providers, mcp, skills, systemd`
 
-Alias: `sync` resolves to `skills` (`resolveKeys`, `src/config/mod.ts:34`). Unknown keys are rejected by `parseOnlyFlag` (`src/env.ts:101`).
+Heads-up: `sync` is just another name for `skills` (`resolveKeys`, `src/config/mod.ts:34`). Unknown keys are politely rejected by `parseOnlyFlag` (`src/env.ts:101`).
 
-## Exit codes
+## Exit codes at a glance
 
-| Code | Meaning |
+| Code | What it means |
 | --- | --- |
-| `0` | ok / clean |
-| `2` | drifted (`check`) or partial (`reset`, `sync`) |
-| `1` | error (unknown command, missing required flag, `run` non-completed, fresh-start failure) |
-| `3` | `UPGRADE_REQUIRED` — daemon only, version shortfall (`src/daemon.ts:56`) |
+| `0` | All good |
+| `2` | Something drifted (`check`) or partly converged (`reset`, `sync`) |
+| `1` | Something went wrong (unknown command, missing flag, `run` didn't complete, fresh-start failed) |
+| `3` | Daemon only: server says `UPGRADE_REQUIRED` (`src/daemon.ts:56`) |
 
-Tables respect `NO_COLOR`/non-TTY: `humanTable()` in `src/index.ts:25` strips `cli-table3` styling and `picocolors` disables color automatically. Errors are secret-redacted and truncated to 300 chars (`safeError`, `src/index.ts:47`).
+Tables respect `NO_COLOR` and non-TTY output: `humanTable()` in `src/index.ts:25` drops styling, and errors are secret-redacted and trimmed to 300 chars (`safeError`, `src/index.ts:47`).
 
-## Environment
+## Environment variables
 
-| Variable | Default | Used by |
+| Variable | Default | Used for |
 | --- | --- | --- |
-| `UMA_SERVER_URL` / `UMA_SERVER` | `http://127.0.0.1:3000` | `enroll --server` default (`serverUrl()`) |
-| `UMA_MACHINE_ROOT` / `UMA_CONFIG_HOME` / `UMA_DATA_HOME` / `XDG_*` | platform dirs | identity, limits, `state.db` location |
+| `UMA_SERVER_URL` / `UMA_SERVER` | `http://127.0.0.1:3000` | Default `--server` for `enroll` (`serverUrl()`) |
+| `UMA_MACHINE_ROOT` / `UMA_CONFIG_HOME` / `UMA_DATA_HOME` / `XDG_*` | platform dirs | Where identity, limits, and `state.db` live |
 | `UMA_STATE_DB` | under machine root | `history`, receipts, heartbeat rows |
-| `UMA_HEARTBEAT_INTERVAL_S` | `30` (min 5) | daemon tick default |
-| `UMA_HEARTBEAT_RETENTION_DAYS` | `30` | `history` retention |
-| `UMA_SANDBOX_TTL_S` | `3600` (min 60) | daemon TTL reap |
-| `UMA_AGENT_BIN` | auto-detected agent | `run --agent` default |
+| `UMA_HEARTBEAT_INTERVAL_S` | `30` (min 5) | Default daemon tick |
+| `UMA_HEARTBEAT_RETENTION_DAYS` | `30` | How long `history` keeps rows |
+| `UMA_SANDBOX_TTL_S` | `3600` (min 60) | When stopped sandboxes get reaped |
+| `UMA_AGENT_BIN` | auto-detected agent | Default for `run --agent` |
 | `UMA_EXEC_PATH` | binary path | systemd `ExecStart` |
-| `GH_TOKEN` / `GITHUB_TOKEN` | — | redactor secret + git auth |
-| `MSB_MOCK` / `UMA_MSB_MOCK=1` | unset | force mock sandbox driver in tests |
+| `GH_TOKEN` / `GITHUB_TOKEN` | — | Redacted from logs, used for git auth |
+| `MSB_MOCK` / `UMA_MSB_MOCK=1` | unset | Force the mock sandbox driver in tests |

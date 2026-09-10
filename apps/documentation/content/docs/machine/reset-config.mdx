@@ -1,9 +1,9 @@
 ---
 title: reset-config
-description: Server-driven config convergence with per-key acks.
+description: How the server keeps your machine's config in sync.
 ---
 
-Schema `ResetConfigFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:26`; handler `handleResetConfig` in `apps/machine/src/daemon.ts:80`.
+`reset-config` is how the server gently brings your machine back in line. Schema `ResetConfigFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:26`; handled by `handleResetConfig` in `apps/machine/src/daemon.ts:80`.
 
 ```ts
 {
@@ -19,12 +19,12 @@ Schema `ResetConfigFrameSchema` in `apps/orpc-contract/src/schemas/server-frames
 }
 ```
 
-## Handler order (crash-safe by design)
+## How we handle it (crash-safe by design)
 
-1. `resetAll({ only: keys == "*" ? undefined : keys, payload })` — same `ORDERED_KEYS` ordering as local `sync`.
-2. **Cache desired-state before acking** — `templates`/`limits` + `version` go to `desired.json` (`loadDesired`/`saveDesired`). A crash after acking must not leave converged config un-cached.
-3. **Persist all receipts first** — `persistReceiptsBestEffort(stateDbPath(), jobId, receipts)`. A DB hiccup never masks converge results.
-4. **Ack each key independently** — one `reset-ack { jobId, key, ok, error? }` per receipt (`ResetAckFrameSchema`, `machine-frames.ts:73`). One dropped ack never aborts the rest.
-5. **If `keys == "*"`**, additionally send `sync-ack { jobId, receipts[] }` (`SyncAckFrameSchema`, `machine-frames.ts:83`).
+1. Converge with `resetAll({ only: keys == "*" ? undefined : keys, payload })` — same `ORDERED_KEYS` ordering as local `sync`.
+2. **Save desired-state before acking** — `templates`/`limits` + `version` go to `desired.json` (`loadDesired`/`saveDesired`). If we crash after acking, converged config is still cached.
+3. **Save all receipts first** — `persistReceiptsBestEffort(stateDbPath(), jobId, receipts)`. A database hiccup never hides converge results.
+4. **Ack each key on its own** — one `reset-ack { jobId, key, ok, error? }` per receipt (`ResetAckFrameSchema`, `machine-frames.ts:73`). One dropped ack never stops the rest.
+5. **If `keys == "*"`**, we also send `sync-ack { jobId, receipts[] }` (`SyncAckFrameSchema`, `machine-frames.ts:83`).
 
-`check-ack` (`CheckAckFrameSchema`) is contract-only in `v1` — defined but never sent (see `apps/orpc-contract/docs/FRAMES.md`).
+Note: `check-ack` (`CheckAckFrameSchema`) is contract-only in `v1` — defined but never sent (see `apps/orpc-contract/docs/FRAMES.md`).

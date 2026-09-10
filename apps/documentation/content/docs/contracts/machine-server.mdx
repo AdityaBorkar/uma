@@ -1,44 +1,46 @@
 ---
 title: Machine ↔ Server
-description: Frozen v1 WebSocket frames plus device and claim HTTPS.
+description: The shared v1 language your machine and server speak.
 ---
 
-Package `@uma/orpc-contract` (`apps/orpc-contract`). `apps/machine` imports it by relative path; it must never import from `apps/machine/src`. Diagram: [/visualize/contract-machine-server](/visualize/contract-machine-server).
+Welcome! This is the frozen contract that keeps machines and servers in sync. Package `@uma/orpc-contract` (`apps/orpc-contract`). Your machine imports it by relative path; it never imports from `apps/machine/src`. Diagram: [/visualize/contract-machine-server](/visualize/contract-machine-server).
 
-Transport: **raw JSON frames** at `MACHINES_WS_PATH = /api/machines/ws` (`src/constants.ts:19`), **not** an oRPC envelope. `PROTOCOL_VERSION = "v1"`. Every machine→server frame carries `machineId + protocol: "v1"` plus its `t` discriminator (`MachineFrameSchema` discriminated union, `src/schemas/machine-frames.ts:116`). Server→machine frames carry only `t` + payload (`ServerFrameSchema`, `src/schemas/server-frames.ts:55`).
+Transport is **raw JSON frames** at `MACHINES_WS_PATH = /api/machines/ws` (`src/constants.ts:19`) — not an oRPC envelope. `PROTOCOL_VERSION = "v1"`. Every machine→server frame carries `machineId + protocol: "v1"` plus its `t` discriminator (`MachineFrameSchema` discriminated union, `src/schemas/machine-frames.ts:116`). Server→machine frames carry just `t` + payload (`ServerFrameSchema`, `src/schemas/server-frames.ts:55`).
+
+The production server lives in `apps/web`: `src/lib/machines/` (service, frames, sockets), the Nitro WebSocket at `server/machines-ws.ts` (`/api/machines/ws`), and `device.*` / `machines.*` oRPC procedures.
 
 ## Machine → server (8)
 
-| `t` | Schema | Fields |
+| `t` | Schema | What you'll send |
 | --- | --- | --- |
 | `heartbeat` | `HeartbeatFrameSchema` | `cliVersion, configVersion, metrics{cpu,ram,disk,pids}, quotaUsage{running,total}, sandboxes[{id,status,taskId,projectId}], scopeHint` |
-| `log` | `LogFrameSchema` | `taskId, chunk` (≤256 KB **UTF-8 bytes** via `TextEncoder` refine — `max` counts UTF-16 units so the refine is the real cap), `stream?: stdout\|stderr\|system` |
-| `task-done` | `TaskDoneFrameSchema` | `taskId, status: completed\|failed, projectId: string\|null, result? ≤64k` |
+| `log` | `LogFrameSchema` | `taskId, chunk` (256 KB or smaller **UTF-8 bytes** via `TextEncoder` refine — `max` counts UTF-16 units so the refine is the real cap), `stream?: stdout\|stderr\|system` |
+| `task-done` | `TaskDoneFrameSchema` | `taskId, status: completed\|failed, projectId: string\|null, result? up to 64k` |
 | `reset-ack` | `ResetAckFrameSchema` | `jobId, key, ok, error?` — one per converged key |
 | `sync-ack` | `SyncAckFrameSchema` | `jobId, receipts[{key,ok,error?}]` — only for `reset-config { keys: "*" }` |
 | `claim-ack` | `ClaimAckFrameSchema` | `taskId, sandboxId, ok, error?: QUOTA_EXCEEDED\|string` |
 | `quota-exceeded` | `QuotaExceededFrameSchema` | `taskId, limits, usage` — always paired with a `claim-ack ok:false` |
 | `check-ack` | `CheckAckFrameSchema` | `jobId, drift[{key,drifted,detail?}]` — **contract-only in v1, never sent** |
 
-Validate outbound with `validateMachineFrame()` (`src/schemas/machine-frames.ts:129`); machine calls `assertMachineFrame` on every `send` (`apps/machine/src/ws-client.ts`, `protocol.ts`).
+Validate outbound frames with `validateMachineFrame()` (`src/schemas/machine-frames.ts:129`); the machine calls `assertMachineFrame` on every `send` (`apps/machine/src/ws-client.ts`, `protocol.ts`).
 
 ## Server → machine (4)
 
-| `t` | Schema | Fields |
+| `t` | Schema | What you'll receive |
 | --- | --- | --- |
 | `assign` | `AssignFrameSchema` | `taskId, projectId: string\|null, prompt (min 1), repoUrl (default ""), branch?, commit?, freshStart?, limits?: partial` |
 | `cancel` | `CancelFrameSchema` | `taskId` |
 | `reset-config` | `ResetConfigFrameSchema` | `jobId, keys: string[]\|"*", version, payload?: { limits?, templates?, keys? }` |
 | `UPGRADE_REQUIRED` | `UpgradeRequiredFrameSchema` | `minVersion, reason?` |
 
-Parse inbound with `parseServerFrame()` — unknown `t` → `null` (logged + ignored, never thrown). See [/machine](/machine) for per-command handler behavior.
+Parse inbound frames with `parseServerFrame()` — unknown `t` gives `null` (logged + ignored, never thrown). See [/machine](/machine) for what each command does.
 
 ## Registry
 
 `wsMessagesContract` in `src/contracts/ws.ts:36` is the canonical raw-frame registry (`path`, `protocol`, per-`t` schemas). `wsContract` (`src/contracts/ws.ts:57`) models the same channel as oRPC procedures (`machines.send: MachineFrame → {ok:true}`, `machines.stream: {machineId,lastEventId?} → eventIterator(ServerFrame)`) for future oRPC-native clients.
 
-## Primitives & constants
+## Helpful primitives and constants
 
 - `LimitsSchema { maxRunning ≥1, maxTotal ≥1, cpu?, ram? }`, `QuotaUsageSchema { running, total }`, `HostMetricsSchema { cpu/ram/disk 0–100, pids }`, `SandboxInfoSchema { id, status, taskId, projectId }`, `MachineNameSchema` (slug 1–64, not reserved), `ConnectionStatusSchema` (`src/schemas/primitives.ts`).
 - `UBUNTU_IMAGE`, `TASK_CPUS=1`, `TASK_MEMORY_MB=1024`, `TASK_MAX_CPUS=2`, `TASK_MAX_MEMORY_MB=2048`, `LOG_FRAME_CAP_BYTES=256KB`, pressure + heartbeat constants, `RESERVED_MACHINE_NAMES` (`src/constants.ts`).
-- Frame catalog: `apps/orpc-contract/docs/FRAMES.md`. Production server implementing this contract: `apps/web` (`src/lib/machines/`, `/api/machines/ws` Nitro websocket, `device.*`/`machines.*` oRPC procedures).
+- Frame catalog: `apps/orpc-contract/docs/FRAMES.md`. Production server: `apps/web` (`src/lib/machines/`, `/api/machines/ws` Nitro websocket, `device.*`/`machines.*` oRPC procedures).

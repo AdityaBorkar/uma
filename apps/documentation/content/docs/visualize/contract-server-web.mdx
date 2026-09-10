@@ -1,5 +1,4 @@
 ---
-layout: ../../../src/layouts/visualize.astro
 title: Server ↔ Web
 ---
 
@@ -56,6 +55,16 @@ export const groups = [
 			"disconnect → {success:true}",
 		],
 	},
+	{
+		name: "device / machines",
+		procs: [
+			"device.code / token → device flow",
+			"device.approve → browser approval",
+			"machines.claim → {ok} / CONFLICT",
+			"machines.list / get / revoke → registry",
+			"checkState / resetState / history / sandboxes",
+		],
+	},
 ];
 
 export const chart = `sequenceDiagram
@@ -67,6 +76,7 @@ export const chart = `sequenceDiagram
     B->>W: signals and projects
     B->>W: documents plus events
     B->>W: connections.getAuthUrl
+    B->>W: device.approve, machines.list
     W->>D: Drizzle SQL
     D-->>W: rows
     W-->>B: rows and pages
@@ -78,13 +88,14 @@ export const ascii = `browser (TanStack Start + Query, rpc = createTanstackQuery
    │  POST /api/rpc/signals.* / projects.* ──────────────▶ … ──▶ rows / pages
    │  POST /api/rpc/documents.* ────────────────────────▶ … ──▶ rows + events (opened/closed/commented)
    │  POST /api/rpc/connections.getAuthUrl {provider} ──▶ … ──▶ {url, state, redirectUri}
+   │  POST /api/rpc/machines.list ──────────────────────▶ registry rows for /settings/machines
    └── every call: requireUser(headers) → UNAUTHORIZED if signed out`;
 
 <p class="text-sm font-medium text-fd-muted-foreground">visualize/contract-server-web · source: apps/web/src/rpc/router.ts, procedures/*, routes/api/rpc.$.ts</p>
 
-<h1 class="mt-1 text-3xl font-semibold">oRPC contract: server ↔ web</h1>
+<h1 class="mt-1 text-3xl font-semibold">How your browser talks to the server</h1>
 
-<p class="mt-2 max-w-2xl text-fd-muted-foreground">TanStack frontend → <code class="font-mono">POST /api/rpc/*</code> (<code class="font-mono">RPCHandler</code>) → Drizzle/Postgres. Auth via <code class="font-mono">requireUser</code>; keyset pagination <code class="font-mono">{"{items, nextCursor}"}</code>. Detail: <a class="text-fd-primary hover:underline" href="/contracts/server-web">/contracts/server-web</a>.</p>
+<p class="mt-2 max-w-2xl text-fd-muted-foreground">Your TanStack frontend calls <code class="font-mono">POST /api/rpc/*</code> (<code class="font-mono">RPCHandler</code>), which reads and writes Postgres via Drizzle. Auth via <code class="font-mono">requireUser</code>; pages come back as <code class="font-mono">{"{items, nextCursor}"}</code>. Full detail: <a class="text-fd-primary hover:underline" href="/contracts/server-web">/contracts/server-web</a>.</p>
 
 <Mermaid chart={chart} ascii={ascii} />
 
@@ -98,7 +109,7 @@ export const ascii = `browser (TanStack Start + Query, rpc = createTanstackQuery
     </div>
   ))}
   <div class="rounded-xl border border-dashed border-fd-border p-5">
-    <h2 class="font-mono font-semibold">device.* / machines.*</h2>
-    <p class="mt-2 text-sm text-fd-muted-foreground">Contract-first only (<code class="font-mono">apiContract</code>) — not implemented by web yet. No machine registry, no <code class="font-mono">/api/machines/ws</code> server. See <a class="text-fd-primary hover:underline" href="/contracts/device-and-claim">/contracts/device-and-claim</a>.</p>
+    <h2 class="font-mono font-semibold">machines over WebSocket</h2>
+    <p class="mt-2 text-sm text-fd-muted-foreground">Machines also stay in touch over <code class="font-mono">/api/machines/ws</code> (<code class="font-mono">server/machines-ws.ts</code>) with heartbeats, logs, and task updates. Device flow + claim: <a class="text-fd-primary hover:underline" href="/machine/device">/machine/device</a>.</p>
   </div>
 </div>

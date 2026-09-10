@@ -1,9 +1,9 @@
 ---
 title: enroll
-description: Enroll this machine with the server via OAuth device flow.
+description: Connect this machine to a server for the first time.
 ---
 
-Defined in `apps/machine/src/cli.ts:34`, dispatched in `apps/machine/src/index.ts:297`, implemented in `apps/machine/src/enroll.ts:107`.
+First time here? `enroll` introduces your machine to the server. Defined in `apps/machine/src/cli.ts:34`, run from `apps/machine/src/index.ts:297`, implemented in `apps/machine/src/enroll.ts:107`.
 
 ```text
 uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <id>]
@@ -11,31 +11,31 @@ uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <i
 
 ## Flags
 
-| Flag | Default | Notes |
+| Flag | Default | When to use it |
 | --- | --- | --- |
-| `--server <url>` | `serverUrl()` = `UMA_SERVER_URL` \| `UMA_SERVER` \| `http://127.0.0.1:3000` | Target server |
-| `--name <machine>` / `--machine <machine>` | prompted / generated | Validated by `MachineNameSchema` (lowercase slug, 1–64 chars, not in `RESERVED_MACHINE_NAMES`) |
-| `--systemd` | off | Writes a `uma-machine.service` unit (`ExecStart=<exec> daemon`, `Restart=always`) |
+| `--server <url>` | `serverUrl()` = `UMA_SERVER_URL` \| `UMA_SERVER` \| `http://127.0.0.1:3000` | Point at your server |
+| `--name <machine>` / `--machine <machine>` | We'll prompt or generate one | Pick a friendly lowercase slug (1–64 chars, validated by `MachineNameSchema`) |
+| `--systemd` | off | Also install a `uma-machine.service` unit (`ExecStart=<exec> daemon`, `Restart=always`) |
 | `--client-id <id>` | `uma-machine` | OAuth client id sent as `client_id` |
 
-## Flow
+## What happens
 
-1. `POST /device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/schemas/device.ts`). Server returns `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
-2. CLI prints the `user_code` + `verification_uri_complete` and asks the operator to approve in a browser.
-3. Polls `POST /device/token` with `{ client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }` until success or a terminal error. Handles `authorization_pending` (keep polling), `slow_down` (back off), `expired_token` / `access_denied` (abort). Jitter + `p-retry` between attempts.
-4. On success (`{ access_token, machine_id, token_type: "Bearer" }`) writes, with `0600` permissions:
+1. We ask for a device code: `POST /device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/schemas/device.ts`). The server replies with `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
+2. You approve the `user_code` at `verification_uri_complete` in your browser.
+3. We poll `POST /device/token` with `{ client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }` until you're approved. We keep polling on `authorization_pending`, back off on `slow_down`, and stop kindly on `expired_token` / `access_denied`. Retries use jitter + `p-retry`.
+4. On success (`{ access_token, machine_id, token_type: "Bearer" }`) we save, with `0600` permissions:
    - `identity.json` — `{ machineId, serverUrl, sessionToken }`
    - `limits.json` — seeded from `quotaDefaultsFromRam()` (`{ maxRunning: 2×GB, maxTotal: 5×GB }`)
    - `state.db` — SQLite (migrated/initialized)
-5. With `--systemd`, writes the unit file via `writeUnitFile()` (`src/config/systemd.ts:40`).
+5. With `--systemd`, we write the unit via `writeUnitFile()` (`src/config/systemd.ts:40`).
 
-## Examples
+## Try it
 
 ```bash
 uma-machine enroll --server https://uma.example.com --name worker-01
 uma-machine enroll --server https://uma.example.com --name worker-01 --systemd
 ```
 
-## Exit codes
+## If something goes wrong
 
-`0` on success; `1` on validation, network, or device-flow errors (`expired_token`, `access_denied`). Re-run `enroll` to retry — it overwrites the previous identity.
+`0` means you're enrolled. `1` means validation, network, or device-flow trouble (`expired_token`, `access_denied`). Just re-run `enroll` — it safely overwrites the previous identity.

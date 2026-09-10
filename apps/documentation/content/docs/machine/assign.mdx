@@ -1,9 +1,9 @@
 ---
 title: assign
-description: Server → machine task assignment; the core execution trigger.
+description: How your machine picks up new work from the server.
 ---
 
-Schema `AssignFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:7`; handler `handleAssign` in `apps/machine/src/daemon.ts:59` → `executeTask` in `apps/machine/src/execution.ts:309`.
+`assign` is the exciting one — new work just arrived! Schema `AssignFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:7`; handled by `handleAssign` in `apps/machine/src/daemon.ts:59`, which calls `executeTask` in `apps/machine/src/execution.ts:309`.
 
 ```ts
 {
@@ -19,15 +19,15 @@ Schema `AssignFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:7
 }
 ```
 
-Effective limits are `server override ?? limits.json` (`effectiveLimits` in `apps/orpc-contract/src/utils.ts`).
+Your effective limits are the server override if present, else your `limits.json` (`effectiveLimits` in `apps/orpc-contract/src/utils.ts`).
 
-## Execution pipeline (`executeTask`)
+## What your machine does (`executeTask`)
 
-1. **Admission lock** — `snapshotQuota()` + `quotaPreCheck()` + `create`. Over quota → emit `quota-exceeded { taskId, limits, usage }` **and** `claim-ack { ok: false, error: "QUOTA_EXCEEDED" }` (`quotaRefusalFrames` in `src/protocol.ts`), log `refused (quota)`, stop. No sandbox is leaked.
-2. **Claim** — `POST /api/rpc/machines/claim { machineId, sandboxId, taskId }`. `409`/4xx → `claim-ack { ok: false, error: CLAIM_REJECTED }`, free the sandbox, log `rejected (claim …)`. Network failure with retries exhausted → `CLAIM_UNREACHABLE`. Success → `claim-ack { ok: true, sandboxId }`.
-3. **Start** — `startSandbox`. Binds the worktree via `ensureBinding` (clone/fetch/checkout `branchForTask(taskId)` = `task/<short>`; `freshStart` does `git clean -fdx + reset --hard` first).
-4. **Exec + stream** — `execStream` runs the agent binary, redacts secrets (`Redactor` seeded with session + GitHub tokens), splits output into ≤256 KB UTF-8 chunks (`splitChunks`, byte-accurate for multibyte text), emits `log { taskId, chunk, stream?: stdout|stderr|system }` per chunk.
-5. **Done + stop** — emits `task-done { taskId, status: completed|failed, projectId, result? ≤64k }`, then `stopSandbox` (left `stopped` for later TTL reap — never removed inline).
-6. **Failure** — any throw frees the sandbox; `cancelTask(taskId)` (in-flight map, falls back to `task.id` label lookup) does `stopSandbox --force`.
+1. **Reserves room first** — `snapshotQuota()` + `quotaPreCheck()` + `create` run under an admission lock. Over quota? We emit `quota-exceeded { taskId, limits, usage }` **and** `claim-ack { ok: false, error: "QUOTA_EXCEEDED" }` (`quotaRefusalFrames` in `src/protocol.ts`), log `refused (quota)`, and stop cleanly without leaking a sandbox.
+2. **Claims fairly** — oRPC `machines.claim` (raw `POST /api/machines/claim` for the binary) `{ machineId, sandboxId, taskId }`. A `409`/4xx means someone else won, so we send `claim-ack { ok: false, error: CLAIM_REJECTED }`, free the sandbox, and log `rejected (claim ...)`. Network failure after retries gives `CLAIM_UNREACHABLE`. Success sends `claim-ack { ok: true, sandboxId }`.
+3. **Starts fresh** — `startSandbox`, then bind the worktree via `ensureBinding` (clone/fetch/checkout `branchForTask(taskId)`, like `task/<short>`; `freshStart` runs `git clean -fdx + reset --hard` first).
+4. **Runs + streams** — `execStream` runs the agent binary with secrets redacted (`Redactor` seeded with session + GitHub tokens), splitting output into 256 KB or smaller UTF-8 chunks (`splitChunks`, byte-accurate) and emitting `log { taskId, chunk, stream?: stdout|stderr|system }` per chunk.
+5. **Wraps up** — emits `task-done { taskId, status: completed|failed, projectId, result? up to 64k }`, then `stopSandbox` (left `stopped` for later TTL reap — never removed inline).
+6. **Cleans up on trouble** — any throw frees the sandbox; `cancelTask(taskId)` checks the in-flight map first, then falls back to the `task.id` label lookup, and runs `stopSandbox --force`.
 
-`uma-machine run` builds the same frame locally (see [/cli/run](/cli/run)).
+Want to try this locally? `uma-machine run` builds the same frame on your machine (see [/cli/run](/cli/run)).

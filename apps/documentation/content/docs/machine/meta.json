@@ -6,7 +6,8 @@
 		"cancel",
 		"reset-config",
 		"upgrade-required",
-		"execution-pipeline"
+		"execution-pipeline",
+		"device"
 	],
 	"title": "Machine"
 }

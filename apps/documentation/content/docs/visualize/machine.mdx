@@ -1,5 +1,4 @@
 ---
-layout: ../../../src/layouts/visualize.astro
 title: Machine
 ---
 
@@ -36,7 +35,7 @@ export const steps = [
 	"assign received",
 	"quotaPreCheck → over? [quota-exceeded + claim-ack❌] → refused",
 	"create sandbox",
-	"POST /api/rpc/machines/claim → 409? [claim-ack❌] → rejected, free sandbox",
+	"POST /api/machines/claim → 409? [claim-ack❌] → rejected, free sandbox",
 	"claim-ack ✅ → start",
 	"ensureBinding (clone / fetch / checkout task/<short>, optional freshStart)",
 	"execStream (redacted, ≤256KB chunks → log frames)",
@@ -67,9 +66,9 @@ export const ascii = `runDaemon ── requires identity.json ──→ connectW
 
 <p class="text-sm font-medium text-fd-muted-foreground">visualize/machine · source: apps/machine/src/daemon.ts, execution.ts, heartbeat.ts</p>
 
-<h1 class="mt-1 text-3xl font-semibold">Machine daemon</h1>
+<h1 class="mt-1 text-3xl font-semibold">What your daemon is up to</h1>
 
-<p class="mt-2 max-w-2xl text-fd-muted-foreground">Dispatch of server→machine commands, the persist-first heartbeat tick, and the execution pipeline.</p>
+<p class="mt-2 max-w-2xl text-fd-muted-foreground">How your machine handles server commands, checks in with heartbeats, and runs tasks start to finish.</p>
 
 <Mermaid chart={chart} ascii={ascii} />
 
@@ -98,4 +97,4 @@ export const ascii = `runDaemon ── requires identity.json ──→ connectW
   ))}
 </div>
 
-<p class="mt-4 text-sm text-fd-muted-foreground">Detail: <a class="text-fd-primary hover:underline" href="/machine/execution-pipeline">/machine/execution-pipeline</a> · heartbeat: <a class="text-fd-primary hover:underline" href="/machine/heartbeat">/machine/heartbeat</a></p>
+<p class="mt-4 text-sm text-fd-muted-foreground">Want more? <a class="text-fd-primary hover:underline" href="/machine/execution-pipeline">Execution pipeline</a> walks through every step · <a class="text-fd-primary hover:underline" href="/machine/heartbeat">Heartbeat</a> explains check-ins</p>

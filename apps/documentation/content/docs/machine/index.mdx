@@ -1,19 +1,19 @@
 ---
-title: Overview
-description: Daemon inbound commands, heartbeat, and execution pipeline.
+title: Machine overview
+description: What the daemon listens for and how it stays healthy.
 ---
 
-The daemon (`runDaemon` in `apps/machine/src/daemon.ts:144`) is a WS client. The server sends **commands**; the machine sends **frames back**. Dispatch is `handleFrame` (`src/daemon.ts:155`):
+Welcome! The daemon (`runDaemon` in `apps/machine/src/daemon.ts:144`) is a friendly WebSocket client: the server sends **commands**, and your machine sends **frames back**. Dispatch lives in `handleFrame` (`src/daemon.ts:155`):
 
-| Inbound `t` | Handler | Effect |
+| Server says (`t`) | Your machine | What happens |
 | --- | --- | --- |
-| `assign` | `handleAssign` → `executeTask` | run a task in a sandbox |
-| `cancel` | `cancelTask` | stop a running task's sandbox |
-| `reset-config` | `handleResetConfig` → `resetAll` | converge config, ack per key |
-| `UPGRADE_REQUIRED` | `handleUpgrade` | exit `3` on real version shortfall |
+| `assign` | `handleAssign` → `executeTask` | Runs a task in a sandbox |
+| `cancel` | `cancelTask` | Stops a running task's sandbox |
+| `reset-config` | `handleResetConfig` → `resetAll` | Converges config, acks each key |
+| `UPGRADE_REQUIRED` | `handleUpgrade` | Exits `3` if truly out of date |
 
-Interactive diagram: [/visualize/machine](/visualize/machine). Full wire shapes: [/contracts/machine-server](/contracts/machine-server).
+Prefer a diagram? See [/visualize/machine](/visualize/machine). For exact wire shapes, see [/contracts/machine-server](/contracts/machine-server).
 
-Unknown inbound `t` values never throw: `parseServerFrame` returns `null`, the frame is logged and ignored (`src/ws-client.ts`, `server-frames.ts:64`). Outbound frames are validated before send (`assertMachineFrame` / `validateMachineFrame`).
+Good to know: unknown `t` values never crash anything — `parseServerFrame` returns `null` and the frame is logged and ignored (`src/ws-client.ts`, `server-frames.ts:64`). Outbound frames are validated before sending (`assertMachineFrame` / `validateMachineFrame`).
 
-The daemon also ticks independently of the socket: every `intervalS` it persists a heartbeat to SQLite and opportunistically reaps long-stopped sandboxes (`reapStopped`, `UMA_SANDBOX_TTL_S`, default 1h, never `running`).
+Between commands, the daemon ticks on its own schedule: every `intervalS` it saves a heartbeat to SQLite and tidies up long-stopped sandboxes (`reapStopped`, `UMA_SANDBOX_TTL_S`, default 1h — `running` sandboxes are never touched).

@@ -31,12 +31,8 @@ export function Docs({
 			theme={{ enabled: false }}
 		>
 			<DocsLayout
-				nav={{
-					title: "Fumadocs on Astro",
-				}}
-				themeSwitch={{
-					enabled: false,
-				}}
+				nav={{ title: "Unified Manager for Agents" }}
+				themeSwitch={{ enabled: false }}
 				tree={tree}
 			>
 				<DocsPage {...page}>{children}</DocsPage>

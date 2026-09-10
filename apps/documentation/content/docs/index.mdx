@@ -1,48 +1,50 @@
 ---
-title: Introduction
-description: CLI commands, machine daemon commands, oRPC wire contracts, and architecture.
+title: Welcome to UMA
+description: What UMA is, how the pieces fit together, and where to go next.
 ---
 
-UMA is a Bun monorepo with four runtime pieces:
+Welcome! UMA connects your machines, your tasks, and your web app so work flows smoothly from idea to done.
 
-- **Product web app** (`apps/web`) — TanStack Start + oRPC + Drizzle/PostgreSQL. Owns projects, signals, tasks, documents, connections.
-- **Device agent** (`apps/machine`) — `uma-machine` CLI + daemon. Runs tasks in microsandbox sandboxes, talks to the server over HTTPS + WebSocket.
-- **Wire contract** (`apps/orpc-contract`) — frozen `v1` machine↔server frames plus the contract-first API/WS routers.
-- **Infra** (`apps/infra`) — Pulumi program (OCI + Cloudflare + Docker).
+Think of it in four friendly pieces:
 
-## Start here
+- **Product web app** (`apps/web`) — where you triage signals, create tasks, and watch progress. Built with TanStack Start, oRPC, and Drizzle/PostgreSQL.
+- **Device agent** (`apps/machine`) — the `uma-machine` CLI and daemon that runs tasks safely inside microsandbox sandboxes and stays in touch over HTTPS + WebSocket.
+- **Wire contract** (`apps/orpc-contract`) — the frozen `v1` language machines and servers share, so upgrades never surprise you.
+- **Infra** (`apps/infra`) — the Pulumi program that provisions OCI, Cloudflare, and Docker.
+
+## Where to go next
 
 <Cards>
   <Card title="CLI commands" href="/cli">
-    `uma-machine enroll | daemon | check | reset | sync | history | sandbox | run` — flags, exits, examples.
+    Set up and care for a machine: `enroll`, `daemon`, `check`, `reset`, `sync`, `history`, `sandbox`, `run`.
   </Card>
-  <Card title="Machine commands" href="/machine">
-    Daemon inbound frames (`assign`, `cancel`, `reset-config`, `UPGRADE_REQUIRED`) plus heartbeat and the execution pipeline.
+  <Card title="Machine behavior" href="/machine">
+    What the daemon does when it hears `assign`, `cancel`, `reset-config`, or `UPGRADE_REQUIRED` — plus heartbeats and the execution pipeline.
   </Card>
   <Card title="Machine ↔ server contract" href="/contracts/machine-server">
-    The 8 machine→server and 4 server→machine `v1` frames at `/api/machines/ws`.
+    The 8 machine→server and 4 server→machine `v1` frames at `/api/machines/ws`, plus device flow and claim over HTTPS.
   </Card>
   <Card title="Server ↔ web contract" href="/contracts/server-web">
-    The oRPC router at `POST /api/rpc/*` the TanStack frontend actually calls.
+    The oRPC router at `POST /api/rpc/*` your browser calls for tasks, signals, projects, documents, machines, and more.
   </Card>
 </Cards>
 
-## Interactive visualizations
+## Prefer pictures?
 
-The `visualize/*` routes render the same material as Mermaid diagrams (rendered client-side in the new docs fonts):
+The `visualize/*` routes show the same ideas as diagrams:
 
 - `/visualize` — hub with links to all five diagrams
 - `/visualize/cli` — CLI command tree
 - `/visualize/machine` — daemon dispatch + heartbeat loop
-- `/visualize/contract-machine-server` — WS frames, both directions
+- `/visualize/contract-machine-server` — WebSocket frames, both directions
 - `/visualize/contract-server-web` — oRPC router (server ↔ web frontend)
 - `/visualize/architecture` — end-to-end connection and architecture
 
-## Sources
+## How these docs stay honest
 
-Every page cites the file it documents. Implementation sources of truth:
+Every page names the source file it describes. Ground truth lives here:
 
 - CLI surface: `apps/machine/src/cli.ts`, `apps/machine/src/index.ts`
 - Daemon: `apps/machine/src/daemon.ts`, `execution.ts`, `heartbeat.ts`, `ws-client.ts`, `enroll.ts`
 - Wire frames: `apps/orpc-contract/src/schemas/machine-frames.ts`, `server-frames.ts`, `constants.ts`, `ids.ts`, `contracts/ws.ts`, `contracts/api.ts`, `schemas/`
-- Web router: `apps/web/src/rpc/router.ts`, `apps/web/src/rpc/procedures/*`, `apps/web/src/routes/api/rpc.$.ts`
+- Web router + machine server: `apps/web/src/rpc/router.ts`, `apps/web/src/rpc/procedures/*`, `apps/web/src/routes/api/rpc.$.ts`, `apps/web/server/machines-ws.ts`, `apps/web/src/lib/machines/`

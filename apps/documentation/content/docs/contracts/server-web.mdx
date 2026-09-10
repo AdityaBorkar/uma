@@ -1,55 +1,57 @@
 ---
 title: Server ↔ Web
-description: The oRPC router the TanStack frontend actually calls.
+description: The API your browser calls — tasks, signals, projects, docs, and machines.
 ---
 
-Router in `apps/web/src/rpc/router.ts`, served by `RPCHandler` at `POST /api/rpc/*` (`apps/web/src/routes/api/rpc.$.ts`, prefix `/api/rpc`, context `{ headers }`). OpenAPI via `OpenAPIHandler` at `/api` (`src/routes/api/$.ts`). Client in `src/lib/rpc.ts` (`createRouterClient` on the server, `RPCLink(/api/rpc)` + `createTanstackQueryUtils` as `rpc` in the browser). Diagram: [/visualize/contract-server-web](/visualize/contract-server-web).
+This is the API your TanStack frontend talks to every day. The router lives in `apps/web/src/rpc/router.ts`, served by `RPCHandler` at `POST /api/rpc/*` (`apps/web/src/routes/api/rpc.$.ts`, prefix `/api/rpc`, context `{ headers }`). Browse it via OpenAPI at `/api` (`src/routes/api/$.ts`). The client lives in `src/lib/rpc.ts` (`createRouterClient` on the server, `RPCLink(/api/rpc)` + `createTanstackQueryUtils` as `rpc` in the browser). Diagram: [/visualize/contract-server-web](/visualize/contract-server-web).
 
-Auth: every procedure runs `requireUser(headers)` → `UNAUTHORIZED` when signed out (`src/rpc/auth.ts`). Project/signal scoping asserts ownership → `NOT_FOUND` on cross-project access (`src/rpc/scope.ts`). Pagination is keyset on `(sortAt, id)` desc (`paginate`, `nextCursor` opaque).
+Auth first: every procedure runs `requireUser(headers)` and returns `UNAUTHORIZED` when signed out (`src/rpc/auth.ts`). Project and signal scoping checks ownership and returns `NOT_FOUND` on cross-project access (`src/rpc/scope.ts`). Lists use keyset pagination on `(sortAt, id)` descending (`paginate`, opaque `nextCursor`).
 
-> Drift note: the contract-first `apiContract` in `apps/orpc-contract/src/contracts/api.ts` is **not yet implemented** by web (`implement(apiContract)` is future work). Web procedures mirror the same shapes from `apps/web/src/schemas/schema.ts`. `device.*` / `machines.*` exist only in the contract — web has no machine registry or `/api/machines/ws` server yet (`settings/machines.tsx` is a placeholder).
+> Good news: the machine server is fully implemented in web. `device.*` (`code`, `token`, plus web-only `approve`) and `machines.*` (`claim`, `checkState`, `heartbeatHistory`, `latestVersion`, `resetState`, `sandboxList`, plus browser-only `list`/`get`/`revoke`) are live in `src/rpc/procedures/device.ts` and `src/rpc/procedures/machines.ts` on the frozen contract schemas. The WebSocket lives at `/api/machines/ws` (`server/machines-ws.ts`, registered in `vite.config.ts` — TanStack file routes are HTTP-only, so WS lives outside `src/routes/`). Manage machines at `/settings/machines`, approve devices at `/device`. Product domains (tasks/signals/projects/documents/connections) still mirror shapes from `apps/web/src/schemas/schema.ts`.
+
+The binary itself uses plain `fetch` + `WebSocket` (no oRPC client), so it talks to raw shims with the same service + schemas: `POST /device/code`, `POST /device/token`, `POST /api/machines/claim`.
 
 ## `tasks.*` (`src/rpc/procedures/tasks.ts`)
 
-| Procedure | Input | Output / errors |
+| Procedure | Input | You'll get |
 | --- | --- | --- |
-| `tasks.list` | `{ cursor?, limit 1–100 (dflt 20), q?, projectId?, status? }?` | `{ items, nextCursor }` |
+| `tasks.list` | `{ cursor?, limit 1–100 (default 20), q?, projectId?, status? }?` | `{ items, nextCursor }` |
 | `tasks.stats` | `{ projectId? }?` | `{ queued, running, completed, failed, cancelled }` |
-| `tasks.get` | `{ id }` | row, `NOT_FOUND` |
-| `tasks.create` | `{ title 2–200, prompt ≤10k?, projectId?, signalId? }` | row (created `queued`, `agent: cli`) |
-| `tasks.updateStatus` | `{ id, status }` | row, `NOT_FOUND`; only `queued→running\|cancelled`, `running→completed\|failed\|cancelled`, `failed→queued` else `BAD_REQUEST`; server stamps `startedAt`/`finishedAt` |
+| `tasks.get` | `{ id }` | row, or `NOT_FOUND` |
+| `tasks.create` | `{ title 2–200, prompt up to 10k?, projectId?, signalId? }` | row (starts `queued`, `agent: cli`) |
+| `tasks.updateStatus` | `{ id, status }` | row, or `NOT_FOUND`; only `queued→running\|cancelled`, `running→completed\|failed\|cancelled`, `failed→queued` else `BAD_REQUEST`; server stamps `startedAt`/`finishedAt` |
 
-Task lifecycle: `queued → running → completed|failed|cancelled`, with `failed → queued` retry. DB `CHECK` enforces `finishedAt` presence on terminal states.
+Task lifecycle: `queued → running → completed|failed|cancelled`, with `failed → queued` for retries. The DB enforces `finishedAt` on terminal states with a `CHECK`.
 
 ## `signals.*` (`src/rpc/procedures/signals.ts`)
 
-| Procedure | Input | Output / errors |
+| Procedure | Input | You'll get |
 | --- | --- | --- |
 | `signals.list` | `{ cursor?, limit, q?, projectId?, severity?, status? }?` | joined `{ items, nextCursor }` |
 | `signals.stats` | `{ projectId? }?` | `{ new, triaged, dismissed }` |
-| `signals.get` | `{ id }` | row, `NOT_FOUND` |
-| `signals.create` | `{ title 2–200, body ≤5k?, projectId?, severity = info, url ≤2k? }` | row (`source: manual`, `status: new`) |
+| `signals.get` | `{ id }` | row, or `NOT_FOUND` |
+| `signals.create` | `{ title 2–200, body up to 5k?, projectId?, severity = info, url up to 2k? }` | row (`source: manual`, `status: new`) |
 | `signals.update` | `{ id, title?, body?, projectId?\|null, severity?, status?, url?\|null }` (strict) | row; only `new→triaged\|dismissed`, `triaged→dismissed` else `BAD_REQUEST` |
 
 ## `projects.*` (`src/rpc/procedures/projects.ts`)
 
-| Procedure | Input | Output / errors |
+| Procedure | Input | You'll get |
 | --- | --- | --- |
 | `projects.list` | `{ cursor?, limit, q?, status? }?` | `{ items, nextCursor }` |
-| `projects.get` | `{ id }` | row, `NOT_FOUND` |
-| `projects.getBySlug` | `{ slug }` | row, `NOT_FOUND` |
-| `projects.create` | `{ name 2–100, description ≤5k?, slug? (regex, else derived), status = active }` | row; reserved/duplicate slug → `BAD_REQUEST` |
-| `projects.update` | `{ id, …partial }` | row, `NOT_FOUND` / `BAD_REQUEST` |
+| `projects.get` | `{ id }` | row, or `NOT_FOUND` |
+| `projects.getBySlug` | `{ slug }` | row, or `NOT_FOUND` |
+| `projects.create` | `{ name 2–100, description up to 5k?, slug? (regex, else derived), status = active }` | row; reserved/duplicate slug gives `BAD_REQUEST` |
+| `projects.update` | `{ id, ...partial }` | row, or `NOT_FOUND` / `BAD_REQUEST` |
 
 `status: active|on_hold|completed`. Slugs match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–60 chars.
 
 ## `documents.*` (`src/rpc/procedures/documents.ts`, exposed as `documents` + `documents.comments.create`)
 
-| Procedure | Input | Output / errors |
+| Procedure | Input | You'll get |
 | --- | --- | --- |
 | `documents.list` | `{ cursor?, limit, kind?, kinds[]?, label?, projectId?, q?, state? }?` | projection + FTS `{ items, nextCursor }` |
-| `documents.get` | `{ number: int+ }` | `{ …doc, projectName }`, `NOT_FOUND` |
-| `documents.create` | `{ title, body 1–200k, kind, labels ≤20?, meta?, projectId! }` | row (frontmatter `composeBody` + `allocateNumber` txn + `opened` event) |
+| `documents.get` | `{ number: int+ }` | `{ ...doc, projectName }`, or `NOT_FOUND` |
+| `documents.create` | `{ title, body 1–200k, kind, labels up to 20?, meta?, projectId! }` | row (frontmatter `composeBody` + `allocateNumber` txn + `opened` event) |
 | `documents.update` | `{ number, title?, body?, labels?, meta? }` | row (+ `renamed`/`labeled` events) |
 | `documents.close` / `reopen` | `{ number }` | row (+ `closed`/`reopened` event) |
 | `documents.remove` | `{ number }` | `{ ok: true }`; `BAD_REQUEST` unless `closed` |
@@ -59,10 +61,29 @@ Task lifecycle: `queued → running → completed|failed|cancelled`, with `faile
 
 ## `connections.*` (`src/rpc/procedures/connections.ts`)
 
-| Procedure | Input | Output |
+| Procedure | Input | You'll get |
 | --- | --- | --- |
 | `connections.list` | `void` | stripped rows array |
-| `connections.get` | `{ provider: github\|google }` | stripped row \| `null` |
+| `connections.get` | `{ provider: github\|google }` | stripped row or `null` |
 | `connections.getAuthUrl` | `{ provider }` | `{ url, state, redirectUri }` (`BAD_REQUEST` if unsupported) |
 | `connections.providers` | `void` | `{ providers: [{ id }] }` |
 | `connections.disconnect` | `{ provider }` | `{ success: true }` |
+
+## `device.*` and `machines.*` (`src/rpc/procedures/device.ts`, `src/rpc/procedures/machines.ts`)
+
+Your machine's home on the web side — all on frozen contract schemas from `@uma/orpc-contract`:
+
+| Procedure | Input | You'll get |
+| --- | --- | --- |
+| `device.code` | `{ client_id, machineName?, scope? }` | `{ device_code, user_code, verification_uri, ... }` |
+| `device.token` | `{ client_id, device_code, grant_type }` | `{ access_token, machine_id, ... }` or `AUTHORIZATION_PENDING \| SLOW_DOWN \| EXPIRED_TOKEN \| ACCESS_DENIED` |
+| `device.approve` | `{ user_code, approve }` | web-only browser approval (not part of the frozen wire contract) |
+| `machines.claim` | `{ machineId, sandboxId, taskId }` | `{ ok, startedAt? }` or `CONFLICT` on double-claim |
+| `machines.checkState` | `void` | `{ drift, version }` |
+| `machines.heartbeatHistory` | `void` | `{ heartbeats }` |
+| `machines.sandboxList` | `void` | `{ sandboxes }` |
+| `machines.latestVersion` | `void` | `{ latest, min }` |
+| `machines.resetState` | `{ keys?: string[]\|"*" }` | `{ jobId, keys }` — fans out `reset-config` via `sendToMachine` |
+| `machines.list` / `get` / `revoke` | browser-only (cookie auth) | Registry rows for `/settings/machines` |
+
+Device approval lives at `/device`, the registry at `/settings/machines`, and machine frames flow over `/api/machines/ws` (`server/machines-ws.ts` + `src/lib/machines/frames.ts` dispatching all 8 `t` values).

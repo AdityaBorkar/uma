@@ -4,6 +4,7 @@
 		"**/.git",
 		"**/.local",
 		"**/.output",
+		"**/.astro",
 		"**/.tanstack",
 		"**/.coverage",
 		"**/node_modules",

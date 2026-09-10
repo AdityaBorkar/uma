@@ -1,17 +1,17 @@
 ---
 title: sandbox
-description: List sandboxes and prune stopped ones.
+description: See your sandboxes and tidy up stopped ones.
 ---
 
-Defined in `apps/machine/src/cli.ts:88`, dispatched to `cmdSandbox` in `apps/machine/src/index.ts:184`. Subcommand is positional (`rest[0]`, defaults to `list`).
+`sandbox` helps you inspect and clean up microsandbox sandboxes. Defined in `apps/machine/src/cli.ts:88`, handled by `cmdSandbox` in `apps/machine/src/index.ts:184`. The subcommand is positional and defaults to `list`.
 
 ```text
 uma-machine sandbox [list|prune] [--json] [--dry-run]
 ```
 
-## `sandbox list`
+## `sandbox list` — see what's there
 
-`listSandboxes()` table: `id | task | project | status` (`created` cyan, `running` green, `stopped` yellow, `destroyed` red). `--json` prints the raw array. Always exits `0`.
+Shows a `listSandboxes()` table: `id | task | project | status` (`created` cyan, `running` green, `stopped` yellow, `destroyed` red). Add `--json` for the raw array. Always exits `0`.
 
 ```bash
 uma-machine sandbox
@@ -19,15 +19,15 @@ uma-machine sandbox list
 uma-machine sandbox list --json
 ```
 
-## `sandbox prune`
+## `sandbox prune` — tidy up safely
 
-Removes every sandbox with `status == stopped` (`removeSandbox`). `--dry-run` prints `would prune <id>` without removing. Prints `<n> stopped sandbox(es)` at the end. Running sandboxes are never touched. Always exits `0`.
+Removes every sandbox with `status == stopped` (`removeSandbox`). Add `--dry-run` to preview with `would prune <id>` lines. You'll see `<n> stopped sandbox(es)` at the end. Running sandboxes are never touched. Always exits `0`.
 
 ```bash
 uma-machine sandbox prune --dry-run
 uma-machine sandbox prune
 ```
 
-Unknown subcommands (`uma-machine sandbox foo`) print `unknown sandbox subcommand: foo` and exit `1`.
+Typing something else (like `uma-machine sandbox foo`) prints `unknown sandbox subcommand: foo` and exits `1`.
 
-Underlying driver invocations (`src/sandbox/cli.ts:29`): `create <UBUNTU_IMAGE> -n <name> … --label task.id= --label project.id=`, `start`, `stop [--force]`, `remove --force`, `list --format json`, `exec <name> -- <cmd>…`. Driver selection is `sdk → cli → fail-closed` (`src/sandbox/driver.ts`); tests force the mock with `MSB_MOCK=1`.
+Under the hood we call (`src/sandbox/cli.ts:29`): `create <UBUNTU_IMAGE> -n <name> ... --label task.id= --label project.id=`, `start`, `stop [--force]`, `remove --force`, `list --format json`, `exec <name> -- <cmd>...`. Driver choice is `sdk` then `cli` then fail-closed (`src/sandbox/driver.ts`); tests force the mock with `MSB_MOCK=1`.

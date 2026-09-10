@@ -1,17 +1,17 @@
 ---
 title: cancel
-description: Server → machine task cancellation.
+description: How your machine gracefully stops work when asked.
 ---
 
-Schema `CancelFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:20`; dispatch in `apps/machine/src/daemon.ts:158`; implementation `cancelTask` in `apps/machine/src/execution.ts:563`.
+Sometimes plans change — `cancel` lets the server ask your machine to stop a task. Schema `CancelFrameSchema` in `apps/orpc-contract/src/schemas/server-frames.ts:20`; dispatched in `apps/machine/src/daemon.ts:158`; implemented by `cancelTask` in `apps/machine/src/execution.ts:563`.
 
 ```ts
 { t: "cancel", taskId: string }
 ```
 
-## Behavior
+## What happens
 
-- Marks the in-flight task cancelled via the in-flight map.
-- Runs `stopSandbox --force` for the task's sandbox (falls back to label lookup `task.id` when the map has no entry).
-- Best-effort and idempotent: cancelling an unknown or already-finished `taskId` is a no-op, never an error frame.
-- No ack frame exists for `cancel` in `v1` — completion surfaces as the subsequent `task-done { status: "failed" }` or the sandbox going `stopped`.
+- We mark the in-flight task as cancelled via the in-flight map.
+- We run `stopSandbox --force` for that task's sandbox (falling back to a `task.id` label lookup when the map has no entry, e.g. after a daemon restart).
+- It's best-effort and idempotent: cancelling an unknown or already-finished `taskId` is a quiet no-op, never an error frame.
+- There's no ack frame for `cancel` in `v1` — you'll see completion as the follow-up `task-done { status: "failed" }` or the sandbox going `stopped`.

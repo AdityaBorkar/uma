@@ -1,9 +1,9 @@
 ---
 title: heartbeat
-description: Periodic machine → server presence, quota, and sandbox inventory.
+description: How your machine says "I'm here" — regularly and reliably.
 ---
 
-Built by `buildHeartbeat` in `apps/machine/src/heartbeat.ts`, sent by `sendHeartbeat` in `apps/machine/src/daemon.ts:29`, schema `HeartbeatFrameSchema` in `apps/orpc-contract/src/schemas/machine-frames.ts:18`.
+Heartbeats are your machine's friendly check-ins. Built by `buildHeartbeat` in `apps/machine/src/heartbeat.ts`, sent by `sendHeartbeat` in `apps/machine/src/daemon.ts:29`, shaped by `HeartbeatFrameSchema` in `apps/orpc-contract/src/schemas/machine-frames.ts:18`.
 
 ```ts
 {
@@ -19,12 +19,12 @@ Built by `buildHeartbeat` in `apps/machine/src/heartbeat.ts`, sent by `sendHeart
 }
 ```
 
-## Behavior
+## How it works
 
-- **Tick:** `setInterval(..., intervalS * 1000)` (`src/daemon.ts:165`), plus one immediate heartbeat on connect (`onOpen`) and one at startup. `intervalS` comes from `daemonIntervalS()` (floor 2s, default 30s).
-- **Persist-first:** `persistHeartbeat(frame)` writes SQLite before `send(frame)` — a send failure never loses the row, and `uma-machine history` stays queryable offline.
-- **Pressure hint:** `evaluateScopeHint()` sets `scopeHint` when host pressure exceeds `PRESSURE_THRESHOLD_PCT` (90%) with `PRESSURE_ATTRIBUTION_PCT` (60%) attribution sustained `PRESSURE_SUSTAINED_S` (600s), with a `PRESSURE_COOLDOWN_S` (600s) cooldown. Constants in `apps/orpc-contract/src/constants.ts:13`.
-- **Retention:** `UMA_HEARTBEAT_RETENTION_DAYS` (default 30).
+- **Regular ticks:** every `intervalS` via `setInterval(..., intervalS * 1000)` (`src/daemon.ts:165`), plus one right when the socket opens (`onOpen`) and one at startup. `intervalS` comes from `daemonIntervalS()` (floor 2s, default 30s).
+- **Saved first, sent second:** `persistHeartbeat(frame)` writes SQLite before `send(frame)` — so even if the network drops, `uma-machine history` still shows what happened.
+- **Helpful under pressure:** `evaluateScopeHint()` sets `scopeHint` when host pressure tops `PRESSURE_THRESHOLD_PCT` (90%) with `PRESSURE_ATTRIBUTION_PCT` (60%) attribution sustained for `PRESSURE_SUSTAINED_S` (600s), with a `PRESSURE_COOLDOWN_S` (600s) cooldown. Constants live in `apps/orpc-contract/src/constants.ts:13`.
+- **Tidied automatically:** rows older than `UMA_HEARTBEAT_RETENTION_DAYS` (default 30) are vacuumed away.
 
 ## Example
 

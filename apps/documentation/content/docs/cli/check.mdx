@@ -1,9 +1,9 @@
 ---
 title: check
-description: Check config drift without changing anything.
+description: See what drifted, without changing anything.
 ---
 
-Defined in `apps/machine/src/cli.ts:50`, dispatched to `cmdCheck` in `apps/machine/src/index.ts:66`.
+Wondering if your machine still matches its desired setup? `check` takes a safe look and tells you. Defined in `apps/machine/src/cli.ts:50`, handled by `cmdCheck` in `apps/machine/src/index.ts:66`.
 
 ```text
 uma-machine check [--only <k1,k2>] [--json]
@@ -11,21 +11,21 @@ uma-machine check [--only <k1,k2>] [--json]
 
 ## Flags
 
-| Flag | Notes |
+| Flag | When to use it |
 | --- | --- |
-| `--only <k1,k2>` | Comma-separated subset of config keys (see [/cli](/cli)). Parsed by `parseOnlyFlag`. |
-| `--json` | Print the raw `checkAll()` result array as JSON instead of the human table. |
+| `--only <k1,k2>` | Just check these config keys (see [/cli](/cli)). Parsed by `parseOnlyFlag`. |
+| `--json` | Get the raw `checkAll()` result array as JSON instead of the friendly table. |
 
-Runs `checkAll(only)` over `ORDERED_KEYS` (`src/config/mod.ts:43`). Human output is a `cli-table3` table with `key | status (ok / DRIFTED) | detail`.
+We run `checkAll(only)` over `ORDERED_KEYS` (`src/config/mod.ts:43`). The human-friendly output is a table with `key | status (ok / DRIFTED) | detail`.
 
-## Exit codes
+## What the exits mean
 
-| Code | Meaning |
+| Code | What it means |
 | --- | --- |
-| `0` | all checked keys clean |
-| `2` | at least one key drifted |
+| `0` | Everything you checked looks clean — nice! |
+| `2` | At least one key drifted — see `reset` to fix it |
 
-## Examples
+## Try it
 
 ```bash
 uma-machine check
