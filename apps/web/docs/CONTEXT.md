@@ -166,3 +166,33 @@ _Avoid_: reply, note
 **Event**:
 An append-only timeline entry on a document (`document_events`): `opened | closed | reopened | labeled | unlabeled | renamed | commented`. Written transactionally with the mutation that caused it. Kinds are convention-only — the DB column is free `text` (no pgEnum/`CHECK`).
 _Avoid_: activity, log
+
+### Devices & automation
+
+**Machine**:
+A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; the registry itself is still a placeholder with no backing rows in v1.
+_Avoid_: worker, node, runner
+
+**Agent**:
+A coding agent binary that can run inside a machine sandbox (`opencode | pi | omp` in the settings catalog). Distinct from a Task's `agent` column, which today is hardcoded to `cli` at creation and has no shared enum with the catalog.
+_Avoid_: model, bot
+
+**Model Provider**:
+An external model vendor (OpenAI, Anthropic, Google in the settings catalog) with its supported models and API-key state.Static catalog in v1 — keys show as configured/unconfigured, no live sync.
+_Avoid_: connection, integration
+
+**Eval**:
+A placeholder concept for future evaluation results. No table, RPC, or scoring engine in v1; the settings page is an explicit blank slate.
+_Avoid_: test, benchmark
+
+**Analytics**:
+A placeholder concept for future flow/cycle analytics. No engine in v1; the settings page is an explicit blank slate. Do not confuse with the domain formulas in `docs/do-not-touch-ai/REFERENCE.md`, which are theory-only until marked Implemented.
+_Avoid_: report, insight
+
+**Version Source**:
+The version-control and source-hosting systems a project builds from (Git / Jujutsu; GitHub / GitLab in the settings catalog). Static catalog in v1.
+_Avoid_: repo host, vcs
+
+**Monitor**:
+The per-scope live status view (`/{projectSlug}/monitor`). Placeholder in v1 — signals and task health will appear here.
+_Avoid_: dashboard, activity feed

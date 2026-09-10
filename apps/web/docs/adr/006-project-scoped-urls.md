@@ -43,10 +43,10 @@ Make the URL the source of truth for workspace scope.
   owns the shell — `AppSidebar` (desktop) project selector and the mobile
   `select` take `"~"` or a slug and router-navigate to `/$projectSlug/dashboard`;
   nav `to` strings are `/$projectSlug/…` with `params: { projectSlug }`. Nav
-  item arrays live in `(app)/$projectSlug/route.tsx` (`projectNavItems`) and
+  item arrays live in `(app)/$projectSlug/route.tsx` (`navItems`) and
   `(app)/settings/route.tsx` (`settingsNavItems`).
 - **Management stays unscoped** under `/settings/*` (`/settings/projects`,
-  `/settings/connections`, `/settings/account`, `/settings/evals`,
+  `/settings/account`, `/settings/evals`,
   `/settings/projects/new`, `/settings/projects/$projectId`) — per-user,
   not per-project (plan 005 §3.1, option **A**). `settings/insights.tsx`
   redirects to `/~/insights`.
@@ -56,7 +56,7 @@ Make the URL the source of truth for workspace scope.
   `/documents?kind=wiki`; unknown slugs render an in-shell "Project not found"
   alert with a link to `/settings/projects`.
 
-> **Post-implementation delta (2026-09-09):** the `/wiki → documents?kind=wiki` redirect and `insights/updates` pages no longer exist — workspace nav is 5 items (`navItems`: dashboard/documents/monitor/signals/tasks). `routeTree.gen.ts` is gitignored (`*.gen.ts`), not committed. Settings nav now includes backed pages `analytics/agents/machines/model-providers/version-source` plus dead/planned entries (`skills/mcp/commands/subagents/web-search/browsers/computer-control`) with no backing files; `connections`/`insights` settings pages are gone (Connections remain as oRPC + `/api/connections.*` callbacks).
+> **Post-implementation delta (2026-09-09, refreshed 2026-09-10):** the `/wiki → documents?kind=wiki` redirect and `insights/updates` pages no longer exist — workspace nav is 5 items (`navItems`: dashboard/documents/monitor/signals/tasks). `monitor` is a placeholder route. Settings nav now includes backed pages `account/analytics/evals/projects/machines/agents/model-providers/version-source` plus dead/planned entries (`skills/mcp/commands/subagents/web-search/browsers/computer-control`) with no backing files; `analytics`/`evals` are explicit placeholders. `connections`/`insights` settings pages are gone (Connections remain as oRPC `connections.*` + `/api/connections.*` callbacks with no settings UI). `routeTree.gen.ts` is generated (`bun run gen:routes`); do not hand-edit.
 
 ## Deviations from plan 005
 
@@ -77,10 +77,9 @@ Make the URL the source of truth for workspace scope.
 - `projects.slug` is mutable — renaming changes the URL and the old slug 404s
   in v1 (no history/redirect table yet).
 - Settings/nav caution: unscoped `to` strings `/projects`, `/connections`,
-  `/account`, `/evals` in the nav arrays (`projectNavItems`/`settingsNavItems`,
-  now in `(app)/$projectSlug/route.tsx` and `(app)/settings/route.tsx`) still
-  have **no backing file routes** — the real pages live under `/settings/*`
-  (see AGENTS.md).
+  `/account`, `/evals` in the nav arrays (`navItems` in `(app)/$projectSlug/route.tsx` and `settingsNavItems`
+  in `(app)/settings/route.tsx`) still
+  have **no backing file routes** — the real pages live under `/settings/*`.
 - `~` can never be a project slug (reserved), and TanStack Router's literal
   precedence keeps room to split a literal `(app)/~` tree later without
   migration.

@@ -44,9 +44,14 @@ Nav items are defined in `navItems`
 (`src/routes/(app)/settings/route.tsx` — backed: account/analytics/evals/projects/machines/agents/model-providers/version-source; dead/planned with no backing files: skills/mcp/commands/subagents/web-search/browsers/computer-control), and passed to `<AppShell items={…}>`
 (`isSettings` for the settings shell). Scoped items are `/$projectSlug/…` and
 receive `params.projectSlug` from the current scope (or `"~"` for Multi-Project)
-via `currentScope`.
+via `currentScope`. `monitor` is a backed route but renders a placeholder
+("Monitor view coming soon"); `analytics`/`evals` settings pages are backed
+routes rendering explicit placeholders. `connections` has full backend
+(oRPC `connections.*` + `/api/connections.*` OAuth callbacks) but no settings
+UI page — tokens/scopes/metadata are not editable from the UI in v1.
 
 Files: `src/components/layout/AppShell.tsx`, `src/components/layout/AppSidebar.tsx`, `src/components/layout/UnderlineNav.tsx`, `src/routes/(app)/$projectSlug/route.tsx`, `src/routes/(app)/settings/route.tsx`, `src/routes/__root.tsx` (`<body className="dark">` forces dark — see Deviations; meta is `color-scheme: light dark`).
+`src/routeTree.gen.ts` is generated (`bun run gen:routes`); do not hand-edit.
 
 ## Tokens (`src/styles.css`)
 

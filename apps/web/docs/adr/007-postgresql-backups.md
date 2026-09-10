@@ -2,17 +2,16 @@
 
 **Date:** 2026-08-31
 **Status:** Accepted
-**Implements:** `infra/oci/object-storage.ts` + `infra/docker/backup/` (pgBackRest-enabled postgres image), `infra/docker/postgres.ts`
-**Related:** [`docs/CONTEXT.md`](../CONTEXT.md) (control_plane database), `docs/AGENTS.md` (infra layout)
+**Implements:** `apps/infra/oci/object-storage.ts` + `apps/infra/docker/backup/` (pgBackRest-enabled postgres image), `apps/infra/docker/postgres.ts`
+**Related:** [`docs/CONTEXT.md`](../CONTEXT.md) (control_plane database)
 
-> ⚠️ **Wiring status (2026-08-31):** every component this ADR describes is in
-> the tree, but the stack does **not** currently enable backups. `infra/index.ts`
+> ⚠️ **Wiring status (2026-08-31, still true 2026-09-10):** every component this ADR describes is in
+> the tree, but the stack does **not** currently enable backups. `apps/infra/index.ts`
 > has the `createBackupBackend()` call commented out and never passes `backends`
 > to `postgresContainer()`, so as committed the postgres container runs the
 > stock image with `archive_mode` off and no cron. The decision below stands;
 > re-enable by wiring `vps ? createBackupBackend() : undefined` through to
-> `postgresContainer({ backends })`. See `docs/notes/INFRA_REPORT.md` for the
-> surrounding open items (bucket plumbing, `CIPHER_PASS`, observability).
+> `postgresContainer({ backends })`.
 
 ## Context
 
@@ -20,7 +19,7 @@ Postgres (`control_plane`, Docker container on the OCI VPS) had no backups:
 the previous weekly-cycle ADRs assumed a fixed period, and the only persistence
 was a single Docker named volume on the same disk as the container. A lost VM,
 disk, or accidental `TRUNCATE` was unrecoverable. The infra is Pulumi-driven
-(`infra/index.ts`) and OCI-native (`@pulumi/oci`), so the natural recovery
+(`apps/infra/index.ts`) and OCI-native (`@pulumi/oci`), so the natural recovery
 target is **OCI Object Storage**, which the stack already provisions against
 (`oci:*` provider config, `vps:compartmentId`).
 
@@ -45,7 +44,7 @@ the bucket's lifecycle policy as the retention enforcement layer.
   scheduled cron job takes the base backup. A logical `pg_dump` every 2 days
   cannot be WAL-replayed, so it would forfeit point-in-time recovery.
 - **Where it runs:** inside the postgres container. The image
-  (`infra/docker/backup/Dockerfile`) is `postgres:18-alpine` + pgBackRest +
+  (`apps/infra/docker/backup/Dockerfile`) is `postgres:18-alpine` + pgBackRest +
   busybox cron. `wal_level=replica` was already set; we add
   `archive_mode=on`, `archive_command=pgbackrest … archive-push %p`, and
   `archive_timeout=60` (idle clusters still ship WAL at least every minute).
@@ -55,7 +54,7 @@ the bucket's lifecycle policy as the retention enforcement layer.
   OS `postgres` user → DB role `postgres` (created by an initdb script);
   no TCP/password exposure.
 - **Object storage:** a private bucket + `ObjectLifecyclePolicy`
-  (`infra/oci/object-storage.ts`), credentials as an IAM **Customer Secret
+  (`apps/infra/oci/object-storage.ts`), credentials as an IAM **Customer Secret
   Key** (the S3-compatible Access Key = key `id`, Secret Key = `key`), and
   the path-style endpoint
   `https://<namespace>.compat.objectstorage.<region>.oci.customer-oci.com`.
@@ -78,7 +77,7 @@ the bucket's lifecycle policy as the retention enforcement layer.
 
 - Recovery to any committed transaction **within the WAL window** (default
   14 days), or to any kept base backup (60 days) — see the runbook
-  `docs/notes/BACKUPS.md` for the restore procedure.
+  `docs/do-not-touch-ai/BACKUPS.md` for the restore procedure.
 - Storage cost bounded by the lifecycle rules; WAL is small (~write volume)
   and compresses (lz4/zstd).
 - The S3-compat Customer Secret Key is created for the same IAM user that
@@ -111,7 +110,7 @@ the bucket's lifecycle policy as the retention enforcement layer.
 
 ## Traceability
 
-- `infra/oci/object-storage.ts` — bucket, lifecycle policy, S3-compat key.
-- `infra/docker/backup/{Dockerfile,entrypoint.sh,pgbackrest-boot.sh,planner-backup-full.sh,init-role-postgres.sql}` — image + orchestration.
-- `infra/docker/postgres.ts` — image selection, `PGDATA`, archive settings, `BACKUP_*` envs, healthcheck fix.
-- `docs/notes/BACKUPS.md` — verification, restore, and troubleshooting runbook.
+- `apps/infra/oci/object-storage.ts` — bucket, lifecycle policy, S3-compat key.
+- `apps/infra/docker/backup/{Dockerfile,entrypoint.sh,pgbackrest-boot.sh,planner-backup-full.sh,init-role-postgres.sql}` — image + orchestration.
+- `apps/infra/docker/postgres.ts` — image selection, `PGDATA`, archive settings, `BACKUP_*` envs, healthcheck fix.
+- `docs/do-not-touch-ai/BACKUPS.md` — verification, restore, and troubleshooting runbook.
