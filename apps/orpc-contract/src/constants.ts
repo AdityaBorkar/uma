@@ -15,6 +15,7 @@ export const PRESSURE_THRESHOLD_PCT = 90;
 export const PRESSURE_SUSTAINED_S = 10 * 60;
 export const PRESSURE_ATTRIBUTION_PCT = 60;
 export const PRESSURE_COOLDOWN_S = 10 * 60;
+
 export const MACHINES_WS_PATH = "/api/machines/ws";
 export const RESERVED_MACHINE_NAMES = [
 	"api",

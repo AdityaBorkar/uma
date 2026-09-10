@@ -12,7 +12,6 @@
 		"dev": "bun run src/index.ts",
 		"docs:wire": "bun run scripts/generate-wire-schema.ts",
 		"roundtrip": "bun run scripts/machine.roundtrip.ts",
-		"server": "bun run server-central/src/index.ts",
 		"test": "bun test"
 	},
 	"dependencies": {

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// oRPC / HTTPS contract (server-owned, consumed here)
-
 export const DeviceCodeRequestSchema = z.object({
 	client_id: z.string().min(1),
 	machineName: z.string().min(1).optional(),
