@@ -8,26 +8,27 @@ import Layout from "@/components/layout.astro";
 import type { TOCItemType } from "fumadocs-core/toc";
 
 interface Props {
-  page: CollectionEntry<"docs">;
+	page: CollectionEntry<"docs">;
 }
 
 export async function getStaticPaths() {
-  return source.getPages().map((page) => ({
-    params: { slug: page.slugs.length > 0 ? page.slugs.join("/") : undefined },
-    props: { page: page.data._raw },
-  }));
+	return source.getPages().map((page) => ({
+		params: { slug: page.slugs.length > 0 ? page.slugs.join("/") : undefined },
+		props: { page: page.data._raw },
+	}));
 }
 
 const { page } = Astro.props;
 const { Content, headings } = await render(page);
-const slugs = typeof Astro.params.slug === "string" ? Astro.params.slug.split("/") : [];
+const slugs =
+	typeof Astro.params.slug === "string" ? Astro.params.slug.split("/") : [];
 const docsPage = source.getPage(slugs)!;
 const image = getPageImageUrl(docsPage);
 
 const toc: TOCItemType[] = headings.map((heading) => ({
-  depth: heading.depth,
-  title: heading.text,
-  url: "#" + heading.slug,
+	depth: heading.depth,
+	title: heading.text,
+	url: "#" + heading.slug,
 }));
 ---
 
