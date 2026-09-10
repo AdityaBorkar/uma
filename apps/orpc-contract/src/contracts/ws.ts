@@ -21,18 +21,6 @@ import {
 	UpgradeRequiredFrameSchema,
 } from "../server-frames.ts";
 
-// WS messages contract (frozen v1).
-//
-// Transport is raw JSON frames at MACHINES_WS_PATH, NOT an oRPC envelope —
-// that wire shape is frozen (see VERSIONING.md), so this file does two things:
-//  1. `wsMessagesContract`: the canonical raw-frame registry (path, protocol,
-//     per-`t` schemas, discriminated unions). Senders/parsers keep using
-//     `validateMachineFrame` / `parseServerFrame` against these schemas.
-//  2. `wsContract`: the same channel modeled as `oc` procedures so future
-//     oRPC-native clients/servers share types — `machines.send` for
-//     machine→server delivery, `machines.stream` (event iterator) for the
-//     server→machine stream.
-
 export const wsMessagesContract = {
 	machineToServer: {
 		"check-ack": CheckAckFrameSchema,
