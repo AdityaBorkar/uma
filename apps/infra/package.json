@@ -6,16 +6,15 @@
 		"#/*": "./src/*"
 	},
 	"dependencies": {
-		"@pulumi/local": "catalog:"
-	},
-	"devDependencies": {
 		"@clack/prompts": "catalog:",
 		"@pulumi/cloudflare": "^6.20.0",
 		"@pulumi/docker": "^5.2.0",
+		"@pulumi/local": "catalog:",
 		"@pulumi/oci": "^4.22.0",
 		"@pulumi/pulumi": "^3.261.0",
 		"@types/bun": "catalog:",
 		"cac": "catalog:",
+		"commander": "^15.0.0",
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:"
 	}
