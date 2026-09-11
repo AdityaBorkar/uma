@@ -6,7 +6,6 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate as drizzleMigrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { chmod0600, ensureParentDir } from "../fs-utils.ts";
-import { schema } from "./schema.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
 export type Db = DrizzleDb;
@@ -16,7 +15,7 @@ export type DbTx =
 	| Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];
 
 function createDrizzle(raw: Database) {
-	return drizzle(raw, { schema });
+	return drizzle({ client: raw });
 }
 
 const SQLITE_SIDECARS = ["-wal", "-shm", "-journal"];
