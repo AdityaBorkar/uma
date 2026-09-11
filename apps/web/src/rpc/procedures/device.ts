@@ -1,11 +1,12 @@
 import { ORPCError, os } from "@orpc/server";
 import {
+	DeviceApproveInputSchema,
+	DeviceApproveResponseSchema,
 	DeviceCodeRequestSchema,
 	DeviceCodeResponseSchema,
 	DeviceTokenRequestSchema,
 	DeviceTokenResponseSchema,
 } from "@uma/orpc-contract";
-import { z } from "zod";
 
 import {
 	approveDevice,
@@ -67,16 +68,13 @@ export const token = os
 	});
 
 /**
- * Browser approval for a `user_code` (web UI concern, not part of the frozen
- * wire contract). Creates the enrolled machine row on approve.
+ * Browser approval for a `user_code` (apiContract `device.approve`; web-only,
+ * not part of the frozen wire contract). Creates the enrolled machine row on
+ * approve.
  */
 export const approve = os
-	.input(
-		z.object({
-			approve: z.boolean().default(true),
-			user_code: z.string().min(1),
-		}),
-	)
+	.input(DeviceApproveInputSchema)
+	.output(DeviceApproveResponseSchema)
 	.handler(async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);

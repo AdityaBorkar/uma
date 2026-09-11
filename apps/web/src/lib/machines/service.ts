@@ -14,6 +14,7 @@ import { and, desc, eq, lt, sql } from "drizzle-orm";
 
 import { serverUrl } from "#/env.ts";
 import { db } from "#/lib/db.ts";
+import { taskRuns } from "#/schemas/db/agents.ts";
 import {
 	deviceCodes,
 	machineHeartbeats,
@@ -435,6 +436,8 @@ const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 /**
  * Atomic claim: `queued → running` guarded by `WHERE status='queued'`.
  * Returns true on claim, false on conflict (authoritative 409 upstream).
+ * On success also opens a `task_runs` row so every execution attempt is
+ * tracked (browser reads via `runs.*`; see `finishTask` for terminal sync).
  */
 export async function claimTask(
 	taskId: string,
@@ -442,9 +445,10 @@ export async function claimTask(
 	userId: string,
 	sandboxId: string,
 ): Promise<boolean> {
+	const now = new Date();
 	const updated = await db
 		.update(tasks)
-		.set({ startedAt: new Date(), status: "running", updatedAt: new Date() })
+		.set({ startedAt: now, status: "running", updatedAt: now })
 		.where(
 			and(
 				eq(tasks.id, taskId),
@@ -452,7 +456,7 @@ export async function claimTask(
 				eq(tasks.status, "queued"),
 			),
 		)
-		.returning({ id: tasks.id });
+		.returning({ agent: tasks.agent, id: tasks.id });
 	if (updated.length === 0) return false;
 	await db
 		.insert(machineSandboxes)
@@ -467,6 +471,16 @@ export async function claimTask(
 			set: { status: "running", taskId },
 			target: machineSandboxes.sandboxId,
 		});
+	await db.insert(taskRuns).values({
+		agent: updated[0]?.agent ?? "cli",
+		id: crypto.randomUUID(),
+		machineId,
+		sandboxId,
+		startedAt: now,
+		status: "running",
+		taskId,
+		userId,
+	});
 	return true;
 }
 
@@ -503,13 +517,14 @@ export async function finishTask(
 	result?: string,
 ): Promise<boolean> {
 	if (!TERMINAL_STATUSES.has(status)) return false;
+	const now = new Date();
 	const updated = await db
 		.update(tasks)
 		.set({
-			finishedAt: new Date(),
+			finishedAt: now,
 			result: result?.slice(0, 65536) ?? null,
 			status,
-			updatedAt: new Date(),
+			updatedAt: now,
 		})
 		.where(
 			and(
@@ -519,7 +534,24 @@ export async function finishTask(
 			),
 		)
 		.returning({ id: tasks.id });
-	return updated.length > 0;
+	if (updated.length === 0) return false;
+	// Close the open run (there is at most one: claims require `queued`).
+	await db
+		.update(taskRuns)
+		.set({
+			finishedAt: now,
+			result: result?.slice(0, 65536) ?? null,
+			status,
+			updatedAt: now,
+		})
+		.where(
+			and(
+				eq(taskRuns.taskId, taskId),
+				eq(taskRuns.userId, userId),
+				eq(taskRuns.status, "running"),
+			),
+		);
+	return true;
 }
 
 // --- Server → machine fan-out -------------------------------------------------

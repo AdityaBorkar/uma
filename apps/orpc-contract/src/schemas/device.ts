@@ -63,3 +63,13 @@ export const ReceiptSchema = z.object({
 	ok: z.boolean(),
 });
 export type Receipt = z.infer<typeof ReceiptSchema>;
+
+// Browser approval for a `user_code` (cookie auth; web-only, not frozen wire).
+export const DeviceApproveInputSchema = z.object({
+	approve: z.boolean().default(true),
+	user_code: z.string().min(1),
+});
+export type DeviceApproveInput = z.infer<typeof DeviceApproveInputSchema>;
+
+export const DeviceApproveResponseSchema = z.object({ ok: z.literal(true) });
+export type DeviceApproveResponse = z.infer<typeof DeviceApproveResponseSchema>;

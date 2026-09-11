@@ -1,9 +1,11 @@
 import { ORPCError, os } from "@orpc/server";
+import { KNOWN_AGENT_NAMES } from "@uma/orpc-contract";
 import { and, desc, eq, ilike, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "#/lib/db.ts";
 import { type RpcContext, requireUser } from "#/rpc/auth.ts";
+import { implementer } from "#/rpc/contract.ts";
 import {
 	afterCursor,
 	assertProjectOwned,
@@ -11,6 +13,8 @@ import {
 	pageCursor,
 	paginate,
 } from "#/rpc/scope.ts";
+import { agents } from "#/schemas/db/agents.ts";
+import { taskLogs } from "#/schemas/db/machines.ts";
 import { projects } from "#/schemas/db/projects.ts";
 import { signals, tasks } from "#/schemas/db/tasks.ts";
 import {
@@ -46,6 +50,9 @@ export const list = os
 		}
 		if (projectId) {
 			conditions.push(eq(tasks.projectId, projectId));
+		}
+		if (input?.agent) {
+			conditions.push(eq(tasks.agent, input.agent));
 		}
 		if (q) {
 			conditions.push(ilike(tasks.title, `%${q}%`));
@@ -144,11 +151,29 @@ export const create = os
 		if (input.projectId) {
 			await assertProjectOwned(input.projectId, user.id);
 		}
+		// Agent pinning: `cli` is the legacy default; anything else must be a
+		// well-known agent or a name in the user's registry (`agents.*`).
+		const agent = input.agent?.trim() || "cli";
+		if (
+			agent !== "cli" &&
+			!(KNOWN_AGENT_NAMES as readonly string[]).includes(agent)
+		) {
+			const [registered] = await db
+				.select({ id: agents.id })
+				.from(agents)
+				.where(and(eq(agents.userId, user.id), eq(agents.name, agent)))
+				.limit(1);
+			if (!registered) {
+				throw new ORPCError("BAD_REQUEST", {
+					message: `Unknown agent "${agent}"`,
+				});
+			}
+		}
 		const id = crypto.randomUUID();
 		const [row] = await db
 			.insert(tasks)
 			.values({
-				agent: "cli",
+				agent,
 				id,
 				projectId: input.projectId ?? null,
 				prompt: input.prompt ?? null,
@@ -216,3 +241,44 @@ export const updateStatus = os
 		}
 		return updated;
 	});
+
+/**
+ * Browser-readable task logs (contract-first: `apiContract tasks.logs.list`).
+ * Machines append via the WS `log` frame; ownership is checked through the
+ * parent task.
+ */
+export const logsList = implementer.tasks.logs.list.handler(
+	async ({ input, context, errors }) => {
+		const user = await requireUser(context.headers);
+		const [task] = await db
+			.select({ id: tasks.id })
+			.from(tasks)
+			.where(and(eq(tasks.id, input.taskId), eq(tasks.userId, user.id)))
+			.limit(1);
+		if (!task) throw errors.NOT_FOUND();
+		const limit = input.limit ?? 50;
+		const cursor = await pageCursor(input.cursor, async (id) => {
+			const [row] = await db
+				.select({ createdAt: taskLogs.createdAt })
+				.from(taskLogs)
+				.where(and(eq(taskLogs.id, id), eq(taskLogs.taskId, input.taskId)))
+				.limit(1);
+			return row?.createdAt;
+		});
+		const rows = await db
+			.select()
+			.from(taskLogs)
+			.where(
+				and(
+					eq(taskLogs.taskId, input.taskId),
+					cursor
+						? afterCursor(taskLogs.createdAt, taskLogs.id, cursor)
+						: undefined,
+				),
+			)
+			.orderBy(desc(taskLogs.createdAt), desc(taskLogs.id))
+			.limit(limit + 1);
+		const { items, nextCursor } = paginate(rows, limit, (last) => last.id);
+		return { items, nextCursor: nextCursor ?? null };
+	},
+);

@@ -9,6 +9,7 @@ import { fieldErrors, type ProjectOption } from "#/lib/forms.ts";
 import { TaskCreateInput } from "#/schemas/schema.ts";
 
 interface Values {
+	agent: string;
 	projectId: string;
 	prompt: string;
 	signalId: string;
@@ -20,11 +21,17 @@ interface SignalOption {
 	title: string;
 }
 
+interface AgentOption {
+	name: string;
+}
+
 interface Props {
+	agents?: AgentOption[];
 	defaultSignalId?: string;
 	loading?: boolean;
 	onCancel?: () => void;
 	onSubmit: (values: {
+		agent: string | undefined;
 		projectId: string | undefined;
 		prompt: string | undefined;
 		signalId: string | undefined;
@@ -36,6 +43,7 @@ interface Props {
 }
 
 export function TaskForm({
+	agents,
 	projects,
 	signals,
 	defaultSignalId,
@@ -45,6 +53,7 @@ export function TaskForm({
 	loading,
 }: Props) {
 	const [values, setValues] = useState<Values>({
+		agent: "",
 		projectId: "",
 		prompt: "",
 		signalId: defaultSignalId ?? "",
@@ -57,6 +66,7 @@ export function TaskForm({
 	/** Validation is the canonical Zod schema — no duplicated rules here. */
 	function validate(): boolean {
 		const result = TaskCreateInput.safeParse({
+			agent: values.agent || undefined,
 			projectId: values.projectId || undefined,
 			prompt: values.prompt || undefined,
 			signalId: values.signalId || undefined,
@@ -78,6 +88,7 @@ export function TaskForm({
 			return;
 		}
 		await onSubmit({
+			agent: values.agent || undefined,
 			projectId: values.projectId || undefined,
 			prompt: values.prompt || undefined,
 			signalId: values.signalId || undefined,
@@ -147,6 +158,24 @@ export function TaskForm({
 						))}
 					</Select>
 				</div>
+			</div>
+			<div className="space-y-2">
+				<Label htmlFor="agent">Agent</Label>
+				<Select
+					id="agent"
+					onChange={(e) => setValues((s) => ({ ...s, agent: e.target.value }))}
+					value={values.agent}
+				>
+					<option value="">Default (cli)</option>
+					{(agents ?? []).map((a) => (
+						<option key={a.name} value={a.name}>
+							{a.name}
+						</option>
+					))}
+				</Select>
+				{errors.agent ? (
+					<p className="text-destructive text-xs">{errors.agent}</p>
+				) : null}
 			</div>
 			<div className="flex justify-end gap-2 pt-2">
 				{onCancel ? (

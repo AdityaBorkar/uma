@@ -44,3 +44,19 @@ export const ResetStateResponseSchema = z.object({
 	keys: z.union([z.array(z.string()), z.literal("*")]),
 });
 export type ResetStateResponse = z.infer<typeof ResetStateResponseSchema>;
+
+// --- Browser-side machine registry (cookie auth; web-only) ---
+
+export const MachineGetInputSchema = z.object({ id: z.string().min(1) });
+export type MachineGetInput = z.infer<typeof MachineGetInputSchema>;
+
+export const MachineRevokeInputSchema = z.object({ id: z.string().min(1) });
+export type MachineRevokeInput = z.infer<typeof MachineRevokeInputSchema>;
+
+export const MachineHeartbeatListInputSchema = z.object({
+	limit: z.number().int().min(1).max(100).default(50),
+	machineId: z.string().min(1),
+});
+export type MachineHeartbeatListInput = z.infer<
+	typeof MachineHeartbeatListInputSchema
+>;

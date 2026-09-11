@@ -1,3 +1,4 @@
+export * from "./agents.ts";
 export * from "./auth.gen.ts";
 export * from "./connections.ts";
 export * from "./documents.ts";

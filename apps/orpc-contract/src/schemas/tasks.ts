@@ -11,6 +11,7 @@ export const TaskStatusEnum = z.enum(TASK_STATUS_VALUES);
 export type TaskStatus = z.infer<typeof TaskStatusEnum>;
 
 export const TaskCreateInputSchema = z.object({
+	agent: z.string().min(1).max(64).optional(),
 	projectId: z.string().optional(),
 	prompt: z.string().max(10_000, "Max 10000 characters").optional(),
 	signalId: z.string().optional(),
@@ -29,6 +30,7 @@ export type TaskUpdateStatusInput = z.infer<typeof TaskUpdateStatusInputSchema>;
 
 export const TaskListInputSchema = z
 	.object({
+		agent: z.string().optional(),
 		cursor: z.string().optional(),
 		limit: z.number().int().min(1).max(100).default(20),
 		projectId: z.string().optional(),

@@ -9,8 +9,8 @@ Single source of truth for machine↔server wire shapes. Imported by `apps/machi
 - `src/schemas/machine-frames.ts` — machine→server frames (all carry `machineId` + `protocol: "v1"`). See `FRAMES.md`.
 - `src/schemas/server-frames.ts` — server→machine frames. See `FRAMES.md`.
 - `src/schemas/device.ts` — HTTPS/oRPC shapes: device-code flow (`DeviceCode*`, `DeviceToken*`, `DeviceTokenError`) and `TaskClaimRequest`, `DriftEntry`, `Receipt`.
-- `src/schemas/` — API I/O schemas for the contract routers: web-domain inputs (mirroring `apps/web/src/schemas/schema.ts`), loose row/page/stats outputs, machine HTTPS responses (`TaskClaimResponse`, `LatestVersionResponse`, …), WS channel I/O (`WsSendAck`, `WsSubscribeInput`), shared primitives (`primitives.ts`), and WS frames (`machine-frames.ts`, `server-frames.ts`). Split per domain: `common.ts` (DbRecord/page/stats/id/remove envelopes), `projects.ts`, `connections.ts`, `signals.ts`, `tasks.ts`, `documents.ts` (incl. comments), `machines.ts`, `ws.ts`; re-exported via `schemas/index.ts`.
-- `src/contracts/api.ts` — `apiContract`: `oc` router (from `@orpc/contract`) over the schemas above. Namespaces `tasks/signals/projects/documents/connections` mirror `apps/web/src/rpc/router.ts`; `device`/`machines` cover machine enrollment + claim/version/history. Implement with `implement(apiContract)` from `@orpc/server`. Every procedure carries `openapi({ method, path, ... })` metadata (from `@orpc/openapi`) so the same contract serves RPC **and** REST: `RPCHandler` at `/api/rpc` (unchanged) plus `OpenAPIHandler` and OpenAPI-spec generation. See "REST endpoints" below.
+- `src/schemas/` — API I/O schemas for the contract routers: web-domain inputs (mirroring `apps/web/src/schemas/schema.ts`), loose row/page/stats outputs, machine HTTPS responses (`TaskClaimResponse`, `LatestVersionResponse`, …), WS channel I/O (`WsSendAck`, `WsSubscribeInput`), shared primitives (`primitives.ts`), and WS frames (`machine-frames.ts`, `server-frames.ts`). Split per domain: `common.ts` (DbRecord/page/stats/id/remove envelopes), `projects.ts`, `connections.ts`, `signals.ts`, `tasks.ts`, `documents.ts` (incl. comments), `machines.ts`, `agents.ts`, `runs.ts`, `task-logs.ts`, `ws.ts`; re-exported via `schemas/index.ts`.
+- `src/contracts/api.ts` — `apiContract`: `oc` router (from `@orpc/contract`) over the schemas above. Namespaces `tasks/signals/projects/documents/connections` mirror `apps/web/src/rpc/router.ts`; `device`/`machines` cover machine enrollment + claim/version/history **plus** the browser registry (`machines.list/get/revoke/heartbeatList`, `device.approve`); `agents`/`runs` cover the coding-agent registry and task-run tracking. Implement with `implement(apiContract)` from `@orpc/server`. Every procedure carries `openapi({ method, path, ... })` metadata (from `@orpc/openapi`) so the same contract serves RPC **and** REST: `RPCHandler` at `/api/rpc` (unchanged) plus `OpenAPIHandler` and OpenAPI-spec generation. See "REST endpoints" below.
 - `src/contracts/ws.ts` — WS messages contract (frozen v1): `wsMessagesContract` is the raw-frame registry (`path`, `protocol`, per-`t` schemas for both directions); `wsContract` models the same channel as `oc` procedures (`machines.send` for machine→server frames, `machines.stream` as an `asyncIteratorObject(ServerFrameSchema)` for server→machine). Transport stays raw JSON frames, not an oRPC envelope.
 - `src/contracts/index.ts` + `src/index.ts` — barrel re-exports: schemas and contracts are both exported from the package root.
 - `src/utils.ts` — pure helpers: `branchForTask`, `effectiveLimits`, `quotaDefaultsFromRam`, `compareVersions` / `needsUpgrade`.
@@ -24,6 +24,14 @@ device operations are actions whose paths mirror the procedure name.
 
 | Procedure | Method | Path |
 |---|---|---|
+| `agents.list` | `GET` | `/agents` |
+| `agents.create` | `POST` | `/agents` (201) |
+| `agents.get` | `GET` | `/agents/{id}` |
+| `agents.update` | `PATCH` | `/agents/{id}` |
+| `agents.remove` | `DELETE` | `/agents/{id}` |
+| `runs.list` | `GET` | `/runs` |
+| `runs.get` | `GET` | `/runs/{id}` |
+| `runs.stats` | `GET` | `/runs/stats` |
 | `connections.list` | `GET` | `/connections` |
 | `connections.providers` | `GET` | `/connections/providers` |
 | `connections.get` | `GET` | `/connections/{provider}` |
@@ -31,6 +39,7 @@ device operations are actions whose paths mirror the procedure name.
 | `connections.disconnect` | `DELETE` | `/connections/{provider}` |
 | `device.code` | `POST` | `/device/code` |
 | `device.token` | `POST` | `/device/token` |
+| `device.approve` | `POST` | `/device/approve` |
 | `documents.list` | `GET` | `/documents` |
 | `documents.create` | `POST` | `/documents` (201) |
 | `documents.get` | `GET` | `/documents/{number}` |
@@ -40,6 +49,10 @@ device operations are actions whose paths mirror the procedure name.
 | `documents.reopen` | `POST` | `/documents/{number}/reopen` |
 | `documents.comments.create` | `POST` | `/documents/{documentNumber}/comments` (201) |
 | `machines.checkState` | `GET` | `/machines/check-state` |
+| `machines.list` | `GET` | `/machines` |
+| `machines.get` | `GET` | `/machines/{id}` |
+| `machines.revoke` | `DELETE` | `/machines/{id}` |
+| `machines.heartbeatList` | `GET` | `/machines/{machineId}/heartbeats` |
 | `machines.claim` | `POST` | `/machines/claim` |
 | `machines.heartbeatHistory` | `GET` | `/machines/heartbeats` |
 | `machines.latestVersion` | `GET` | `/machines/versions/latest` |
@@ -60,6 +73,7 @@ device operations are actions whose paths mirror the procedure name.
 | `tasks.get` | `GET` | `/tasks/{id}` |
 | `tasks.stats` | `GET` | `/tasks/stats` |
 | `tasks.updateStatus` | `PATCH` | `/tasks/{id}/status` |
+| `tasks.logs.list` | `GET` | `/tasks/{taskId}/logs` |
 
 Notes for implementers:
 

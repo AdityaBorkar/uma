@@ -136,6 +136,7 @@ export const TaskStatusEnum = z.enum(TASK_STATUS_VALUES);
 export type TaskStatus = z.infer<typeof TaskStatusEnum>;
 
 export const TaskCreateInput = z.object({
+	agent: z.string().min(1).max(64).optional(),
 	projectId: z.string().optional(),
 	prompt: z.string().max(10_000, "Max 10000 characters").optional(),
 	signalId: z.string().optional(),
@@ -152,6 +153,7 @@ export const TaskUpdateStatusInput = z.object({
 
 export const TaskListInput = z
 	.object({
+		agent: z.string().optional(),
 		cursor: z.string().optional(),
 		limit: z.number().int().min(1).max(100).default(20),
 		projectId: z.string().optional(),
@@ -299,4 +301,85 @@ export const DocumentNumberInput = z.object({
 export const CommentCreateInput = z.object({
 	body: z.string().min(1).max(10_000),
 	documentNumber: z.number().int().positive(),
+});
+
+// --- Coding agents & task runs (mirrors @uma/orpc-contract, which is
+// canonical for the wire; this file stays dependency-free for the browser) ---
+
+/** Well-known agents seeded per user on first `agents.list`. */
+export const KNOWN_AGENT_NAMES = ["opencode", "pi", "omp"] as const;
+
+export const AGENT_STATUS_VALUES = [
+	"available",
+	"disabled",
+	"deprecated",
+] as const;
+export const AgentStatusEnum = z.enum(AGENT_STATUS_VALUES);
+export type AgentStatus = z.infer<typeof AgentStatusEnum>;
+
+export const AgentNameSchema = z
+	.string()
+	.min(1, "Must be at least 1 character")
+	.max(64, "Max 64 characters")
+	.regex(
+		/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/,
+		"Lowercase slug (letters, digits, dashes)",
+	);
+
+export const AgentCreateInput = z.object({
+	binary: z.string().min(1).max(200).optional(),
+	description: z.string().max(500).optional(),
+	name: AgentNameSchema,
+	version: z.string().max(50).optional(),
+});
+
+export const AgentUpdateInput = z.object({
+	binary: z.string().min(1).max(200).nullable().optional(),
+	description: z.string().max(500).nullable().optional(),
+	id: z.string(),
+	name: AgentNameSchema.optional(),
+	status: AgentStatusEnum.optional(),
+	version: z.string().max(50).nullable().optional(),
+});
+
+export const AgentListInput = z
+	.object({
+		q: z.string().optional(),
+		status: AgentStatusEnum.optional(),
+	})
+	.optional();
+
+export const RUN_STATUS_VALUES = [
+	"running",
+	"completed",
+	"failed",
+	"cancelled",
+] as const;
+export const RunStatusEnum = z.enum(RUN_STATUS_VALUES);
+export type RunStatus = z.infer<typeof RunStatusEnum>;
+
+export const TaskRunListInput = z
+	.object({
+		cursor: z.string().optional(),
+		limit: z.number().int().min(1).max(100).default(20),
+		machineId: z.string().optional(),
+		status: RunStatusEnum.optional(),
+		taskId: z.string().optional(),
+	})
+	.optional();
+
+export const TaskLogsListInput = z.object({
+	cursor: z.string().optional(),
+	limit: z.number().int().min(1).max(100).default(50),
+	taskId: z.string().min(1),
+});
+
+export const MachineHeartbeatListInput = z.object({
+	limit: z.number().int().min(1).max(100).default(50),
+	machineId: z.string().min(1),
+});
+
+export const DeviceApproveInput = z.object({
+	approve: z.boolean().default(true),
+	user_code: z.string().min(1),
 });

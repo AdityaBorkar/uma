@@ -21,6 +21,7 @@ import {
 	sandboxList,
 } from "#/lib/machines/service.ts";
 import { type RpcContext, requireMachine, requireUser } from "#/rpc/auth.ts";
+import { implementer } from "#/rpc/contract.ts";
 import { machines } from "#/schemas/db/machines.ts";
 
 /**
@@ -148,3 +149,35 @@ export const get = os
 			throw new ORPCError("NOT_FOUND", { message: "Machine not found" });
 		return row;
 	});
+
+/**
+ * Browser-readable heartbeats for one owned machine (contract-first:
+ * `apiContract machines.heartbeatList`). The machine-auth twin
+ * (`heartbeatHistoryProc`) serves the daemon itself.
+ */
+export const heartbeatListProc = implementer.machines.heartbeatList.handler(
+	async ({ input, context, errors }) => {
+		const user = await requireUser(context.headers);
+		const [m] = await db
+			.select({ id: machines.id })
+			.from(machines)
+			.where(
+				and(eq(machines.id, input.machineId), eq(machines.userId, user.id)),
+			)
+			.limit(1);
+		if (!m) throw errors.NOT_FOUND();
+		const rows = await heartbeatHistory(
+			input.machineId,
+			user.id,
+			input.limit ?? 50,
+		);
+		return {
+			heartbeats: rows.map((r) => ({
+				...r,
+				createdAt:
+					r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+				ts: r.ts instanceof Date ? r.ts.toISOString() : r.ts,
+			})),
+		};
+	},
+);

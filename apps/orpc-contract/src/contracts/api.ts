@@ -2,6 +2,8 @@ import { oc } from "@orpc/contract";
 import { openapi } from "@orpc/openapi";
 
 import {
+	DeviceApproveInputSchema,
+	DeviceApproveResponseSchema,
 	DeviceCodeRequestSchema,
 	DeviceCodeResponseSchema,
 	DeviceTokenRequestSchema,
@@ -9,6 +11,10 @@ import {
 	TaskClaimRequestSchema,
 } from "../schemas/device.ts";
 import {
+	AgentCreateInputSchema,
+	AgentListInputSchema,
+	AgentSchema,
+	AgentUpdateInputSchema,
 	CheckStateResponseSchema,
 	CommentCreateInputSchema,
 	ConnectionAuthUrlOutputSchema,
@@ -25,6 +31,9 @@ import {
 	HeartbeatHistoryResponseSchema,
 	IdInputSchema,
 	LatestVersionResponseSchema,
+	MachineGetInputSchema,
+	MachineHeartbeatListInputSchema,
+	MachineRevokeInputSchema,
 	PageOutputSchema,
 	ProjectCreateInputSchema,
 	ProjectGetBySlugInputSchema,
@@ -42,6 +51,12 @@ import {
 	TaskClaimResponseSchema,
 	TaskCreateInputSchema,
 	TaskListInputSchema,
+	TaskLogsListInputSchema,
+	TaskRunListInputSchema,
+	TaskRunPageOutputSchema,
+	TaskRunSchema,
+	TaskRunStatsInputSchema,
+	TaskRunStatsOutputSchema,
 	TaskStatsOutputSchema,
 	TaskUpdateStatusInputSchema,
 } from "../schemas/index.ts";
@@ -66,16 +81,86 @@ import {
 // - Machine/device operations are actions, not CRUD, so their paths mirror
 //   the procedure name (`POST /machines/claim`, `POST /device/code`).
 // - Path-param names match input-schema keys (`{id}`, `{provider}`,
-//   `{slug}`, `{number}`, `{documentNumber}`) — required by oRPC compact
-//   input mapping. Numeric params (`{number}`, `?limit=`) arrive as strings
-//   over HTTP; the server must enable `SmartCoercionHandlerPlugin` (with
-//   `ZodToJsonSchemaConverter`) so they coerce to numbers.
-// - Static routes (`/tasks/stats`, `/connections/providers`) take precedence
-//   over dynamic siblings (`/tasks/{id}`, `/connections/{provider}`) in the
-//   OpenAPI handler; values never collide in practice (UUIDs vs literals,
-//   `github|google` vs `providers`).
+//   `{slug}`, `{number}`, `{documentNumber}`, `{machineId}`, `{taskId}`) —
+//   required by oRPC compact input mapping. Numeric params (`{number}`,
+//   `?limit=`) arrive as strings over HTTP; the server must enable
+//   `SmartCoercionHandlerPlugin` (with `ZodToJsonSchemaConverter`) so they
+//   coerce to numbers.
+// - Static routes (`/tasks/stats`, `/runs/stats`, `/connections/providers`)
+//   take precedence over dynamic siblings (`/tasks/{id}`, `/runs/{id}`,
+//   `/connections/{provider}`) in the OpenAPI handler; values never collide
+//   in practice (UUIDs vs literals, `github|google` vs `providers`).
 
 export const apiContract = {
+	agents: {
+		create: oc
+			.meta(
+				openapi({
+					description: "Register a custom coding agent for the current user.",
+					method: "POST",
+					path: "/agents",
+					successStatus: 201,
+					summary: "Create agent",
+					tags: ["agents"],
+				}),
+			)
+			.input(AgentCreateInputSchema)
+			.output(AgentSchema)
+			.errors({ CONFLICT: {} }),
+		get: oc
+			.meta(
+				openapi({
+					description: "Get a registered agent by id.",
+					method: "GET",
+					path: "/agents/{id}",
+					summary: "Get agent",
+					tags: ["agents"],
+				}),
+			)
+			.input(IdInputSchema)
+			.output(AgentSchema)
+			.errors({ NOT_FOUND: {} }),
+		list: oc
+			.meta(
+				openapi({
+					description:
+						"List coding agents for the current user. Well-known agents (opencode, pi, omp) are seeded on first call.",
+					method: "GET",
+					path: "/agents",
+					summary: "List agents",
+					tags: ["agents"],
+				}),
+			)
+			.input(AgentListInputSchema)
+			.output(AgentSchema.array()),
+		remove: oc
+			.meta(
+				openapi({
+					description:
+						"Remove a custom agent. Well-known agents (opencode, pi, omp) cannot be removed.",
+					method: "DELETE",
+					path: "/agents/{id}",
+					summary: "Remove agent",
+					tags: ["agents"],
+				}),
+			)
+			.input(IdInputSchema)
+			.output(RemoveOutputSchema)
+			.errors({ BAD_REQUEST: {}, NOT_FOUND: {} }),
+		update: oc
+			.meta(
+				openapi({
+					description: "Patch an agent's name, binary, version, or status.",
+					method: "PATCH",
+					path: "/agents/{id}",
+					summary: "Update agent",
+					tags: ["agents"],
+				}),
+			)
+			.input(AgentUpdateInputSchema)
+			.output(AgentSchema)
+			.errors({ CONFLICT: {}, NOT_FOUND: {} }),
+	},
 	connections: {
 		disconnect: oc
 			.meta(
@@ -138,6 +223,20 @@ export const apiContract = {
 			.output(ConnectionProvidersOutputSchema),
 	},
 	device: {
+		approve: oc
+			.meta(
+				openapi({
+					description:
+						"Approve or deny a device-code enrollment from the browser. Creates the enrolled machine row on approve.",
+					method: "POST",
+					path: "/device/approve",
+					summary: "Approve device enrollment",
+					tags: ["device"],
+				}),
+			)
+			.input(DeviceApproveInputSchema)
+			.output(DeviceApproveResponseSchema)
+			.errors({ CONFLICT: {}, NOT_FOUND: {} }),
 		code: oc
 			.meta(
 				openapi({
@@ -307,6 +406,19 @@ export const apiContract = {
 			.input(TaskClaimRequestSchema)
 			.output(TaskClaimResponseSchema)
 			.errors({ CONFLICT: {} }),
+		get: oc
+			.meta(
+				openapi({
+					description: "Get a machine of the current user by id (browser).",
+					method: "GET",
+					path: "/machines/{id}",
+					summary: "Get machine",
+					tags: ["machines"],
+				}),
+			)
+			.input(MachineGetInputSchema)
+			.output(DbRecordSchema)
+			.errors({ NOT_FOUND: {} }),
 		heartbeatHistory: oc
 			.meta(
 				openapi({
@@ -318,6 +430,20 @@ export const apiContract = {
 				}),
 			)
 			.output(HeartbeatHistoryResponseSchema),
+		heartbeatList: oc
+			.meta(
+				openapi({
+					description:
+						"List recent heartbeat rows for one of the current user's machines (browser).",
+					method: "GET",
+					path: "/machines/{machineId}/heartbeats",
+					summary: "List machine heartbeats",
+					tags: ["machines"],
+				}),
+			)
+			.input(MachineHeartbeatListInputSchema)
+			.output(HeartbeatHistoryResponseSchema)
+			.errors({ NOT_FOUND: {} }),
 		latestVersion: oc
 			.meta(
 				openapi({
@@ -330,6 +456,17 @@ export const apiContract = {
 				}),
 			)
 			.output(LatestVersionResponseSchema),
+		list: oc
+			.meta(
+				openapi({
+					description: "List machines of the current user (browser).",
+					method: "GET",
+					path: "/machines",
+					summary: "List machines",
+					tags: ["machines"],
+				}),
+			)
+			.output(DbRecordSchema.array()),
 		resetState: oc
 			.meta(
 				openapi({
@@ -344,6 +481,20 @@ export const apiContract = {
 			)
 			.input(ResetStateRequestSchema)
 			.output(ResetStateResponseSchema),
+		revoke: oc
+			.meta(
+				openapi({
+					description:
+						"Revoke a machine of the current user. Sessions are invalidated and the status becomes revoked.",
+					method: "DELETE",
+					path: "/machines/{id}",
+					summary: "Revoke machine",
+					tags: ["machines"],
+				}),
+			)
+			.input(MachineRevokeInputSchema)
+			.output(RemoveOutputSchema)
+			.errors({ NOT_FOUND: {} }),
 		sandboxList: oc
 			.meta(
 				openapi({
@@ -423,6 +574,47 @@ export const apiContract = {
 			.output(DbRecordSchema)
 			.errors({ NOT_FOUND: {} }),
 	},
+	runs: {
+		get: oc
+			.meta(
+				openapi({
+					description: "Get a task run by id.",
+					method: "GET",
+					path: "/runs/{id}",
+					summary: "Get run",
+					tags: ["runs"],
+				}),
+			)
+			.input(IdInputSchema)
+			.output(TaskRunSchema)
+			.errors({ NOT_FOUND: {} }),
+		list: oc
+			.meta(
+				openapi({
+					description:
+						"List task runs with cursor pagination and optional task/machine/status filters.",
+					method: "GET",
+					path: "/runs",
+					summary: "List runs",
+					tags: ["runs"],
+				}),
+			)
+			.input(TaskRunListInputSchema)
+			.output(TaskRunPageOutputSchema),
+		stats: oc
+			.meta(
+				openapi({
+					description:
+						"Count runs by status (running/completed/failed/cancelled), optionally scoped to a task or machine.",
+					method: "GET",
+					path: "/runs/stats",
+					summary: "Run stats",
+					tags: ["runs"],
+				}),
+			)
+			.input(TaskRunStatsInputSchema)
+			.output(TaskRunStatsOutputSchema),
+	},
 	signals: {
 		create: oc
 			.meta(
@@ -495,7 +687,7 @@ export const apiContract = {
 			.meta(
 				openapi({
 					description:
-						"Create a queued task, optionally linked to a project or signal.",
+						"Create a queued task, optionally linked to a project or signal and pinned to an agent.",
 					method: "POST",
 					path: "/tasks",
 					successStatus: 201,
@@ -531,6 +723,22 @@ export const apiContract = {
 			)
 			.input(TaskListInputSchema)
 			.output(PageOutputSchema),
+		logs: {
+			list: oc
+				.meta(
+					openapi({
+						description:
+							"List streamed log chunks for a task (browser). Machines append via the WS log frame.",
+						method: "GET",
+						path: "/tasks/{taskId}/logs",
+						summary: "List task logs",
+						tags: ["tasks"],
+					}),
+				)
+				.input(TaskLogsListInputSchema)
+				.output(PageOutputSchema)
+				.errors({ NOT_FOUND: {} }),
+		},
 		stats: oc
 			.meta(
 				openapi({

@@ -12,6 +12,12 @@ import * as schema from "./index.ts";
  * `relations: { ...relations, ...authRelations }`.
  */
 export const relations = defineRelations(schema, (r) => ({
+	agents: {
+		owner: r.one.user({
+			from: r.agents.userId,
+			to: r.user.id,
+		}),
+	},
 	connections: {
 		owner: r.one.user({
 			from: r.connections.userId,
@@ -109,6 +115,10 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.machines.userId,
 			to: r.user.id,
 		}),
+		runs: r.many.taskRuns({
+			from: r.machines.id,
+			to: r.taskRuns.machineId,
+		}),
 		sandboxes: r.many.machineSandboxes({
 			from: r.machines.id,
 			to: r.machineSandboxes.machineId,
@@ -164,6 +174,20 @@ export const relations = defineRelations(schema, (r) => ({
 			to: r.tasks.id,
 		}),
 	},
+	taskRuns: {
+		machine: r.one.machines({
+			from: r.taskRuns.machineId,
+			to: r.machines.id,
+		}),
+		owner: r.one.user({
+			from: r.taskRuns.userId,
+			to: r.user.id,
+		}),
+		task: r.one.tasks({
+			from: r.taskRuns.taskId,
+			to: r.tasks.id,
+		}),
+	},
 	tasks: {
 		logs: r.many.taskLogs({
 			from: r.tasks.id,
@@ -176,6 +200,10 @@ export const relations = defineRelations(schema, (r) => ({
 		project: r.one.projects({
 			from: r.tasks.projectId,
 			to: r.projects.id,
+		}),
+		runs: r.many.taskRuns({
+			from: r.tasks.id,
+			to: r.taskRuns.taskId,
 		}),
 		sandboxes: r.many.machineSandboxes({
 			from: r.tasks.id,

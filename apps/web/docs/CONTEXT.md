@@ -170,12 +170,16 @@ _Avoid_: activity, log
 ### Devices & automation
 
 **Machine**:
-A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; the registry itself is still a placeholder with no backing rows in v1.
+A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; backed by the `machines` table (`machines.list/get/revoke`, plus `machines.heartbeatList` for recent heartbeats).
 _Avoid_: worker, node, runner
 
 **Agent**:
-A coding agent binary that can run inside a machine sandbox (`opencode | pi | omp` in the settings catalog). Distinct from a Task's `agent` column, which today is hardcoded to `cli` at creation and has no shared enum with the catalog.
+A coding agent binary that can run inside a machine sandbox, owned per user in the `agents` registry (`agents.list/get/create/update/remove`). Well-known agents (`opencode | pi | omp`) are seeded on first list; custom binaries are registered by name. A Task pins one via its `agent` column (validated against the well-known names, the registry, or the legacy `cli` default).
 _Avoid_: model, bot
+
+**Run**:
+One execution attempt of a Task on a Machine (`task_runs`): opened as a side effect of the atomic claim (`queued → running`, recording agent + machine + sandbox) and closed when the Task finishes. Browser clients read runs (`runs.list/get/stats`); writes are owned by the claim/finish paths so runs never disagree with Task status. Task logs (`tasks.logs.list`) stream per run via the WS `log` frame.
+_Avoid_: job, execution
 
 **Model Provider**:
 An external model vendor (OpenAI, Anthropic, Google in the settings catalog) with its supported models and API-key state.Static catalog in v1 — keys show as configured/unconfigured, no live sync.

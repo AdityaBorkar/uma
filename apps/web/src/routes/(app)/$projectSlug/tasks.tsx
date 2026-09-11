@@ -98,6 +98,10 @@ function TasksPage() {
 		}),
 	);
 
+	const agentsQuery = useQuery(
+		rpc.agents.list.queryOptions({ input: undefined }),
+	);
+
 	const createMut = useMutation(
 		rpc.tasks.create.mutationOptions({
 			onError: onMutationError,
@@ -123,6 +127,9 @@ function TasksPage() {
 	const signalOptions = (signalsQuery.data?.items ?? []).map((s) => ({
 		id: s.id,
 		title: s.title,
+	}));
+	const agentOptions = (agentsQuery.data ?? []).map((a) => ({
+		name: a.name,
 	}));
 
 	const count = items?.length ?? 0;
@@ -227,10 +234,12 @@ function TasksPage() {
 						<DialogTitle>New Task</DialogTitle>
 					</DialogHeader>
 					<TaskForm
+						agents={agentOptions}
 						loading={createMut.isPending}
 						onCancel={() => setOpen(false)}
 						onSubmit={async (values) => {
 							await createMut.mutateAsync({
+								agent: values.agent,
 								projectId: values.projectId,
 								prompt: values.prompt || undefined,
 								signalId: values.signalId,
