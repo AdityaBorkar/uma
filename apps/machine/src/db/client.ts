@@ -1,11 +1,10 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { Database } from "bun:sqlite";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate as drizzleMigrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { chmod0600, ensureParentDir } from "../fs-utils.ts";
+import { LATEST_VERSION, MIGRATIONS } from "./migrations.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
 export type Db = DrizzleDb;
@@ -37,32 +36,49 @@ function applyPragmas(raw: Database): void {
 	}
 }
 
-function migrationsFolder(): string {
-	// drizzle/ at repo root when running from source; dist/ keeps a copy for
-	// the compiled binary (see package.json scripts.db:copy-migrations).
-	const candidates = [
-		join(import.meta.dir, "..", "..", "drizzle"),
-		join(process.cwd(), "drizzle"),
-	];
-	for (const c of candidates) {
-		if (existsSync(c)) return c;
+function currentUserVersion(raw: Database): number {
+	try {
+		const row = raw.query("PRAGMA user_version;").get() as {
+			user_version: number;
+		} | null;
+		return Number(row?.user_version ?? 0);
+	} catch {
+		return 0;
 	}
-	return candidates[0] as string;
 }
 
-function applyMigrations(db: DrizzleDb): void {
-	const folder = migrationsFolder();
-	if (!existsSync(folder)) return;
-	try {
-		drizzleMigrate(db, { migrationsFolder: folder });
-	} catch (e) {
-		// A pre-drizzle state.db already has the tables (created by the
-		// legacy CREATE TABLE IF NOT EXISTS path). The baseline migration is
-		// written with IF NOT EXISTS so re-running is safe; any other error
-		// (e.g. readonly) propagates to the caller.
-		const msg = e instanceof Error ? e.message : String(e);
-		if (!/already exists/i.test(msg)) throw e;
+/**
+ * Apply pending embedded migrations to the XDG state.db.
+ *
+ * The machine has no repo checkout (compiled single binary), so migrations
+ * are bundled in `src/db/migrations.ts` and tracked with
+ * `PRAGMA user_version` stored inside the database file itself — no external
+ * migration folder needed. Each migration applies atomically; the version
+ * only advances on success, so a crash replays the same migration.
+ */
+function applyMigrations(raw: Database): void {
+	const current = currentUserVersion(raw);
+	for (const m of MIGRATIONS) {
+		if (m.version <= current) continue;
+		raw.exec("BEGIN;");
+		try {
+			raw.exec(m.sql);
+			raw.exec(`PRAGMA user_version = ${m.version};`);
+			raw.exec("COMMIT;");
+		} catch (e) {
+			try {
+				raw.exec("ROLLBACK;");
+			} catch {
+				// rollback best-effort; original error is what matters
+			}
+			throw e;
+		}
 	}
+}
+
+/** Highest embedded migration version (for tests/ops introspection). */
+export function latestMigrationVersion(): number {
+	return LATEST_VERSION;
 }
 
 /**
@@ -87,7 +103,7 @@ export function openDb(
 		close: () => void;
 	};
 	if (!readonly) {
-		applyMigrations(db);
+		applyMigrations(raw);
 		chmodDb0600(dbPath);
 	}
 	db.close = () => {
@@ -100,7 +116,7 @@ export function openDb(
 	return db;
 }
 
-/** Run drizzle-kit migrations against an existing path (enroll path). */
+/** Apply pending embedded migrations to an existing path (enroll/ops path). */
 export function migrate(dbPath: string): void {
 	const db = openDb(dbPath, false);
 	try {

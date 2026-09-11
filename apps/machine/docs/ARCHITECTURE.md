@@ -13,7 +13,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 - `sandbox.ts`: facade over `sandbox/driver.ts` (SDK → CLI → mock; fails closed when no runtime is installed) + `sandbox/sdk.ts`, `sandbox/cli.ts`, `sandbox/mock.ts`, `sandbox/shared.ts`, `sandbox/types.ts`, `sandbox/driver.ts` (selector + `driverKind` diagnostics); create/start/stop/remove/list/exec/execStream/metrics. `git-binding.ts`: clone/fetch/checkout/fresh-start via `execInSandbox` (driver-agnostic, not SDK-only).
 - `execution.ts`: Sandbox Execution module: admission (quota snapshot + create under an internal lock; server limits from `assign.limits`) → claim → start → bind → exec-stream → task-done → stop; every outbound v1 frame via injected `emit`; failures free the sandbox; cancel via `stop --force` through in-flight state.
 - `sync.ts` + `config/mod.ts` + `config/desired.ts` (desired-state cache load/save) + `config/<key>.ts` (9 keys in `ORDERED_KEYS` order; file `git.ts` exports KEY `git-login`, file `skills.ts` exports KEY `skills`): check/reset + receipts.
-- `db.ts` (store facade) + `db/schema.ts` (tables) + `db/client.ts` (open/migrate/WAL): SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`. `fs-utils.ts`: `chmod0600`, parent-dir helpers.
+- `db.ts` (store facade) + `db/schema.ts` (tables) + `db/client.ts` (open/migrate/WAL) + `db/migrations.ts` (embedded DDL applied to the XDG state.db, versioned by `PRAGMA user_version`; no external migration folder, so the compiled binary works with no repo checkout): SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`. `fs-utils.ts`: `chmod0600`, parent-dir helpers.
 
 ## Package
 
@@ -72,7 +72,7 @@ Outbound (driven by us, faked in tests):
 
 - **Server adapter**: `ws-client.ts` (ws transport) + `daemon.ts:handleResetConfig` (receipt mapping) + `execution.ts:claimTask` (HTTPS claim, default claim for `executeTask`).
 - **Sandbox adapters**: `src/sandbox/sdk.ts`, `src/sandbox/cli.ts`, `src/sandbox/mock.ts` implement the same `SandboxDriver` port (`create/start/stop/remove/list/exec/execStream/metrics`); `task.id`/`project.id` labels set on SDK + CLI create (`user.id` never set — `executeTask` passes no userId).
-- **Store adapter**: `db.ts` + `db/schema.ts` + `db/client.ts` over `drizzle-orm` + `bun:sqlite` (WAL, `0600` incl sidecars, `withDb` open/close, `drizzle/` migrations when present).
+- **Store adapter**: `db.ts` + `db/schema.ts` + `db/client.ts` + `db/migrations.ts` over `drizzle-orm` + `bun:sqlite` (WAL, `0600` incl sidecars, `withDb` open/close, embedded migrations applied to the XDG state.db on every writable open).
 - **Metrics adapters**: `collectCpu/collectRam/collectDisk` (Linux-first, degrade to `0`), `sandboxMetricsForPressure` (SDK-only, `[]` when absent).
 - **Config adapters**: per-key `check/reset` shell-outs (`msb doctor`, `gh auth status`, `loginctl show-user`, binary `--version`).
 

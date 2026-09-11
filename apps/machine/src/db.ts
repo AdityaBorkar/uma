@@ -17,6 +17,7 @@ import {
 	type Db,
 	type DbTx,
 	type DrizzleDb,
+	latestMigrationVersion,
 	migrate,
 	openDb,
 	withDb,
@@ -29,7 +30,15 @@ import {
 	sandboxEvents,
 } from "./db/schema.ts";
 
-export { type Db, type DbTx, type DrizzleDb, migrate, openDb, withDb };
+export {
+	type Db,
+	type DbTx,
+	type DrizzleDb,
+	latestMigrationVersion,
+	migrate,
+	openDb,
+	withDb,
+};
 
 export interface HeartbeatSample {
 	cpu: number;
