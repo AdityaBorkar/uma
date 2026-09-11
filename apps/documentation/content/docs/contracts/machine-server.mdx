@@ -37,7 +37,7 @@ Parse inbound frames with `parseServerFrame()` — unknown `t` gives `null` (log
 
 ## Registry
 
-`wsMessagesContract` in `src/contracts/ws.ts:36` is the canonical raw-frame registry (`path`, `protocol`, per-`t` schemas). `wsContract` (`src/contracts/ws.ts:57`) models the same channel as oRPC procedures (`machines.send: MachineFrame → {ok:true}`, `machines.stream: {machineId,lastEventId?} → eventIterator(ServerFrame)`) for future oRPC-native clients.
+`wsMessagesContract` in `src/contracts/ws.ts:36` is the canonical raw-frame registry (`path`, `protocol`, per-`t` schemas). `wsContract` (`src/contracts/ws.ts:57`) models the same channel as oRPC procedures (`machines.send: MachineFrame → {ok:true}`, `machines.stream: {machineId,lastEventId?} → asyncIteratorObject(ServerFrame)`) for future oRPC-native clients.
 
 ## Helpful primitives and constants
 

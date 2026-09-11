@@ -1,4 +1,4 @@
-import { eventIterator, oc } from "@orpc/contract";
+import { asyncIteratorObject, oc, type RouterContract } from "@orpc/contract";
 
 import { MACHINES_WS_PATH, PROTOCOL_VERSION } from "../constants.ts";
 import { WsSendAckSchema, WsSubscribeInputSchema } from "../schemas/index.ts";
@@ -42,12 +42,12 @@ export const wsMessagesContract = {
 	},
 } as const;
 
-export const wsContract = {
+export const wsContract: RouterContract = {
 	machines: {
 		send: oc.input(MachineFrameSchema).output(WsSendAckSchema),
 		stream: oc
 			.input(WsSubscribeInputSchema)
-			.output(eventIterator(ServerFrameSchema)),
+			.output(asyncIteratorObject(ServerFrameSchema)),
 	},
 };
 export type WsContract = typeof wsContract;

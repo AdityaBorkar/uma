@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// WS channel I/O (unary wrappers; streaming uses `eventIterator`).
+// WS channel I/O (unary wrappers; streaming uses `asyncIteratorObject`).
 
 /** Ack for a machine→server frame delivered over the WS channel. */
 export const WsSendAckSchema = z.object({ ok: z.literal(true) });

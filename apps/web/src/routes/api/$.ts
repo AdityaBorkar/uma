@@ -1,21 +1,25 @@
-import { SmartCoercionPlugin } from "@orpc/json-schema";
+import { SmartCoercionHandlerPlugin } from "@orpc/json-schema";
+import { OpenAPIGenerator } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
-import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
+import { OpenAPIReferenceHandlerPlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
+import { ZodToJsonSchemaConverter } from "@orpc/zod";
 import { createFileRoute } from "@tanstack/react-router";
 
 import router from "#/rpc/router.ts";
-import { ProjectSchema } from "#/schemas/schema.ts";
+
+const generator = new OpenAPIGenerator({
+	converters: [new ZodToJsonSchemaConverter()],
+});
 
 const handler = new OpenAPIHandler(router, {
 	interceptors: [onError((_error) => {})],
 	plugins: [
-		new SmartCoercionPlugin({
-			schemaConverters: [new ZodToJsonSchemaConverter()],
+		new SmartCoercionHandlerPlugin({
+			converters: [new ZodToJsonSchemaConverter()],
 		}),
-		new OpenAPIReferencePlugin({
-			docsConfig: {
+		new OpenAPIReferenceHandlerPlugin({
+			providerConfig: {
 				authentication: {
 					securitySchemes: {
 						bearerAuth: {
@@ -24,26 +28,24 @@ const handler = new OpenAPIHandler(router, {
 					},
 				},
 			},
-			schemaConverters: [new ZodToJsonSchemaConverter()],
-			specGenerateOptions: {
-				commonSchemas: {
-					Project: { schema: ProjectSchema },
-					UndefinedError: { error: "UndefinedError" },
-				},
-				components: {
-					securitySchemes: {
-						bearerAuth: {
-							scheme: "bearer",
-							type: "http",
+			spec: () =>
+				generator.generate(router, {
+					base: {
+						components: {
+							securitySchemes: {
+								bearerAuth: {
+									scheme: "bearer",
+									type: "http",
+								},
+							},
 						},
+						info: {
+							title: "Planner Q3 API",
+							version: "1.0.0",
+						},
+						security: [{ bearerAuth: [] }],
 					},
-				},
-				info: {
-					title: "Planner Q3 API",
-					version: "1.0.0",
-				},
-				security: [{ bearerAuth: [] }],
-			},
+				}),
 		}),
 	],
 });
