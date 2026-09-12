@@ -1,5 +1,13 @@
 # TODO
 
+Model Providers
+
+Create a add button with Base URL detection
+https://hyper.charm.land/v1/
+https://hyper.charm.land/v1/models
+
+---
+
 get @machine completely done in code quality by 3PM (25 mins)
 
 Reorganize the code, verify the commands and RPC

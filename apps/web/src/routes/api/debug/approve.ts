@@ -6,11 +6,11 @@ import { approveDevice } from "#/lib/machines/service.ts";
 import { user } from "#/schemas/db/auth.gen.ts";
 
 /**
- * `POST /api/test/approve {user_code, approve?}` — roundtrip/seed helper ONLY.
+ * `POST /api/debug/approve {user_code, approve?}` — roundtrip/seed helper ONLY.
  * Returns 404 unless `E2E_SEED=1` (dev). Stands in for the browser approval UI
  * by approving as an ephemeral test user.
  */
-export const Route = createFileRoute("/api/test/approve")({
+export const Route = createFileRoute("/api/debug/approve")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {

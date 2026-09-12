@@ -8,7 +8,7 @@ import { createDeviceCode } from "#/lib/machines/service.ts";
  * `{client_id, machineName?, scope?}` and parses `DeviceCodeResponse`.
  * Canonical typed equivalent: `device.code` at `/api/rpc/device/code`.
  */
-export const Route = createFileRoute("/device/code")({
+export const Route = createFileRoute("/api/machines/device/code")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {

@@ -6,11 +6,11 @@ import { authMachine, bearerToken } from "#/lib/machines/service.ts";
 import { tasks } from "#/schemas/db/tasks.ts";
 
 /**
- * `POST /api/test/queue-task` — roundtrip/seed helper ONLY. Returns 404
+ * `POST /api/debug/queue-task` — roundtrip/seed helper ONLY. Returns 404
  * unless `E2E_SEED=1` (dev). Machine-Bearer authed; the task is owned by the
  * machine's user so the daemon can claim it via `machines.claim`.
  */
-export const Route = createFileRoute("/api/test/queue-task")({
+export const Route = createFileRoute("/api/debug/queue-task")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {

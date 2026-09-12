@@ -8,10 +8,10 @@ import { taskLogs } from "#/schemas/db/machines.ts";
 import { tasks } from "#/schemas/db/tasks.ts";
 
 /**
- * `GET /api/test/task?id=` — roundtrip/seed helper ONLY. Returns 404 unless
+ * `GET /api/debug/task?id=` — roundtrip/seed helper ONLY. Returns 404 unless
  * `E2E_SEED=1` (dev). Machine-Bearer authed; scoped to the machine's user.
  */
-export const Route = createFileRoute("/api/test/task")({
+export const Route = createFileRoute("/api/debug/task")({
 	server: {
 		handlers: {
 			GET: async ({ request }) => {

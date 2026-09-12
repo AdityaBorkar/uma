@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { latestVersion } from "#/lib/machines/service.ts";
 
 /** `GET /api/version` — daemon upgrade gate (`{latest, min}`). */
-export const Route = createFileRoute("/api/version")({
+export const Route = createFileRoute("/api/machines/version")({
 	server: {
 		handlers: {
 			GET: () => Response.json(latestVersion()),

@@ -30,7 +30,7 @@ contract schemas from `@uma/orpc-contract`.
 ## Env
 
 - `MACHINE_CLIENT_ALLOWLIST` (optional, default `uma-machine,roundtrip`).
-- `E2E_SEED` (optional bool, default false) — enables `/api/test/*` seed
+- `E2E_SEED` (optional bool, default false) — enables `/api/debug/*` seed
   helpers for `bun run roundtrip` in `apps/machine`. Never enable in
   production (dev stack only).
 - `NITRO_PRESET=bun` at build time (set in the Dockerfile) — the default node

@@ -1,6 +1,6 @@
 // heartbeat -> claim -> log -> done vs the web server (E2E_SEED=1).
 // Usage: bun run scripts/machine.roundtrip.ts --server http://127.0.0.1:3000
-// The web server must run with E2E_SEED=1 so the /api/test/* seed helpers
+// The web server must run with E2E_SEED=1 so the /api/debug/* seed helpers
 // (approve, queue-task, task, heartbeats) are enabled. Production refuses
 // them with 404.
 import cac from "cac";
@@ -45,7 +45,7 @@ console.log(`[roundtrip] code=${code.user_code}`);
 
 // 2. approve via dev seed endpoint (stands in for the browser approval UI at
 // /device; 404 unless the server runs with E2E_SEED=1).
-const approveRes = await fetch(`${SERVER}/api/test/approve`, {
+const approveRes = await fetch(`${SERVER}/api/debug/approve`, {
 	body: JSON.stringify({ approve: true, user_code: code.user_code }),
 	headers: { "content-type": "application/json" },
 	method: "POST",
@@ -119,7 +119,7 @@ send({
 });
 await new Promise((r) => setTimeout(r, 800));
 const hb = (await fetch(
-	`${SERVER}/api/test/heartbeats?machineId=${tok.machine_id}`,
+	`${SERVER}/api/debug/heartbeats?machineId=${tok.machine_id}`,
 	{ headers: auth },
 ).then((r) => r.json())) as {
 	heartbeats: unknown[];
@@ -128,7 +128,7 @@ assert(hb.heartbeats.length >= 1, "heartbeat not recorded server-side");
 console.log(`[roundtrip] heartbeat ack (${hb.heartbeats.length} rows)`);
 
 // 6. queue task + claim (atomic queued -> running, guarded server-side)
-const q = (await fetch(`${SERVER}/api/test/queue-task`, {
+const q = (await fetch(`${SERVER}/api/debug/queue-task`, {
 	body: JSON.stringify({ prompt: "roundtrip hello" }),
 	headers: auth,
 	method: "POST",
@@ -190,7 +190,7 @@ send({
 	taskId,
 });
 await new Promise((r) => setTimeout(r, 800));
-const done = (await fetch(`${SERVER}/api/test/task?id=${taskId}`, {
+const done = (await fetch(`${SERVER}/api/debug/task?id=${taskId}`, {
 	headers: auth,
 }).then((r) => r.json())) as {
 	task: {

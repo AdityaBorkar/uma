@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { healthCounts } from "#/lib/machines/service.ts";
 
 /** `GET /health` — liveness probe with row counts (no contents leaked). */
-export const Route = createFileRoute("/health")({
+export const Route = createFileRoute("/api/machines/health")({
 	server: {
 		handlers: {
 			GET: async () => {

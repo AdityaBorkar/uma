@@ -8,10 +8,10 @@ import {
 } from "#/lib/machines/service.ts";
 
 /**
- * `GET /api/test/heartbeats?machineId=` — roundtrip/seed helper ONLY. Returns
+ * `GET /api/debug/heartbeats?machineId=` — roundtrip/seed helper ONLY. Returns
  * 404 unless `E2E_SEED=1` (dev). The machineId must match the caller.
  */
-export const Route = createFileRoute("/api/test/heartbeats")({
+export const Route = createFileRoute("/api/debug/heartbeats")({
 	server: {
 		handlers: {
 			GET: async ({ request }) => {

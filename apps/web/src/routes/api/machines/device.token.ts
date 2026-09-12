@@ -9,7 +9,7 @@ import { pollDeviceToken } from "#/lib/machines/service.ts";
  * envelope. Canonical typed equivalent: `device.token` at
  * `/api/rpc/device/token`.
  */
-export const Route = createFileRoute("/device/token")({
+export const Route = createFileRoute("/api/machines/device/token")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {
