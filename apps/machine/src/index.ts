@@ -2,7 +2,7 @@
 import Table from "cli-table3";
 import pc from "picocolors";
 
-import { type CliFlags, helpText, parseCli } from "./cli.ts";
+import { type CliOptions, parseCli } from "./cli.ts";
 import { checkAll, resetAll } from "./config/mod.ts";
 import { performSync, syncExitCode } from "./config/sync.ts";
 import { Daemon } from "./daemon/daemon.ts";
@@ -29,17 +29,20 @@ function humanTable(head: string[]) {
 	});
 }
 
-// cac flags are string | boolean | undefined (numeric-looking values are
-// normalized back to strings by parseCli); these accessors keep casts out of
-// every command and never let `true` leak into a string position.
-function flagString(flags: CliFlags, key: string): string | undefined {
-	const v = flags[key];
-	return typeof v === "string" && v !== "" ? v : undefined;
+// cac options are native (camelCase keys, numbers/arrays preserved); these
+// accessors coerce to the string/boolean domain at the command edge.
+function optString(value: unknown): string | undefined {
+	if (typeof value === "string" && value !== "") return value;
+	if (typeof value === "number" && Number.isFinite(value)) return String(value);
+	if (Array.isArray(value) && value.length > 0)
+		return optString(value[value.length - 1]);
+	return undefined;
 }
 
-function flagBool(flags: CliFlags, key: string): boolean {
-	const v = flags[key];
-	return v === true || v === "true";
+function optBool(value: unknown): boolean {
+	if (Array.isArray(value))
+		return value.length > 0 && optBool(value[value.length - 1]);
+	return value === true || value === "true";
 }
 
 const errorRedactor = new Redactor();
@@ -62,15 +65,19 @@ function receiptLine(r: {
 	return `${r.key}: ${r.ok ? "ok" : "FAILED"}${err ? ` — ${err}` : ""}`;
 }
 
-function printJsonOr(flags: CliFlags, value: unknown, human: () => void): void {
-	if (flagBool(flags, "json")) console.log(JSON.stringify(value, null, 2));
+function printJsonOr(
+	options: CliOptions,
+	value: unknown,
+	human: () => void,
+): void {
+	if (optBool(options.json)) console.log(JSON.stringify(value, null, 2));
 	else human();
 }
 
-async function cmdCheck(flags: CliFlags): Promise<number> {
-	const results = await checkAll(parseOnlyFlag(flagString(flags, "only")));
+async function cmdCheck(options: CliOptions): Promise<number> {
+	const results = await checkAll(parseOnlyFlag(options.only));
 	const drifted = results.filter((r) => r.drifted);
-	printJsonOr(flags, results, () => {
+	printJsonOr(options, results, () => {
 		const table = humanTable([
 			pc.bold("key"),
 			pc.bold("status"),
@@ -88,16 +95,16 @@ async function cmdCheck(flags: CliFlags): Promise<number> {
 	return drifted.length > 0 ? 2 : 0;
 }
 
-async function cmdReset(flags: CliFlags, rest: string[]): Promise<number> {
+async function cmdReset(options: CliOptions): Promise<number> {
 	// Explicit worktree fresh-start (the only reset path that touches a
 	// worktree; sync/reset-all never do). Requires an explicit sandbox.
-	if (flagBool(flags, "fresh-start")) {
-		const sandbox = flagString(flags, "sandbox") ?? rest[0];
+	if (optBool(options.freshStart)) {
+		const sandbox = optString(options.sandbox);
 		if (!sandbox) {
 			console.error("reset --fresh-start requires --sandbox <id>");
 			return 1;
 		}
-		if (flagBool(flags, "dry-run")) {
+		if (optBool(options.dryRun)) {
 			console.log(
 				`would fresh-start ${sandbox} (git clean -fdx + reset --hard)`,
 			);
@@ -105,10 +112,10 @@ async function cmdReset(flags: CliFlags, rest: string[]): Promise<number> {
 		}
 		try {
 			await new RepoBinding(sandbox).freshStart({
-				branch: flagString(flags, "branch"),
-				commit: flagString(flags, "commit"),
-				repoUrl: flagString(flags, "repo"),
-				taskId: flagString(flags, "task") ?? "task",
+				branch: optString(options.branch),
+				commit: optString(options.commit),
+				repoUrl: optString(options.repo),
+				taskId: optString(options.task) ?? "task",
 			});
 			console.log(`fresh-start ${sandbox}: clean`);
 			return 0;
@@ -120,22 +127,22 @@ async function cmdReset(flags: CliFlags, rest: string[]): Promise<number> {
 		}
 	}
 	const results = await resetAll({
-		dryRun: flagBool(flags, "dry-run"),
-		only: parseOnlyFlag(flagString(flags, "only")),
-		prune: parsePruneFlag(flags.prune),
+		dryRun: optBool(options.dryRun),
+		only: parseOnlyFlag(options.only),
+		prune: parsePruneFlag(options.prune),
 	});
-	printJsonOr(flags, results, () => {
+	printJsonOr(options, results, () => {
 		for (const r of results) console.log(receiptLine(r));
 	});
 	return results.every((r) => r.ok) ? 0 : 2;
 }
 
-async function cmdSync(flags: CliFlags): Promise<number> {
+async function cmdSync(options: CliOptions): Promise<number> {
 	const { jobId, receipts } = await performSync({
-		dryRun: flagBool(flags, "dry-run"),
-		only: parseOnlyFlag(flagString(flags, "only")),
+		dryRun: optBool(options.dryRun),
+		only: parseOnlyFlag(options.only),
 	});
-	printJsonOr(flags, { jobId, receipts }, () => {
+	printJsonOr(options, { jobId, receipts }, () => {
 		console.log(`sync ${jobId}:`);
 		for (const r of receipts) console.log(`  ${receiptLine(r)}`);
 	});
@@ -145,10 +152,10 @@ async function cmdSync(flags: CliFlags): Promise<number> {
 	return syncExitCode(receipts);
 }
 
-async function cmdHistory(flags: CliFlags): Promise<number> {
-	const range = flagString(flags, "range") ?? "24h";
+async function cmdHistory(options: CliOptions): Promise<number> {
+	const range = optString(options.range) ?? "24h";
 	const rows = new Heartbeat().history(range);
-	printJsonOr(flags, rows, () => {
+	printJsonOr(options, rows, () => {
 		const table = humanTable([
 			pc.bold("ts"),
 			pc.bold("cpu"),
@@ -184,11 +191,14 @@ function colorSandboxStatus(status: string): string {
 	}
 }
 
-async function cmdSandbox(flags: CliFlags, rest: string[]): Promise<number> {
-	const sub = rest[0] ?? "list";
+async function cmdSandbox(
+	options: CliOptions,
+	args: string[],
+): Promise<number> {
+	const sub = args[0] ?? "list";
 	if (sub === "list") {
 		const list = await Sandbox.list();
-		printJsonOr(flags, list, () => {
+		printJsonOr(options, list, () => {
 			const table = humanTable([
 				pc.bold("id"),
 				pc.bold("task"),
@@ -212,7 +222,7 @@ async function cmdSandbox(flags: CliFlags, rest: string[]): Promise<number> {
 		let n = 0;
 		for (const s of list) {
 			if (s.status === "stopped") {
-				if (flagBool(flags, "dry-run")) console.log(`would prune ${s.id}`);
+				if (optBool(options.dryRun)) console.log(`would prune ${s.id}`);
 				else {
 					await new Sandbox(s.id).remove();
 					console.log(`pruned ${s.id}`);
@@ -221,7 +231,7 @@ async function cmdSandbox(flags: CliFlags, rest: string[]): Promise<number> {
 			}
 		}
 		console.log(
-			`${n} stopped sandbox(es)${flagBool(flags, "dry-run") ? " (dry-run)" : ""}`,
+			`${n} stopped sandbox(es)${optBool(options.dryRun) ? " (dry-run)" : ""}`,
 		);
 		return 0;
 	}
@@ -229,29 +239,27 @@ async function cmdSandbox(flags: CliFlags, rest: string[]): Promise<number> {
 	return 1;
 }
 
-async function cmdRun(flags: CliFlags, rest: string[]): Promise<number> {
-	const taskId = flagString(flags, "task") ?? rest[0];
+async function cmdRun(options: CliOptions): Promise<number> {
+	const taskId = optString(options.task);
 	if (!taskId) {
 		console.error("run requires --task <id>");
 		return 1;
 	}
-	const commit = flagString(flags, "commit");
-	const branch = flagString(flags, "branch");
+	const commit = optString(options.commit);
+	const branch = optString(options.branch);
 	const engine = new ExecutionEngine({
-		agentBin: flagString(flags, "agent"),
+		agentBin: optString(options.agent),
 	});
 	const res = await engine.executeTask(
 		{
-			projectId: flagString(flags, "project") ?? null,
-			prompt: flagString(flags, "prompt") ?? `manual run ${taskId}`,
-			repoUrl: flagString(flags, "repo") ?? "",
+			projectId: optString(options.project) ?? null,
+			prompt: optString(options.prompt) ?? `manual run ${taskId}`,
+			repoUrl: optString(options.repo) ?? "",
 			t: "assign",
 			taskId,
 			...(commit ? { commit } : {}),
 			...(branch ? { branch } : {}),
-			...(flagBool(flags, "fresh") || flagBool(flags, "fresh-start")
-				? { freshStart: true }
-				: {}),
+			...(optBool(options.freshStart) ? { freshStart: true } : {}),
 		},
 		(f) => console.log(JSON.stringify(f)),
 	);
@@ -268,51 +276,32 @@ async function cmdRun(flags: CliFlags, rest: string[]): Promise<number> {
 }
 
 async function main(): Promise<number> {
-	// cac-backed parsing (see src/cli.ts); flag names, exit codes, and
-	// defaults below are unchanged from the hand-rolled parser.
-	const { cli, cmd, rest, flags } = parseCli(process.argv);
+	const { cli, command, args, options } = parseCli(process.argv);
 
-	// cac auto-doc: `check --help`, `enroll --help`, ... print the
-	// per-command help instead of running the command.
-	if (flags.help || flags.h) {
-		cli.outputHelp();
-		return 0;
-	}
+	// cac already printed help/version during parse.
+	if (options.help === true || options.h === true) return 0;
+	if (options.version === true || options.v === true) return 0;
 
-	switch (cmd) {
-		case "version":
-		case "--version":
-		case "-v": {
+	switch (command) {
+		case "version": {
 			console.log(`uma-machine ${CLI_VERSION} (protocol v1)`);
 			return 0;
 		}
-		case "help":
-		case "--help":
-		case "-h": {
-			// `help <command>` prints that command's cac help; bare help
-			// keeps the legacy template (keys + exit codes).
-			const sub = rest[0];
-			const target = sub ? cli.commands.find((c) => c.name === sub) : undefined;
-			if (target) target.outputHelp();
-			else console.log(helpText());
-			return 0;
-		}
 		case "enroll": {
-			const server = flagString(flags, "server") ?? serverUrl();
-			const name = flagString(flags, "name") ?? flagString(flags, "machine");
+			const server = optString(options.server) ?? serverUrl();
 			await enroll({
-				clientId: flagString(flags, "client-id") ?? "uma-machine",
-				machineName: name,
+				clientId: optString(options.clientId) ?? "uma-machine",
+				machineName: optString(options.name),
 				server,
-				writeSystemd: flagBool(flags, "systemd"),
+				writeSystemd: optBool(options.systemd),
 			});
 			return 0;
 		}
 		case "daemon": {
 			// Coercion lives in daemonIntervalS (floor 2s); invalid => default.
 			const intervalS =
-				flags.interval !== undefined
-					? daemonIntervalS(flags.interval)
+				options.interval !== undefined
+					? daemonIntervalS(options.interval)
 					: undefined;
 			console.log(`uma-machine daemon ${CLI_VERSION} starting...`);
 			await new Daemon({ intervalS }).run();
@@ -321,20 +310,29 @@ async function main(): Promise<number> {
 			return 0;
 		}
 		case "check":
-			return cmdCheck(flags);
+			return cmdCheck(options);
 		case "reset":
-			return cmdReset(flags, rest);
+			return cmdReset(options);
 		case "sync":
-			return cmdSync(flags);
+			return cmdSync(options);
 		case "history":
-			return cmdHistory(flags);
+			return cmdHistory(options);
 		case "sandbox":
-			return cmdSandbox(flags, rest);
+			return cmdSandbox(options, args);
 		case "run":
-			return cmdRun(flags, rest);
+			return cmdRun(options);
+		case undefined: {
+			if (args.length === 0) {
+				cli.outputHelp();
+				return 0;
+			}
+			console.error(`unknown command: ${args[0]}\n`);
+			cli.outputHelp();
+			return 1;
+		}
 		default: {
-			console.error(`unknown command: ${cmd}\n`);
-			console.log(helpText());
+			console.error(`unknown command: ${command}\n`);
+			cli.outputHelp();
 			return 1;
 		}
 	}

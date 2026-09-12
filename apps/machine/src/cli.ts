@@ -1,35 +1,30 @@
 import type { CAC } from "cac";
 import cac from "cac";
-import { kebabCase } from "es-toolkit/string";
 
-export type CliFlags = Record<string, string | boolean>;
+import { CLI_VERSION } from "./utils/version.ts";
 
-export interface ParsedArgs {
-	cmd: string;
-	flags: CliFlags;
-	rest: string[];
-}
+export type CliOptions = Record<string, unknown>;
 
-export interface CliParseResult extends ParsedArgs {
+export interface CliParseResult {
+	/** Positional args (e.g. `sandbox [sub]`). */
+	args: string[];
 	cli: CAC;
-}
-
-function toKebab(key: string): string {
-	return kebabCase(key);
+	/** Matched cac command name, or undefined when no command matched. */
+	command: string | undefined;
+	/** Native cac options: camelCase keys, numbers/arrays preserved. */
+	options: CliOptions;
 }
 
 /**
- * Build the cac CLI with all commands + type-safe option defs.
+ * Build the cac CLI with all commands + option defs.
  *
- * Global `-h/--help` and `-v/--version` are registered via option() (not
- * help()/version()) so parse() stays pure — no auto console output.
- * main() in index.ts handles help/version explicitly to preserve the exact
- * legacy output formats and exit codes.
+ * Help (`-h/--help`, `<cmd> --help`) and version (`-v/--version`) are owned
+ * by cac via help()/version() — parse() prints them directly.
  */
 export function buildCli(): CAC {
 	const cli = cac("uma-machine");
-	cli.option("-h, --help", "Display this message");
-	cli.option("-v, --version", "Display version number");
+	cli.help();
+	cli.version(CLI_VERSION);
 
 	cli
 		.command("enroll", "Enroll this machine with the server")
@@ -38,7 +33,6 @@ export function buildCli(): CAC {
 		)
 		.option("--server <url>", "Server URL")
 		.option("--name <machine>", "Machine name")
-		.option("--machine <machine>", "Machine name alias")
 		.option("--systemd", "Write systemd unit")
 		.option("--client-id <id>", "OAuth client id");
 
@@ -94,7 +88,7 @@ export function buildCli(): CAC {
 	cli
 		.command("run", "Run a task once")
 		.usage(
-			"run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [--commit <sha>] [--branch <b>] [--agent <bin>]",
+			"run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [--commit <sha>] [--branch <b>] [--agent <bin>] [--fresh-start]",
 		)
 		.option("--task <id>", "Task id")
 		.option("--prompt <text>", "Prompt text")
@@ -103,12 +97,11 @@ export function buildCli(): CAC {
 		.option("--commit <sha>", "Commit sha")
 		.option("--branch <branch>", "Branch name")
 		.option("--agent <bin>", "Agent binary")
-		.option("--fresh", "Fresh start in sandbox")
 		.option("--fresh-start", "Fresh start in sandbox");
 
 	cli.command("version", "Print version").usage("version");
 
-	// Keep Keys / Exit-codes footer consistent with helpText() on global help.
+	// Product footer on global help: valid config keys + exit-code contract.
 	const prevHelp = cli.globalCommand.helpCallback;
 	cli.globalCommand.helpCallback = (sections) => {
 		const out = prevHelp ? prevHelp(sections) : undefined;
@@ -130,76 +123,14 @@ export function buildCli(): CAC {
 	return cli;
 }
 
-/** Parse argv via cac into the legacy {cmd, flags, rest} shape. */
+/** Parse argv via cac, keeping options native (camelCase, numbers/arrays). */
 export function parseCli(argv: string[]): CliParseResult {
 	const cli = buildCli();
-	cli.parse(argv, { run: false });
-	const rawOptions = cli.options as Record<string, unknown>;
-	const flags: CliFlags = {};
-	for (const [key, value] of Object.entries(rawOptions)) {
-		if (key === "--") continue;
-		if (value === undefined) continue;
-		if (typeof value === "string" || typeof value === "boolean") {
-			flags[key] = value;
-			const kebab = toKebab(key);
-			if (kebab !== key) flags[kebab] = value;
-		} else if (typeof value === "number" || Array.isArray(value)) {
-			// mri coerces numeric-looking values to numbers and repeated
-			// flags to arrays; normalize back to the legacy string domain so
-			// downstream casts (taskId, sandbox, server, ...) stay strings.
-			// (Repeated --only a --only b joins to "a,b" for parseOnlyFlag;
-			// the old hand parser overwrote and lost `a`.)
-			const joined = Array.isArray(value)
-				? value.map((v) => String(v)).join(",")
-				: String(value);
-			flags[key] = joined;
-			const kebab = toKebab(key);
-			if (kebab !== key) flags[kebab] = joined;
-		}
-	}
-	const afterDoubleDash = Array.isArray(rawOptions["--"])
-		? (rawOptions["--"] as unknown[]).map((v) => String(v))
-		: [];
-	const matched = cli.matchedCommandName;
-	let cmd: string;
-	let rest: string[];
-	if (matched) {
-		cmd = matched;
-		rest = cli.args.map((a) => String(a));
-	} else if (rawOptions.help || rawOptions.h) {
-		cmd = "help";
-		rest = cli.args.map((a) => String(a));
-	} else if (rawOptions.version || rawOptions.v) {
-		cmd = "version";
-		rest = cli.args.map((a) => String(a));
-	} else if (cli.args.length > 0) {
-		cmd = String(cli.args[0]);
-		rest = cli.args.slice(1).map((a) => String(a));
-	} else {
-		cmd = "help";
-		rest = [];
-	}
-	if (afterDoubleDash.length > 0) rest = [...rest, ...afterDoubleDash];
-	return { cli, cmd, flags, rest };
-}
-
-export function helpText(): string {
-	return `uma-machine — device-side agent (protocol v1)
-
-Usage:
-  uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <id>]
-  uma-machine daemon [--interval <seconds>]
-  uma-machine check [--only <k1,k2>] [--json]
-  uma-machine reset [--only <k1,k2>] [--dry-run] [--prune]
-  uma-machine reset --fresh-start --sandbox <id> [--commit <sha>] [--repo <url>] [--branch <b>] [--task <id>] [--dry-run]
-  uma-machine sync [--dry-run] [--json] [--only <k1,k2>]
-  uma-machine history [--range 24h|30d] [--json]
-  uma-machine sandbox list [--json]
-  uma-machine sandbox prune [--dry-run]
-  uma-machine run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [--commit <sha>] [--branch <b>] [--agent <bin>]
-  uma-machine version
-
-Keys: programs, git-login, agents, files, providers, mcp, skills, systemd
-Exit codes: 0 ok/clean, 2 drifted/partial, 1 error, 3 UPGRADE_REQUIRED
-`;
+	const parsed = cli.parse(argv, { run: false });
+	return {
+		args: parsed.args.map((a) => String(a)),
+		cli,
+		command: cli.matchedCommandName ?? undefined,
+		options: { ...parsed.options },
+	};
 }

@@ -6,7 +6,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 
 `src/` ownership (grouped by concern; `index.ts`/`cli.ts` stay at the root):
 
-- `index.ts`: CLI dispatcher (composition root edge) + exit codes. `cli.ts`: arg parsing + help text.
+- `index.ts`: CLI dispatcher (composition root edge) + exit codes. `cli.ts`: arg parsing (native cac options).
 - `daemon/`: `daemon.ts` — `Daemon` class — tick loop + ws dispatch (assign/cancel/reset-config) + TTL reap; `ws-client.ts`: reconnecting ws; `heartbeat.ts`: `Heartbeat` class — host (`/proc`, `df`) + SDK collectors + `scopeHint` + persist-then-send + `history` query.
 - `enrollment/`: `enroll.ts` — device flow + `identity.json` + `limits.json` + SQLite init + systemd writer (Ubuntu pre-pull lives in `install.sh` + `programs` reset best-effort, not here); `limits.ts`: single quota resolver.
 - `execution/`: `execution.ts` — `ExecutionEngine` class — admission (quota snapshot + create under an instance-scoped admission lock; server limits from `assign.limits`) → claim → start → bind → exec-stream → task-done → stop; in-flight executions are engine instance state; every outbound v1 frame via the `emit` passed to `executeTask`; failures free the sandbox; cancel via `stop --force` through in-flight state; `git-binding.ts`: `RepoBinding` class — clone/fetch/checkout/fresh-start via `Sandbox.exec` (driver-agnostic, not SDK-only); `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers; `redact.ts`: secrets + 256KB split.
