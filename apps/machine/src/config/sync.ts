@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid";
 
-import { type ResetOptions, resetAll } from "./config/mod.ts";
-import { stateDbPath } from "./env.ts";
-import { persistReceiptsBestEffort } from "./utils/db.ts";
+import { persistReceiptsBestEffort } from "../utils/db.ts";
+import { stateDbPath } from "../utils/env.ts";
+import { type ResetOptions, resetAll } from "./mod.ts";
 
 export interface SyncOptions extends ResetOptions {
 	jobId?: string;

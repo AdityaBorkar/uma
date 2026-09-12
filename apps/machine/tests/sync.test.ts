@@ -32,7 +32,7 @@ afterEach(() => {
 
 describe("sync (Perform Sync)", () => {
 	test("dry-run previews without persisting receipts", async () => {
-		const { performSync } = await import("../src/sync.ts");
+		const { performSync } = await import("../src/config/sync.ts");
 		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { existsSync } = await import("node:fs");
 		const { receipts } = await performSync({ dryRun: true });
@@ -50,7 +50,7 @@ describe("sync (Perform Sync)", () => {
 	});
 
 	test("real sync persists per-key receipts", async () => {
-		const { performSync } = await import("../src/sync.ts");
+		const { performSync } = await import("../src/config/sync.ts");
 		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { receipts } = await performSync({ dryRun: false });
 		expect(receipts.length).toBe(9);
@@ -65,7 +65,7 @@ describe("sync (Perform Sync)", () => {
 
 describe("heartbeat history", () => {
 	test("missing DB returns empty history (no throw)", async () => {
-		const { readHistory } = await import("../src/heartbeat.ts");
+		const { readHistory } = await import("../src/daemon/heartbeat.ts");
 		// UMA_STATE_DB points at a path that does not exist yet.
 		expect(readHistory("24h")).toEqual([]);
 	});
@@ -150,7 +150,7 @@ describe("db aux retention + reap age", () => {
 
 describe("enroll validation", () => {
 	test("reserved/invalid names rejected before any network", async () => {
-		const { enroll } = await import("../src/enroll.ts");
+		const { enroll } = await import("../src/enrollment/enroll.ts");
 		await expect(
 			enroll({ machineName: "api", server: "http://127.0.0.1:9" }),
 		).rejects.toThrow(/invalid machine name/);

@@ -7,7 +7,7 @@ import {
 	assertSafeFileName,
 	isSafeFileName,
 	writeFile0600,
-} from "../fs-utils.ts";
+} from "../utils/fs-utils.ts";
 import {
 	type CheckResult,
 	loadDesiredResult,

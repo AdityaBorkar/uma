@@ -11,10 +11,8 @@ import {
 import { maxBy, uniq } from "es-toolkit/array";
 import ms from "ms";
 
-import { loadIdentity } from "./enroll.ts";
-import { heartbeatRetentionDays, stateDbPath } from "./env.ts";
-import { runCapture } from "./proc.ts";
-import { Sandbox } from "./sandbox.ts";
+import { loadIdentity } from "../enrollment/enroll.ts";
+import { Sandbox } from "../sandboxes/sandbox.ts";
 import {
 	type HeartbeatSample,
 	insertHeartbeat,
@@ -22,8 +20,10 @@ import {
 	queryHistory,
 	vacuumRetention,
 	withDb,
-} from "./utils/db.ts";
-import { CLI_VERSION, CONFIG_VERSION } from "./version.ts";
+} from "../utils/db.ts";
+import { heartbeatRetentionDays, stateDbPath } from "../utils/env.ts";
+import { runCapture } from "../utils/proc.ts";
+import { CLI_VERSION, CONFIG_VERSION } from "../utils/version.ts";
 
 // ---------------------------------------------------------------------------
 // Pure helpers (no IO; exported for tests)

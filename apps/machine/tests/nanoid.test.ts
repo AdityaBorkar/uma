@@ -10,8 +10,8 @@ import {
 	userCode,
 } from "@uma/orpc-contract";
 
-import { sandboxNameFor } from "../src/execution.ts";
-import { validateSandboxName } from "../src/sandbox.ts";
+import { sandboxNameFor } from "../src/execution/execution.ts";
+import { validateSandboxName } from "../src/sandboxes/sandbox.ts";
 
 const SANDBOX_RE =
 	/^task-[A-Za-z0-9-]{1,8}-[23456789abcdefghijkmnopqrstuvwxyz]{6}$/;
@@ -80,7 +80,7 @@ describe("nanoid migration", () => {
 	});
 
 	test("sync jobId keeps local- prefix with timestamp + nanoid suffix", async () => {
-		const { performSync } = await import("../src/sync.ts");
+		const { performSync } = await import("../src/config/sync.ts");
 		const a = await performSync({ dryRun: true });
 		const b = await performSync({ dryRun: true });
 		for (const { jobId } of [a, b]) {

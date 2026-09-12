@@ -26,9 +26,9 @@ afterEach(() => {
 
 describe("git-binding (SDK exec, Ubuntu sandbox)", () => {
 	test("notes-only when repoUrl empty (no clone)", async () => {
-		const { ensureBinding } = await import("../src/git-binding.ts");
-		const { createSandbox } = await import("../src/sandbox.ts");
-		const { name } = await createSandbox({
+		const { ensureBinding } = await import("../src/execution/git-binding.ts");
+		const { Sandbox } = await import("../src/sandboxes/sandbox.ts");
+		const { name } = await Sandbox.create({
 			name: `gb-${Date.now().toString(36)}`,
 			projectId: null,
 			taskId: "t1",
@@ -43,12 +43,12 @@ describe("git-binding (SDK exec, Ubuntu sandbox)", () => {
 	});
 
 	test("branchForTask pinning", async () => {
-		const { ensureBinding } = await import("../src/git-binding.ts");
-		const { createSandbox } = await import("../src/sandbox.ts");
+		const { ensureBinding } = await import("../src/execution/git-binding.ts");
+		const { Sandbox } = await import("../src/sandboxes/sandbox.ts");
 		// Mock exec runs on host; use `true` binary via sh to simulate clone path
 		// without network: absent .git check uses ~/work which won't exist on host,
 		// so clone would fail — instead assert notes-only + branch math only.
-		const { name } = await createSandbox({
+		const { name } = await Sandbox.create({
 			name: `gb2-${Date.now().toString(36)}`,
 			projectId: null,
 			taskId: "t2",

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { capChunk, fingerprint, Redactor, splitChunks } from "../src/redact.ts";
+import {
+	capChunk,
+	fingerprint,
+	Redactor,
+	splitChunks,
+} from "../src/execution/redact.ts";
 
 describe("redact", () => {
 	test("verbatim secrets redacted", () => {

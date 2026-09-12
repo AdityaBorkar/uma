@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { isSafeFileName, writeFile0600 } from "../fs-utils.ts";
+import { isSafeFileName, writeFile0600 } from "../utils/fs-utils.ts";
 import {
 	type CheckResult,
 	loadDesiredResult,

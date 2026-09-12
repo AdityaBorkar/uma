@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { effectiveLimits, quotaDefaultsFromRam } from "@uma/orpc-contract";
 
-import { isQuotaError, quotaPreCheck } from "../src/sandbox.ts";
+import { isQuotaError, quotaPreCheck } from "../src/sandboxes/sandbox.ts";
 
 describe("quota (2x/5x defaults + server override)", () => {
 	test("defaults computed from RAM: 2x/5x per GB, floor 1", () => {

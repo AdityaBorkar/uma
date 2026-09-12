@@ -2,21 +2,21 @@ import type { ServerFrame } from "@uma/orpc-contract";
 import { needsUpgrade } from "@uma/orpc-contract";
 import ms from "ms";
 
-import { loadDesired, saveDesired } from "./config/desired.ts";
-import { resetAll } from "./config/mod.ts";
-import { loadIdentity } from "./enroll.ts";
-import { daemonIntervalS, sandboxTtlMs, stateDbPath } from "./env.ts";
-import { cancelTask, executeTask } from "./execution.ts";
-import { Heartbeat } from "./heartbeat.ts";
-import { Redactor } from "./redact.ts";
-import { Sandbox, snapshotQuota } from "./sandbox.ts";
+import { loadDesired, saveDesired } from "../config/desired.ts";
+import { resetAll } from "../config/mod.ts";
+import { loadIdentity } from "../enrollment/enroll.ts";
+import { ExecutionEngine } from "../execution/execution.ts";
+import { Redactor } from "../execution/redact.ts";
+import { Sandbox, snapshotQuota } from "../sandboxes/sandbox.ts";
 import {
 	lastSandboxEventTsBatch,
 	persistReceiptsBestEffort,
 	recordSandboxEventBestEffort,
 	withDb,
-} from "./utils/db.ts";
-import { CLI_VERSION } from "./version.ts";
+} from "../utils/db.ts";
+import { daemonIntervalS, sandboxTtlMs, stateDbPath } from "../utils/env.ts";
+import { CLI_VERSION } from "../utils/version.ts";
+import { Heartbeat } from "./heartbeat.ts";
 import { connectWithBackoff } from "./ws-client.ts";
 
 export interface DaemonOptions {
@@ -40,6 +40,7 @@ export class Daemon {
 	private readonly once: boolean;
 	private readonly redactor = new Redactor();
 	private readonly heartbeat = new Heartbeat();
+	private readonly engine = new ExecutionEngine();
 	private machineId = "";
 	private stopped = false;
 	private lastSend: Send | undefined;
@@ -128,7 +129,7 @@ export class Daemon {
 	private async handleFrame(frame: ServerFrame, send: Send): Promise<void> {
 		if (frame.t === "UPGRADE_REQUIRED") this.handleUpgrade(frame);
 		else if (frame.t === "assign") await this.handleAssign(frame, send);
-		else if (frame.t === "cancel") await cancelTask(frame.taskId);
+		else if (frame.t === "cancel") await this.engine.cancelTask(frame.taskId);
 		else if (frame.t === "reset-config")
 			await this.handleResetConfig(frame, send);
 	}
@@ -149,7 +150,7 @@ export class Daemon {
 
 	private async handleAssign(frame: AssignFrameOf, send: Send): Promise<void> {
 		try {
-			const res = await executeTask(frame, { emit: send });
+			const res = await this.engine.executeTask(frame, send);
 			if (res.status === "refused")
 				console.warn(`task ${frame.taskId}: refused (quota exceeded)`);
 			else if (res.status === "rejected")
@@ -259,9 +260,4 @@ export class Daemon {
 			}
 		}
 	}
-}
-
-// Legacy entry kept for existing callers: run a Daemon to completion.
-export async function runDaemon(opts?: DaemonOptions): Promise<() => void> {
-	return new Daemon(opts).run();
 }

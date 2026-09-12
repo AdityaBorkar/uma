@@ -36,7 +36,7 @@ export interface SandboxMetrics {
 
 /**
  * Sandbox port. One implementation per runtime (SDK / CLI / mock); the
- * facade in `src/sandbox.ts` selects a driver and never branches on it.
+ * facade in `src/sandboxes/sandbox.ts` selects a driver and never branches on it.
  */
 export interface SandboxDriver {
 	create(opts: CreateOpts): Promise<{ id: string; name: string }>;

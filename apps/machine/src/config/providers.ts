@@ -1,6 +1,6 @@
-import { stateDbPath } from "../env.ts";
-import { fingerprint } from "../redact.ts";
+import { fingerprint } from "../execution/redact.ts";
 import { getProviderKeys, setProviderKey, withDb } from "../utils/db.ts";
+import { stateDbPath } from "../utils/env.ts";
 import {
 	type CheckResult,
 	loadDesiredResult,

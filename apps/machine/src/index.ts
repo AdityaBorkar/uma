@@ -4,21 +4,21 @@ import pc from "picocolors";
 
 import { type CliFlags, helpText, parseCli } from "./cli.ts";
 import { checkAll, resetAll } from "./config/mod.ts";
-import { Daemon } from "./daemon.ts";
-import { enroll } from "./enroll.ts";
+import { performSync, syncExitCode } from "./config/sync.ts";
+import { Daemon } from "./daemon/daemon.ts";
+import { Heartbeat } from "./daemon/heartbeat.ts";
+import { enroll } from "./enrollment/enroll.ts";
+import { ExecutionEngine } from "./execution/execution.ts";
+import { RepoBinding } from "./execution/git-binding.ts";
+import { Redactor } from "./execution/redact.ts";
+import { Sandbox } from "./sandboxes/sandbox.ts";
 import {
 	daemonIntervalS,
 	parseOnlyFlag,
 	parsePruneFlag,
 	serverUrl,
-} from "./env.ts";
-import { executeTask } from "./execution.ts";
-import { RepoBinding } from "./git-binding.ts";
-import { Heartbeat } from "./heartbeat.ts";
-import { Redactor } from "./redact.ts";
-import { Sandbox } from "./sandbox.ts";
-import { performSync, syncExitCode } from "./sync.ts";
-import { CLI_VERSION } from "./version.ts";
+} from "./utils/env.ts";
+import { CLI_VERSION } from "./utils/version.ts";
 
 // cli-table3 paints borders/headers even when piped; picocolors already
 // respects NO_COLOR/non-TTY, so gate table styling on the same signal.
@@ -233,7 +233,10 @@ async function cmdRun(flags: CliFlags, rest: string[]): Promise<number> {
 	}
 	const commit = flagString(flags, "commit");
 	const branch = flagString(flags, "branch");
-	const res = await executeTask(
+	const engine = new ExecutionEngine({
+		agentBin: flagString(flags, "agent"),
+	});
+	const res = await engine.executeTask(
 		{
 			projectId: flagString(flags, "project") ?? null,
 			prompt: flagString(flags, "prompt") ?? `manual run ${taskId}`,
@@ -246,10 +249,7 @@ async function cmdRun(flags: CliFlags, rest: string[]): Promise<number> {
 				? { freshStart: true }
 				: {}),
 		},
-		{
-			agentBin: flagString(flags, "agent"),
-			emit: (f) => console.log(JSON.stringify(f)),
-		},
+		(f) => console.log(JSON.stringify(f)),
 	);
 	if (res.status === "refused") {
 		console.log(`run ${taskId} -> refused (quota)`);

@@ -1,7 +1,7 @@
 import { coerce, satisfies, valid } from "semver";
 
-import { msbBin } from "../env.ts";
-import { runCapture, whichBin } from "../proc.ts";
+import { msbBin } from "../utils/env.ts";
+import { runCapture, whichBin } from "../utils/proc.ts";
 import {
 	type CheckResult,
 	loadDesiredResult,

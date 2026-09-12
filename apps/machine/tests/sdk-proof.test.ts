@@ -35,13 +35,14 @@ describe("sdk-proof (Phase-0 Bun gate)", () => {
 		expect(typeof m.allSandboxMetrics).toBe("function");
 	});
 
-	test("driverKind: sdk under bun, mock when MSB_MOCK=1", async () => {
-		const { driverKind } = await import("../src/sandbox.ts");
+	test("DriverSelector: sdk under bun, mock when MSB_MOCK=1", async () => {
+		const { DriverSelector } = await import("../src/sandboxes/msb/driver.ts");
 		const prev = process.env.MSB_MOCK;
 		process.env.MSB_MOCK = "1";
-		expect(await driverKind()).toBe("mock");
+		expect(await new DriverSelector().kind()).toBe("mock");
 		if (prev === undefined) delete process.env.MSB_MOCK;
 		else process.env.MSB_MOCK = prev;
-		expect(await driverKind()).toBe("sdk");
+		// A fresh selector per probe: no sticky availability state across env flips.
+		expect(await new DriverSelector().kind()).toBe("sdk");
 	});
 });

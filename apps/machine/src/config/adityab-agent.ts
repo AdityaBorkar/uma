@@ -1,6 +1,6 @@
 import { coerce, satisfies, valid } from "semver";
 
-import { runCapture, whichBin } from "../proc.ts";
+import { runCapture, whichBin } from "../utils/proc.ts";
 import {
 	type CheckResult,
 	maybeDryRun,

@@ -1,4 +1,4 @@
-import { runCapture } from "../proc.ts";
+import { runCapture } from "../utils/proc.ts";
 import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
 
 export const KEY = "git-login";

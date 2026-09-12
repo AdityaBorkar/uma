@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { isSafeFileName } from "../src/fs-utils.ts";
+import { isSafeFileName } from "../src/utils/fs-utils.ts";
 
 let dir: string;
 let oldEnv: Record<string, string | undefined>;
@@ -38,8 +38,8 @@ afterEach(() => {
 
 describe("limits precedence (single resolver)", () => {
 	test("default -> file -> server", async () => {
-		const { resolveLimits } = await import("../src/limits.ts");
-		const { saveLimits } = await import("../src/enroll.ts");
+		const { resolveLimits } = await import("../src/enrollment/limits.ts");
+		const { saveLimits } = await import("../src/enrollment/enroll.ts");
 		expect(resolveLimits()).toMatchObject({
 			maxRunning: 8,
 			maxTotal: 20,
@@ -108,7 +108,7 @@ describe("declared file names are path-safe", () => {
 describe("quota refusal frames", () => {
 	test("validate against the v1 machine schema", async () => {
 		const { assertMachineFrame, quotaRefusalFrames } = await import(
-			"../src/protocol.ts"
+			"../src/execution/protocol.ts"
 		);
 		const frames = quotaRefusalFrames({
 			limits: { maxRunning: 1, maxTotal: 2 },

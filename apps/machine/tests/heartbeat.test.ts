@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { collectPids, evaluateScopeHint } from "../src/heartbeat.ts";
+import { collectPids, evaluateScopeHint } from "../src/daemon/heartbeat.ts";
 
 describe("pressure rule (90%/10min + 60% attribution + cooldown)", () => {
 	test("no breach => no hint", () => {

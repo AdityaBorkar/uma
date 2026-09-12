@@ -3,8 +3,8 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
-import { configDir } from "../env.ts";
-import { saveJson0600 } from "../fs-utils.ts";
+import { configDir } from "../utils/env.ts";
+import { saveJson0600 } from "../utils/fs-utils.ts";
 
 export interface DesiredState {
 	agents?: { bins: string[] };

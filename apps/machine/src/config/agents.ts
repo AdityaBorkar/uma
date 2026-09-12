@@ -1,4 +1,4 @@
-import { whichBin } from "../proc.ts";
+import { whichBin } from "../utils/proc.ts";
 import {
 	type CheckResult,
 	loadDesiredResult,

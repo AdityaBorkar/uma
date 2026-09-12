@@ -10,13 +10,9 @@ import type {
 	TaskDoneFrame,
 } from "@uma/orpc-contract";
 
-import { saveIdentity } from "../src/enroll.ts";
-import {
-	cancelTask,
-	type ExecutionDeps,
-	executeTask,
-} from "../src/execution.ts";
-import { createSandbox, listSandboxes } from "../src/sandbox.ts";
+import { saveIdentity } from "../src/enrollment/enroll.ts";
+import { type Emit, ExecutionEngine } from "../src/execution/execution.ts";
+import { Sandbox } from "../src/sandboxes/sandbox.ts";
 
 let dir: string;
 let oldEnv: Record<string, string | undefined>;
@@ -71,7 +67,7 @@ function assignFor(
 	};
 }
 
-function collector(): { emit: ExecutionDeps["emit"]; frames: MachineFrame[] } {
+function collector(): { emit: Emit; frames: MachineFrame[] } {
 	const frames: MachineFrame[] = [];
 	return { emit: (f) => frames.push(f), frames };
 }
@@ -81,11 +77,8 @@ const okClaim = async () => "ok" as const;
 describe("executeTask completes the claimed lifecycle", () => {
 	test("completed: claim-ack, task-done completed, sandbox left stopped", async () => {
 		const { emit, frames } = collector();
-		const outcome = await executeTask(assignFor("task_done"), {
-			agentBin: "true",
-			claim: okClaim,
-			emit,
-		});
+		const engine = new ExecutionEngine({ agentBin: "true", claim: okClaim });
+		const outcome = await engine.executeTask(assignFor("task_done"), emit);
 
 		expect(outcome).toEqual({
 			sandboxId: expect.any(String),
@@ -96,7 +89,7 @@ describe("executeTask completes the claimed lifecycle", () => {
 		const done = frames.find((f) => f.t === "task-done") as TaskDoneFrame;
 		expect(done.status).toBe("completed");
 		if (outcome.status === "refused") throw new Error("unreachable");
-		const list = await listSandboxes();
+		const list = await Sandbox.list();
 		expect(list.find((s) => s.id === outcome.sandboxId)?.status).toBe(
 			"stopped",
 		);
@@ -104,11 +97,8 @@ describe("executeTask completes the claimed lifecycle", () => {
 
 	test("failed exec: task-done failed, sandbox left stopped", async () => {
 		const { emit, frames } = collector();
-		const outcome = await executeTask(assignFor("task_fail"), {
-			agentBin: "false",
-			claim: okClaim,
-			emit,
-		});
+		const engine = new ExecutionEngine({ agentBin: "false", claim: okClaim });
+		const outcome = await engine.executeTask(assignFor("task_fail"), emit);
 
 		expect(outcome.status).toBe("failed");
 		const done = frames.find((f) => f.t === "task-done") as TaskDoneFrame;
@@ -117,10 +107,8 @@ describe("executeTask completes the claimed lifecycle", () => {
 
 	test("fail closed when no agent is configured", async () => {
 		const { emit, frames } = collector();
-		const outcome = await executeTask(assignFor("task_noagent"), {
-			claim: okClaim,
-			emit,
-		});
+		const engine = new ExecutionEngine({ claim: okClaim });
+		const outcome = await engine.executeTask(assignFor("task_noagent"), emit);
 
 		expect(outcome.status).toBe("failed");
 		const systems = frames.filter(
@@ -141,21 +129,22 @@ describe("executeTask completes the claimed lifecycle", () => {
 
 	test("cancel mid-run: outcome cancelled and no task-done", async () => {
 		const { emit, frames } = collector();
-		// run with prompt "1" so sleep holds the exec open long enough to cancel
-		const run = executeTask(assignFor("task_cancel", { prompt: "1" }), {
-			agentBin: "sleep",
-			claim: okClaim,
+		// run with prompt "1" so sleep holds the exec open long enough to cancel.
+		// Same engine for run + cancel: in-flight state is engine-scoped.
+		const engine = new ExecutionEngine({ agentBin: "sleep", claim: okClaim });
+		const run = engine.executeTask(
+			assignFor("task_cancel", { prompt: "1" }),
 			emit,
-		});
+		);
 		void run.catch(() => {});
 
 		let found = false;
 		for (let i = 0; i < 200 && !found; i++) {
 			await Bun.sleep(10);
-			found = (await listSandboxes()).some((s) => s.taskId === "task_cancel");
+			found = (await Sandbox.list()).some((s) => s.taskId === "task_cancel");
 		}
 		expect(found).toBe(true);
-		expect(await cancelTask("task_cancel")).toBe(true);
+		expect(await engine.cancelTask("task_cancel")).toBe(true);
 		const outcome = await run;
 		expect(outcome.status).toBe("cancelled");
 		expect(frames.some((f) => f.t === "task-done")).toBe(false);
@@ -165,27 +154,27 @@ describe("executeTask completes the claimed lifecycle", () => {
 describe("executeTask rejects and frees", () => {
 	test("server rejection: reason server, sandbox freed", async () => {
 		const { emit, frames } = collector();
-		const outcome = await executeTask(assignFor("task_rej"), {
+		const engine = new ExecutionEngine({
 			agentBin: "true",
 			claim: async () => "rejected",
-			emit,
 		});
+		const outcome = await engine.executeTask(assignFor("task_rej"), emit);
 
 		expect(outcome).toMatchObject({ reason: "server", status: "rejected" });
 		if (outcome.status !== "rejected") throw new Error("unreachable");
 		const ack = frames.find((f) => f.t === "claim-ack") as ClaimAckFrame;
 		expect(ack).toMatchObject({ error: "CLAIM_REJECTED", ok: false });
-		const list = await listSandboxes();
+		const list = await Sandbox.list();
 		expect(list.some((s) => s.id === outcome.sandboxId)).toBe(false);
 	});
 
 	test("unreachable claim: reason unreachable, sandbox freed", async () => {
 		const { emit, frames } = collector();
-		const outcome = await executeTask(assignFor("task_net"), {
+		const engine = new ExecutionEngine({
 			agentBin: "true",
 			claim: async () => "unreachable",
-			emit,
 		});
+		const outcome = await engine.executeTask(assignFor("task_net"), emit);
 
 		expect(outcome).toMatchObject({
 			reason: "unreachable",
@@ -197,41 +186,41 @@ describe("executeTask rejects and frees", () => {
 
 	test("a throwing claim rethrows after cleanup", async () => {
 		const { emit } = collector();
+		const engine = new ExecutionEngine({
+			agentBin: "true",
+			claim: async () => {
+				throw new Error("boom");
+			},
+		});
 		await expect(
-			executeTask(assignFor("task_boom"), {
-				agentBin: "true",
-				claim: async () => {
-					throw new Error("boom");
-				},
-				emit,
-			}),
+			engine.executeTask(assignFor("task_boom"), emit),
 		).rejects.toThrow("boom");
-		const list = await listSandboxes();
+		const list = await Sandbox.list();
 		expect(list.some((s) => s.taskId === "task_boom")).toBe(false);
 	});
 });
 
 describe("executeTask admission", () => {
 	test("quota refusal emits both refusal frames and never claims", async () => {
-		await createSandbox({
+		await Sandbox.create({
 			name: "task-blocker-234567",
 			projectId: null,
 			taskId: "blocker",
 		});
 		const { emit, frames } = collector();
 		let claimed = false;
-		const outcome = await executeTask(
+		const engine = new ExecutionEngine({
+			agentBin: "true",
+			claim: async () => {
+				claimed = true;
+				return "ok";
+			},
+		});
+		const outcome = await engine.executeTask(
 			assignFor("task_over", {
 				limits: { maxRunning: 1, maxTotal: 1 },
 			}),
-			{
-				agentBin: "true",
-				claim: async () => {
-					claimed = true;
-					return "ok";
-				},
-				emit,
-			},
+			emit,
 		);
 
 		expect(outcome).toEqual({

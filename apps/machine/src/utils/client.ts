@@ -3,12 +3,12 @@ import { Database } from "bun:sqlite";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
 
-import { chmod0600, ensureParentDir } from "../fs-utils.ts";
 import {
 	currentSchemaVersion,
 	stampSchemaVersion,
 	syncSchema,
 } from "../schemas/db/schema-sync.ts";
+import { chmod0600, ensureParentDir } from "./fs-utils.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
 export type Db = DrizzleDb;

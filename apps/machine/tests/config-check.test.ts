@@ -52,7 +52,7 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 
 	test("providers check is fingerprint-only (never prints secret)", async () => {
 		const { saveDesired } = await import("../src/config/desired.ts");
-		const { fingerprint } = await import("../src/redact.ts");
+		const { fingerprint } = await import("../src/execution/redact.ts");
 		const { openDb, setProviderKey } = await import("../src/utils/db.ts");
 		const { check } = await import("../src/config/providers.ts");
 		const secret = "sk-live-1234567890";
@@ -90,7 +90,7 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 	});
 
 	test("sync writes per-key receipts (non-dry-run)", async () => {
-		const { performSync } = await import("../src/sync.ts");
+		const { performSync } = await import("../src/config/sync.ts");
 		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { jobId, receipts } = await performSync({ dryRun: false });
 		expect(jobId.startsWith("local-")).toBe(true);

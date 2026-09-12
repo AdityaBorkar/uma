@@ -12,7 +12,7 @@ The `uma` server (Tasks, Signals, Projects, machine registry) is an external ups
 
 - **Machine Execution (this repo, downstream / conformist)** → **uma Server (external upstream, sole owner)**:
   Consumes `machines.*` + `/api/machines/ws` as frozen `v1` JSON frames (`../orpc-contract/src/schemas/machine-frames.ts`, `../orpc-contract/src/schemas/server-frames.ts`).
-  ACL = `src/ws-client.ts` + `parseServerFrame` / `validateMachineFrame` (unknown `t` logged + ignored, never sent).
+  ACL = `src/daemon/ws-client.ts` + `parseServerFrame` / `validateMachineFrame` (unknown `t` logged + ignored, never sent).
 - Server wins on conflict: `assign.limits` / `reset-config` override local `limits.json`; `tasks.claim` `409` is authoritative; `UPGRADE_REQUIRED` on major forces reinstall.
 
 ## Language
@@ -43,7 +43,7 @@ _Avoid_: container, VM, job
 
 **Worktree Binding**:
 The sandbox, repository, branch, and commit a Task runs in (machine is implied by identity; `BindingOpts` also carries `taskId` + `defaultBranch`).
-_Avoid_: checkout, workspace (the git verb `checkout -B` inside `git-binding.ts` is fine; the term for the tuple is Worktree Binding)
+_Avoid_: checkout, workspace (the git verb `checkout -B` inside `execution/git-binding.ts` is fine; the term for the tuple is Worktree Binding)
 
 **Sandbox Execution**:
 The lifecycle of one Microsandbox for one Task — admission, create, claim, start, Worktree Binding, exec, terminal outcome, stop or cleanup — owned as one unit, including its cancellation.

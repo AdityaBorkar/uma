@@ -2,9 +2,9 @@ import { dirname, join, sep } from "node:path";
 
 import writeFileAtomic from "write-file-atomic";
 
-import { configDir } from "../env.ts";
-import { ensureParentDir } from "../fs-utils.ts";
-import { runCapture } from "../proc.ts";
+import { configDir } from "../utils/env.ts";
+import { ensureParentDir } from "../utils/fs-utils.ts";
+import { runCapture } from "../utils/proc.ts";
 import {
 	type CheckResult,
 	maybeDryRun,

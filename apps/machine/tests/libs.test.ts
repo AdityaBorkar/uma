@@ -7,12 +7,12 @@ import ms from "ms";
 
 import { resolveKeys } from "../src/config/mod.ts";
 import { unitPath, writeUnitFile } from "../src/config/systemd.ts";
-import { parseKeyList, parseOnlyFlag } from "../src/env.ts";
+import { parseKeyList, parseOnlyFlag } from "../src/utils/env.ts";
 import {
 	ensureParentDir,
 	saveJson0600,
 	writeFile0600,
-} from "../src/fs-utils.ts";
+} from "../src/utils/fs-utils.ts";
 
 let dir: string;
 let savedEnv: Record<string, string | undefined>;
@@ -52,7 +52,7 @@ describe("ms parity (replaces manual millisecond math)", () => {
 	});
 
 	test("readHistory window math: 24h vs 30d", async () => {
-		const { readHistory } = await import("../src/heartbeat.ts");
+		const { readHistory } = await import("../src/daemon/heartbeat.ts");
 		// No DB configured here → empty history regardless of window.
 		expect(readHistory("24h")).toEqual([]);
 		expect(readHistory("30d")).toEqual([]);
@@ -61,7 +61,7 @@ describe("ms parity (replaces manual millisecond math)", () => {
 	});
 
 	test("sandboxTtlMs honors UMA_SANDBOX_TTL_S seconds", async () => {
-		const { sandboxTtlMs } = await import("../src/env.ts");
+		const { sandboxTtlMs } = await import("../src/utils/env.ts");
 		delete process.env.UMA_SANDBOX_TTL_S;
 		expect(sandboxTtlMs()).toBe(3600 * 1000);
 		process.env.UMA_SANDBOX_TTL_S = "120";
@@ -166,7 +166,7 @@ describe("atomic file writes (write-file-atomic core)", () => {
 
 describe("validation UX (zod-validation-error)", () => {
 	test("assertMachineFrame reports all issues, not just the first", async () => {
-		const { assertMachineFrame } = await import("../src/protocol.ts");
+		const { assertMachineFrame } = await import("../src/execution/protocol.ts");
 		let msg = "";
 		try {
 			assertMachineFrame({ t: "heartbeat" });
@@ -179,7 +179,7 @@ describe("validation UX (zod-validation-error)", () => {
 	});
 
 	test("enroll rejects reserved names with a descriptive message", async () => {
-		const { enroll } = await import("../src/enroll.ts");
+		const { enroll } = await import("../src/enrollment/enroll.ts");
 		await expect(
 			enroll({ machineName: "api", server: "http://x" }),
 		).rejects.toThrow(/invalid machine name 'api'/);

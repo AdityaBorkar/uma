@@ -1,7 +1,7 @@
 import { parseServerFrame, type ServerFrame } from "@uma/orpc-contract";
 
-import { loadIdentity } from "./enroll.ts";
-import { assertMachineFrame } from "./protocol.ts";
+import { loadIdentity } from "../enrollment/enroll.ts";
+import { assertMachineFrame } from "../execution/protocol.ts";
 
 export interface WsHandlers {
 	onClose?: (code: number, reason: string) => void;
