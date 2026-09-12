@@ -33,7 +33,7 @@ const settingsNavItems = [
 	{ id: "machines-agents", type: "divider" },
 	{ icon: BotMessageSquare, label: "Agents", to: "/settings/agents" },
 	{ icon: FileCode, label: "Skills", to: "/settings/skills" },
-	{ icon: HardDrive, label: "MCP Server", to: "/settings/mcp" },
+	{ icon: HardDrive, label: "MCP Servers", to: "/settings/mcp-servers" },
 	{ icon: FileSymlink, label: "Commands", to: "/settings/commands" },
 	{ icon: FileSliders, label: "Subagents", to: "/settings/subagents" },
 	{ icon: Sparkle, label: "Model Providers", to: "/settings/model-providers" },
