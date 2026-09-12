@@ -9,8 +9,12 @@ import {
 /**
  * Drizzle schema for the device-side SQLite state.db.
  *
- * Mirrors the legacy `MIGRATIONS` DDL in `src/db.ts` exactly so existing
- * databases upgrade in place with no data migration:
+ * Source of truth for migrations: `drizzle-kit generate` diffs this file
+ * into `./drizzle/<timestamp>_<name>/migration.sql`, and
+ * `bun run db:codegen` embeds that SQL into `src/db/migrations.ts`
+ * (`bun run db:generate` does both — never hand-edit the embedded SQL).
+ *
+ * Tables:
  * - heartbeats(ts PK, cpu/ram/disk REAL, pids/sandboxes/config_version/quota_usage TEXT)
  * - sandbox_events(ts, sandbox_id, event, task_id?, detail?) + idx on ts
  * - config_receipts(ts, job_id, key, ok INTEGER 0/1, error?) + idx on ts

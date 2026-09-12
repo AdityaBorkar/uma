@@ -1,10 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { LATEST_VERSION } from "../src/db/migrations.ts";
+import { LATEST_VERSION, MIGRATIONS_JOURNAL } from "../src/db/migrations.ts";
 import {
 	countHeartbeats,
 	insertHeartbeat,
@@ -121,5 +121,36 @@ describe("db migrations (embedded, XDG state.db)", () => {
 		// Second run is a no-op success.
 		migrate(nested);
 		expect(userVersion(nested)).toBe(LATEST_VERSION);
+	});
+
+	test("drizzle journal tracks applied migrations", () => {
+		const db = openDb(dbPath);
+		db.close();
+		const raw = new Database(dbPath, { readonly: true });
+		try {
+			const rows = raw
+				.query("SELECT name FROM __drizzle_migrations ORDER BY name;")
+				.all() as { name: string }[];
+			expect(rows.length).toBe(LATEST_VERSION);
+			expect(rows.map((r) => r.name)).toEqual(
+				MIGRATIONS_JOURNAL.map((m) => m.name),
+			);
+		} finally {
+			raw.close();
+		}
+	});
+
+	test("embedded journal matches drizzle-kit output (run bun run db:codegen)", () => {
+		const drizzleDir = join(import.meta.dir, "..", "drizzle");
+		const folders = readdirSync(drizzleDir, { withFileTypes: true })
+			.filter(
+				(e) =>
+					e.isDirectory() &&
+					existsSync(join(drizzleDir, e.name, "migration.sql")),
+			)
+			.map((e) => e.name)
+			.sort();
+		expect(MIGRATIONS_JOURNAL.map((m) => m.name)).toEqual(folders);
+		expect(LATEST_VERSION).toBe(folders.length);
 	});
 });

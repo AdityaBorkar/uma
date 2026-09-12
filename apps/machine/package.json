@@ -9,6 +9,9 @@
 	},
 	"scripts": {
 		"build": "bun build --compile src/index.ts --outfile .output/uma-machine",
+		"db:codegen": "bun run scripts/generate-embedded-migrations.ts",
+		"db:generate": "drizzle-kit generate && bun run scripts/generate-embedded-migrations.ts",
+		"db:migrate": "bun run scripts/db-migrate.ts",
 		"dev": "bun run src/index.ts",
 		"docs:wire": "bun run scripts/generate-wire-schema.ts",
 		"roundtrip": "bun run scripts/machine.roundtrip.ts",
@@ -18,7 +21,6 @@
 		"@uma/orpc-contract": "workspace:*",
 		"cac": "catalog:",
 		"cli-table3": "~0.6.5",
-		"drizzle-kit": "catalog:",
 		"drizzle-orm": "catalog:",
 		"env-paths": "4.0.0",
 		"es-toolkit": "catalog:",
@@ -40,6 +42,7 @@
 		"@types/ms": "2.1.0",
 		"@types/semver": "^7.8.0",
 		"@types/write-file-atomic": "4.0.3",
+		"drizzle-kit": "catalog:",
 		"typescript": "catalog:",
 		"zod-to-json-schema": "^3.25.2"
 	}

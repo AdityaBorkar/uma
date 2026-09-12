@@ -1,0 +1,377 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "47d7ce84-8271-41d3-b5e5-3117e2075067",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "config_receipts",
+      "entityType": "tables"
+    },
+    {
+      "name": "heartbeats",
+      "entityType": "tables"
+    },
+    {
+      "name": "log_buffer",
+      "entityType": "tables"
+    },
+    {
+      "name": "provider_keys",
+      "entityType": "tables"
+    },
+    {
+      "name": "sandbox_events",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error",
+      "entityType": "columns",
+      "table": "config_receipts"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "job_id",
+      "entityType": "columns",
+      "table": "config_receipts"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "key",
+      "entityType": "columns",
+      "table": "config_receipts"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ok",
+      "entityType": "columns",
+      "table": "config_receipts"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ts",
+      "entityType": "columns",
+      "table": "config_receipts"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'v1'",
+      "generated": null,
+      "name": "config_version",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cpu",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "disk",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'[]'",
+      "generated": null,
+      "name": "pids",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'{}'",
+      "generated": null,
+      "name": "quota_usage",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ram",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'[]'",
+      "generated": null,
+      "name": "sandboxes",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ts",
+      "entityType": "columns",
+      "table": "heartbeats"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "chunk",
+      "entityType": "columns",
+      "table": "log_buffer"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "task_id",
+      "entityType": "columns",
+      "table": "log_buffer"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ts",
+      "entityType": "columns",
+      "table": "log_buffer"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fingerprint",
+      "entityType": "columns",
+      "table": "provider_keys"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "provider_keys"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "secret",
+      "entityType": "columns",
+      "table": "provider_keys"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "provider_keys"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "detail",
+      "entityType": "columns",
+      "table": "sandbox_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event",
+      "entityType": "columns",
+      "table": "sandbox_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sandbox_id",
+      "entityType": "columns",
+      "table": "sandbox_events"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "task_id",
+      "entityType": "columns",
+      "table": "sandbox_events"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ts",
+      "entityType": "columns",
+      "table": "sandbox_events"
+    },
+    {
+      "columns": [
+        "ts"
+      ],
+      "nameExplicit": false,
+      "name": "heartbeats_pk",
+      "table": "heartbeats",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "provider"
+      ],
+      "nameExplicit": false,
+      "name": "provider_keys_pk",
+      "table": "provider_keys",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "ts",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_config_receipts_ts",
+      "entityType": "indexes",
+      "table": "config_receipts"
+    },
+    {
+      "columns": [
+        {
+          "value": "task_id",
+          "isExpression": false
+        },
+        {
+          "value": "ts",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_log_buffer_task",
+      "entityType": "indexes",
+      "table": "log_buffer"
+    },
+    {
+      "columns": [
+        {
+          "value": "ts",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_log_buffer_ts",
+      "entityType": "indexes",
+      "table": "log_buffer"
+    },
+    {
+      "columns": [
+        {
+          "value": "ts",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_sandbox_events_ts",
+      "entityType": "indexes",
+      "table": "sandbox_events"
+    },
+    {
+      "columns": [
+        {
+          "value": "sandbox_id",
+          "isExpression": false
+        },
+        {
+          "value": "ts",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_sandbox_events_sandbox",
+      "entityType": "indexes",
+      "table": "sandbox_events"
+    }
+  ],
+  "renames": []
+}

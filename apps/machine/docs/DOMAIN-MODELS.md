@@ -91,7 +91,7 @@ SQLite via `drizzle-orm` + `bun:sqlite` (`src/db.ts` + `src/db/schema.ts`), file
 - **ProviderKeyStore**: `setProviderKey / getProviderKeys / getProviderSecret` (secret never logged).
 - **LogBuffer**: `bufferLog / peekLogBuffer / deleteLogBufferThrough / drainLogBuffer / bufferedLogCount` (rowid-ordered, at-least-once replay, 7d prune).
 
-Schema source of truth is `src/db/schema.ts` (tables) with open/migrate in `src/db/client.ts` (`withDb` owns open/close). `drizzle.config.ts` points at `./drizzle` but no committed migrations directory exists yet; helper `scripts/db-migrate.ts` exists but is unwired (no `db:*` npm scripts). Baseline intent is `IF NOT EXISTS` so pre-drizzle `state.db` files upgrade in place.
+Schema source of truth is `src/db/schema.ts` (tables) with open/migrate in `src/db/client.ts` (`withDb` owns open/close). `drizzle-kit generate` emits `./drizzle/<timestamp>_<name>/migration.sql`, and `bun run db:codegen` (`scripts/generate-embedded-migrations.ts`) embeds it into `src/db/migrations.ts` for the compiled binary (`bun run db:generate` does both; `bun run db:migrate` applies to a state.db manually). Baseline statements carry `IF NOT EXISTS` (added mechanically at embed time) so pre-drizzle `state.db` files upgrade in place.
 
 ## Domain Primitive
 

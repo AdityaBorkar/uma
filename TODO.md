@@ -8,9 +8,6 @@ rest like contract
 
 retire all old-repo except webapp
 
-- orpc v2
-- drizzle v2
-
 --- Complete by 12PM ---
 
 - DB -> remote-servers

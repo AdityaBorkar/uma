@@ -2,9 +2,10 @@ import { existsSync } from "node:fs";
 import { Database } from "bun:sqlite";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
+import { migrate as drizzleMigrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { chmod0600, ensureParentDir } from "../fs-utils.ts";
-import { LATEST_VERSION, MIGRATIONS } from "./migrations.ts";
+import { LATEST_VERSION, MIGRATIONS_JOURNAL } from "./migrations.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
 export type Db = DrizzleDb;
@@ -36,44 +37,21 @@ function applyPragmas(raw: Database): void {
 	}
 }
 
-function currentUserVersion(raw: Database): number {
-	try {
-		const row = raw.query("PRAGMA user_version;").get() as {
-			user_version: number;
-		} | null;
-		return Number(row?.user_version ?? 0);
-	} catch {
-		return 0;
-	}
-}
-
 /**
  * Apply pending embedded migrations to the XDG state.db.
  *
- * The machine has no repo checkout (compiled single binary), so migrations
- * are bundled in `src/db/migrations.ts` and tracked with
- * `PRAGMA user_version` stored inside the database file itself — no external
- * migration folder needed. Each migration applies atomically; the version
- * only advances on success, so a crash replays the same migration.
+ * The machine has no repo checkout (compiled single binary), so the SQL is
+ * embedded in the bundle: `src/db/migrations.ts` is generated from
+ * drizzle-kit's `./drizzle` folder (`bun run db:codegen`) and applied here
+ * via drizzle-orm's embedded-journal mode — no migration folder is read at
+ * runtime. Applied migrations are tracked in the `__drizzle_migrations`
+ * table inside the database file itself; each migration applies atomically,
+ * so a crash replays the same migration. `PRAGMA user_version` mirrors the
+ * applied count for ops introspection.
  */
-function applyMigrations(raw: Database): void {
-	const current = currentUserVersion(raw);
-	for (const m of MIGRATIONS) {
-		if (m.version <= current) continue;
-		raw.exec("BEGIN;");
-		try {
-			raw.exec(m.sql);
-			raw.exec(`PRAGMA user_version = ${m.version};`);
-			raw.exec("COMMIT;");
-		} catch (e) {
-			try {
-				raw.exec("ROLLBACK;");
-			} catch {
-				// rollback best-effort; original error is what matters
-			}
-			throw e;
-		}
-	}
+function applyMigrations(db: DrizzleDb, raw: Database): void {
+	drizzleMigrate(db, { migrationsJournal: MIGRATIONS_JOURNAL });
+	raw.exec(`PRAGMA user_version = ${LATEST_VERSION};`);
 }
 
 /** Highest embedded migration version (for tests/ops introspection). */
@@ -103,7 +81,7 @@ export function openDb(
 		close: () => void;
 	};
 	if (!readonly) {
-		applyMigrations(raw);
+		applyMigrations(db, raw);
 		chmodDb0600(dbPath);
 	}
 	db.close = () => {

@@ -1,11 +1,11 @@
 import { defineConfig } from "drizzle-kit";
 
-// Dev-only: used by `drizzle-kit generate` to diff `src/db/schema.ts`.
-// Runtime migrations never read `./drizzle` — the compiled single binary has
-// no repo checkout on the machine. Runtime DDL is embedded in
-// `src/db/migrations.ts` and applied directly to the XDG state.db
-// (`stateDbPath()`). When the schema changes, add an embedded migration AND
-// regenerate here for review history.
+// Source of truth for SQL: `src/db/schema.ts` via `drizzle-kit generate`
+// (`bun run db:generate`). Runtime never reads `./drizzle` from disk — the
+// compiled single binary has no repo checkout, so
+// `scripts/generate-embedded-migrations.ts` embeds the SQL into
+// `src/db/migrations.ts`, applied via drizzle-orm's embedded-journal mode
+// to the XDG state.db (`stateDbPath()`).
 export default defineConfig({
 	dbCredentials: {
 		url: "./drizzle/local.db",
