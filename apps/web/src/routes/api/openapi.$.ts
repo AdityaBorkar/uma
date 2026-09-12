@@ -53,7 +53,7 @@ const handler = new OpenAPIHandler(router, {
 async function handle({ request }: { request: Request }) {
 	const { response } = await handler.handle(request, {
 		context: { headers: request.headers },
-		prefix: "/api",
+		prefix: "/api/openapi",
 	});
 
 	return response ?? new Response("Not Found", { status: 404 });

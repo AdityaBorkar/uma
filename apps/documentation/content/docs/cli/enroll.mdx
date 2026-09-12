@@ -20,9 +20,9 @@ uma-machine enroll --server <url> [--name <machine>] [--systemd] [--client-id <i
 
 ## What happens
 
-1. We ask for a device code: `POST /device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/schemas/device.ts`). The server replies with `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
+1. We ask for a device code: `POST /api/machines/device/code` with `{ client_id, machineName?, scope? }` (`DeviceCodeRequestSchema` in `apps/orpc-contract/src/schemas/device.ts`). The server replies with `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
 2. You approve the `user_code` at `verification_uri_complete` in your browser.
-3. We poll `POST /device/token` with `{ client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }` until you're approved. We keep polling on `authorization_pending`, back off on `slow_down`, and stop kindly on `expired_token` / `access_denied`. Retries use jitter + `p-retry`.
+3. We poll `POST /api/machines/device/token` with `{ client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }` until you're approved. We keep polling on `authorization_pending`, back off on `slow_down`, and stop kindly on `expired_token` / `access_denied`. Retries use jitter + `p-retry`.
 4. On success (`{ access_token, machine_id, token_type: "Bearer" }`) we save, with `0600` permissions:
    - `identity.json` — `{ machineId, serverUrl, sessionToken }`
    - `limits.json` — seeded from `quotaDefaultsFromRam()` (`{ maxRunning: 2×GB, maxTotal: 5×GB }`)

@@ -11,13 +11,13 @@
  */
 import { defineWebSocketHandler } from "nitro";
 
-import { handleMachineFrame } from "../../src/lib/machines/frames.ts";
+import { handleMachineFrame } from "#/lib/machines/frames.ts";
 import {
 	authMachine,
 	markConnected,
 	markDisconnected,
-} from "../../src/lib/machines/service.ts";
-import { trackSocket } from "../../src/lib/machines/sockets.ts";
+} from "#/lib/machines/service.ts";
+import { trackSocket } from "#/lib/machines/sockets.ts";
 
 function bearerOrQuery(request: Request): string | null {
 	const h = request.headers.get("authorization");

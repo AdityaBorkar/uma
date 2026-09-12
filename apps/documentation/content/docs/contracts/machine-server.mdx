@@ -7,7 +7,7 @@ Welcome! This is the frozen contract that keeps machines and servers in sync. Pa
 
 Transport is **raw JSON frames** at `MACHINES_WS_PATH = /api/machines/ws` (`src/constants.ts:19`) — not an oRPC envelope. `PROTOCOL_VERSION = "v1"`. Every machine→server frame carries `machineId + protocol: "v1"` plus its `t` discriminator (`MachineFrameSchema` discriminated union, `src/schemas/machine-frames.ts:116`). Server→machine frames carry just `t` + payload (`ServerFrameSchema`, `src/schemas/server-frames.ts:55`).
 
-The production server lives in `apps/web`: `src/lib/machines/` (service, frames, sockets), the Nitro WebSocket at `server/machines-ws.ts` (`/api/machines/ws`), and `device.*` / `machines.*` oRPC procedures.
+The production server lives in `apps/web`: `src/lib/machines/` (service, frames, sockets), the Nitro WebSocket at `src/routes/api/machines/ws.ts` (`/api/machines/ws`), and `device.*` / `machines.*` oRPC procedures.
 
 ## Machine → server (8)
 

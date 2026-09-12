@@ -1,8 +1,20 @@
 # TODO
 
 Model Providers
++ Add Provider
++ Add Model
++ Add Account
 
-Create a add button with Base URL detection
+Create a add button with inputs:
+Provider Name
+Provider Base URL
+
+then auto-detect models by querying `GET $BASE_URL/models`
+and show the list of models with:
+Model Name, Model ID, Max. Output Tokens, Max. Input Tokens, Image Support?, Video Support?, Audio Support?, PDF Support?, Reasoning Variants [], Price (Input/Output/Cache Read/Cache Write/...)
+
+then save it/
+
 https://hyper.charm.land/v1/
 https://hyper.charm.land/v1/models
 

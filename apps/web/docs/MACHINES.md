@@ -12,13 +12,13 @@ in this app:
 - `src/lib/machines/config.ts` — `MIN_CLI_VERSION`, allowlist, TTLs.
 - `src/rpc/procedures/device.ts`, `src/rpc/procedures/machines.ts` — canonical
   typed surface (`device.code/token`, `machines.claim/latestVersion/...`).
-- TanStack routes: `POST /device/code`, `POST /device/token` (raw OAuth shapes
+- TanStack routes: `POST /api/machines/device/code`, `POST /api/machines/device/token` (raw OAuth shapes
   for the binary), `POST /api/machines/claim` (raw claim for the binary),
-  `GET /api/version`, `GET /health`, `/device` (browser approval),
+  `GET /api/machines/version`, `GET /api/machines/health`, `/device` (browser approval),
   `/settings/machines` (registry).
-- `server/machines-ws.ts` — raw v1 frames at `/api/machines/ws` (Nitro
+- `src/routes/api/machines/ws.ts` — raw v1 frames at `/api/machines/ws` (Nitro
   `defineWebSocketHandler`, registered in `vite.config.ts` with
-  `features.websocket`). TanStack file routes are HTTP-only, so WS lives here.
+  `features.websocket` + `handlers`). TanStack file routes are HTTP-only, so WS lives here.
 
 ## Wire compatibility
 

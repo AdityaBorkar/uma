@@ -14,6 +14,12 @@ const config = defineConfig({
 		devtools(),
 		nitro({
 			features: { websocket: true },
+			handlers: [
+				{
+					handler: "./src/routes/api/machines/ws.ts",
+					route: "/api/machines/ws",
+				},
+			],
 		}),
 		tailwindcss(),
 		tanstackStart(),

@@ -80,7 +80,7 @@ export const chart = `flowchart TD
     c7 --> s1["list: inventory table"]
     c7 --> s2["prune: remove stopped"]`;
 
-export const ascii = `uma-machine ─┬─ enroll ──→ POST /device/code → poll /device/token → identity.json
+export const ascii = `uma-machine ─┬─ enroll ──→ POST /api/machines/device/code → poll /api/machines/device/token → identity.json
            ├─ daemon ──→ ws://server/api/machines/ws + heartbeat tick
            ├─ check ───→ checkAll() ──→ table (exit 2 if drifted)
            ├─ reset ──┬─ (default) resetAll() ──→ receipts

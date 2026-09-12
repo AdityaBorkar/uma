@@ -26,7 +26,7 @@ function assert(cond: unknown, msg: string): asserts cond {
 console.log(`[roundtrip] server=${SERVER}`);
 
 // 1. device.code
-const codeRes = await fetch(`${SERVER}/device/code`, {
+const codeRes = await fetch(`${SERVER}/api/machines/device/code`, {
 	body: JSON.stringify({
 		client_id: "roundtrip",
 		machineName: `rt-${Date.now().toString(36)}`,
@@ -57,7 +57,7 @@ assert(
 console.log(`[roundtrip] approved`);
 
 // 3. device.token
-const tokRes = await fetch(`${SERVER}/device/token`, {
+const tokRes = await fetch(`${SERVER}/api/machines/device/token`, {
 	body: JSON.stringify({
 		client_id: "roundtrip",
 		device_code: code.device_code,
@@ -217,7 +217,9 @@ send({ machineId: tok.machine_id, t: "bogus-frame" } as unknown as Record<
 	unknown
 >);
 await new Promise((r) => setTimeout(r, 300));
-const health = (await fetch(`${SERVER}/health`).then((r) => r.json())) as {
+const health = (await fetch(`${SERVER}/api/machines/health`).then((r) =>
+	r.json(),
+)) as {
 	ok: boolean;
 };
 assert(health.ok === true, "server unhealthy after unknown frame");

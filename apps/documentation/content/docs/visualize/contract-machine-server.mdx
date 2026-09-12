@@ -86,10 +86,10 @@ export const ascii = `machine ── ws(s):///api/machines/ws (Bearer, protocol 
     </div>
     <h2 class="mt-6 text-lg font-semibold">Device + claim HTTPS</h2>
     <div class="mt-3 flex flex-col gap-2 font-mono text-xs">
-      <div class="rounded-lg border border-fd-border bg-fd-card p-3">POST /device/code → POST /device/token<br/><span class="text-fd-muted-foreground">user_code approval, Bearer session</span></div>
+      <div class="rounded-lg border border-fd-border bg-fd-card p-3">POST /api/machines/device/code → POST /api/machines/device/token<br/><span class="text-fd-muted-foreground">user_code approval, Bearer session</span></div>
       <div class="rounded-lg border border-fd-border bg-fd-card p-3">POST /api/machines/claim {"{machineId, sandboxId, taskId}"}<br/><span class="text-fd-muted-foreground">409 = someone else won → free sandbox</span></div>
     </div>
   </div>
 </div>
 
-<p class="mt-6 text-sm text-fd-muted-foreground">Friendly parsers: <code class="font-mono">validateMachineFrame</code> checks outbound frames (throws on trouble) · <code class="font-mono">parseServerFrame</code> reads inbound frames (unknown t → null, logged and ignored). Registry: <code class="font-mono">wsMessagesContract</code> in contracts/ws.ts. Live server: <code class="font-mono">server/machines-ws.ts</code> in apps/web.</p>
+<p class="mt-6 text-sm text-fd-muted-foreground">Friendly parsers: <code class="font-mono">validateMachineFrame</code> checks outbound frames (throws on trouble) · <code class="font-mono">parseServerFrame</code> reads inbound frames (unknown t → null, logged and ignored). Registry: <code class="font-mono">wsMessagesContract</code> in contracts/ws.ts. Live server: <code class="font-mono">src/routes/api/machines/ws.ts</code> in apps/web.</p>

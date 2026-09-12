@@ -605,7 +605,7 @@ export function latestVersion(): { latest: string; min: string } {
 	return { latest: MIN_CLI_VERSION, min: MIN_CLI_VERSION };
 }
 
-/** Total row counts for `/health` without leaking contents. */
+/** Total row counts for `/api/machines/health` without leaking contents. */
 export async function healthCounts(): Promise<{
 	machines: number;
 	tasks: number;

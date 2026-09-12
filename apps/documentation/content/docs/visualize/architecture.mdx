@@ -13,7 +13,7 @@ export const chart = `flowchart TD
     web -->|Drizzle| pg[("Postgres")]
     inf["apps/infra (Pulumi)"] -. provisions .-> pg`;
 
-export const ascii = `┌──────────┐  enroll (/device/code→/token)  ┌────────┐  ws /api/machines/ws   ┌─────────────────┐
+export const ascii = `┌──────────┐  enroll (/api/machines/device/code→/token)  ┌────────┐  ws /api/machines/ws   ┌─────────────────┐
 │ you      │ ───────────────────────────────▶ │ server │ ◀═════════════════════ │ uma-machine daemon │
 │ (CLI)    │  identity.json/limits/state.db   │ (auth) │  heartbeat/log/done   │  + microsandbox    │
 └──────────┘                                  │ tasks  │ ─── assign/cancel ───▶ │  + agent binary    │
@@ -59,5 +59,5 @@ export const ascii = `┌──────────┐  enroll (/device/code
 </div>
 
 <div class="mt-6 rounded-xl border border-dashed border-fd-border p-5 text-sm text-fd-muted-foreground">
-  <span class="font-semibold text-fd-foreground">Good to know:</span> web owns the machine server (<code class="font-mono">src/lib/machines/</code>, <code class="font-mono">device.* / machines.*</code> oRPC procedures on contract schemas, <code class="font-mono">/api/machines/ws</code> Nitro websocket at <code class="font-mono">server/machines-ws.ts</code>, <code class="font-mono">/settings/machines</code> registry). Some infra paths still reference pre-move locations — see <a class="text-fd-primary hover:underline" href="/architecture">/architecture</a>.
+  <span class="font-semibold text-fd-foreground">Good to know:</span> web owns the machine server (<code class="font-mono">src/lib/machines/</code>, <code class="font-mono">device.* / machines.*</code> oRPC procedures on contract schemas, <code class="font-mono">/api/machines/ws</code> Nitro websocket at <code class="font-mono">src/routes/api/machines/ws.ts</code>, <code class="font-mono">/settings/machines</code> registry). Some infra paths still reference pre-move locations — see <a class="text-fd-primary hover:underline" href="/architecture">/architecture</a>.
 </div>

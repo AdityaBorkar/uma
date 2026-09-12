@@ -16,7 +16,7 @@ export function allowedClients(): string[] {
 		.filter(Boolean);
 }
 
-/** Dev-only seed helpers (`src/routes/api.debug.*`) are enabled when true. */
+/** Dev-only seed helpers (`src/routes/api/debug/*`) are enabled when true. */
 export function e2eSeedEnabled(): boolean {
 	return env.E2E_SEED;
 }

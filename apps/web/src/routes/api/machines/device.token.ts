@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pollDeviceToken } from "#/lib/machines/service.ts";
 
 /**
- * `POST /device/token` — device-flow poll shim for `uma-machine enroll`.
+ * `POST /api/machines/device/token` — device-flow poll shim for `uma-machine enroll`.
  * Returns the OAuth error vocabulary (`authorization_pending`, `expired_token`,
  * `access_denied`) with HTTP 400 bodies the CLI already parses — not the oRPC
  * envelope. Canonical typed equivalent: `device.token` at

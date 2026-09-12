@@ -3,13 +3,13 @@ title: Server ↔ Web
 description: The API your browser calls — tasks, signals, projects, docs, and machines.
 ---
 
-This is the API your TanStack frontend talks to every day. The router lives in `apps/web/src/rpc/router.ts`, served by `RPCHandler` at `POST /api/rpc/*` (`apps/web/src/routes/api/rpc.$.ts`, prefix `/api/rpc`, context `{ headers }`). Browse it via OpenAPI at `/api` (`src/routes/api/$.ts`). The client lives in `src/lib/rpc.ts` (`createRouterClient` on the server, `RPCLink(/api/rpc)` + `createTanstackQueryUtils` as `rpc` in the browser). Diagram: [/visualize/contract-server-web](/visualize/contract-server-web).
+This is the API your TanStack frontend talks to every day. The router lives in `apps/web/src/rpc/router.ts`, served by `RPCHandler` at `POST /api/rpc/*` (`apps/web/src/routes/api/rpc.$.ts`, prefix `/api/rpc`, context `{ headers }`). Browse it via OpenAPI at `/api/openapi` (`src/routes/api/openapi.$.ts`). The client lives in `src/lib/rpc.ts` (`createRouterClient` on the server, `RPCLink(/api/rpc)` + `createTanstackQueryUtils` as `rpc` in the browser). Diagram: [/visualize/contract-server-web](/visualize/contract-server-web).
 
 Auth first: every procedure runs `requireUser(headers)` and returns `UNAUTHORIZED` when signed out (`src/rpc/auth.ts`). Project and signal scoping checks ownership and returns `NOT_FOUND` on cross-project access (`src/rpc/scope.ts`). Lists use keyset pagination on `(sortAt, id)` descending (`paginate`, opaque `nextCursor`).
 
-> Good news: the machine server is fully implemented in web. `device.*` (`code`, `token`, plus web-only `approve`) and `machines.*` (`claim`, `checkState`, `heartbeatHistory`, `latestVersion`, `resetState`, `sandboxList`, plus browser-only `list`/`get`/`revoke`) are live in `src/rpc/procedures/device.ts` and `src/rpc/procedures/machines.ts` on the frozen contract schemas. The WebSocket lives at `/api/machines/ws` (`server/machines-ws.ts`, registered in `vite.config.ts` — TanStack file routes are HTTP-only, so WS lives outside `src/routes/`). Manage machines at `/settings/machines`, approve devices at `/device`. Product domains (tasks/signals/projects/documents/connections) still mirror shapes from `apps/web/src/schemas/schema.ts`.
+> Good news: the machine server is fully implemented in web. `device.*` (`code`, `token`, plus web-only `approve`) and `machines.*` (`claim`, `checkState`, `heartbeatHistory`, `latestVersion`, `resetState`, `sandboxList`, plus browser-only `list`/`get`/`revoke`) are live in `src/rpc/procedures/device.ts` and `src/rpc/procedures/machines.ts` on the frozen contract schemas. The WebSocket lives at `/api/machines/ws` (`src/routes/api/machines/ws.ts`, registered in `vite.config.ts` — TanStack file routes are HTTP-only, so WS lives outside the file-route HTTP handlers). Manage machines at `/settings/machines`, approve devices at `/device`. Product domains (tasks/signals/projects/documents/connections) still mirror shapes from `apps/web/src/schemas/schema.ts`.
 
-The binary itself uses plain `fetch` + `WebSocket` (no oRPC client), so it talks to raw shims with the same service + schemas: `POST /device/code`, `POST /device/token`, `POST /api/machines/claim`.
+The binary itself uses plain `fetch` + `WebSocket` (no oRPC client), so it talks to raw shims with the same service + schemas: `POST /api/machines/device/code`, `POST /api/machines/device/token`, `POST /api/machines/claim`.
 
 ## `tasks.*` (`src/rpc/procedures/tasks.ts`)
 
@@ -86,4 +86,4 @@ Your machine's home on the web side — all on frozen contract schemas from `@um
 | `machines.resetState` | `{ keys?: string[]\|"*" }` | `{ jobId, keys }` — fans out `reset-config` via `sendToMachine` |
 | `machines.list` / `get` / `revoke` | browser-only (cookie auth) | Registry rows for `/settings/machines` |
 
-Device approval lives at `/device`, the registry at `/settings/machines`, and machine frames flow over `/api/machines/ws` (`server/machines-ws.ts` + `src/lib/machines/frames.ts` dispatching all 8 `t` values).
+Device approval lives at `/device`, the registry at `/settings/machines`, and machine frames flow over `/api/machines/ws` (`src/routes/api/machines/ws.ts` + `src/lib/machines/frames.ts` dispatching all 8 `t` values).

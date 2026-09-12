@@ -120,7 +120,7 @@ export async function enroll(opts: EnrollOptions): Promise<Identity> {
 	}
 
 	// 1. device.code
-	const codeRes = await fetch(`${server}/device/code`, {
+	const codeRes = await fetch(`${server}/api/machines/device/code`, {
 		body: JSON.stringify({
 			client_id: clientId,
 			scope: "machine:heartbeat machine:claim machine:logs",
@@ -159,7 +159,7 @@ export async function enroll(opts: EnrollOptions): Promise<Identity> {
 			throw new Error("device flow expired (expired_token)");
 		const tokRes = await pRetry(
 			async () => {
-				const r = await fetch(`${server}/device/token`, {
+				const r = await fetch(`${server}/api/machines/device/token`, {
 					body: JSON.stringify({
 						client_id: clientId,
 						device_code: code.device_code,

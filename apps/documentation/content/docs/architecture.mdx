@@ -27,7 +27,7 @@ flowchart TD
 
 | Dir | What you'll find there |
 | --- | --- |
-| `apps/web` | Product app (routes in `src/routes/`, oRPC in `src/rpc/`, machine server in `src/lib/machines/` + `server/machines-ws.ts`, schemas in `src/schemas/db/`) |
+| `apps/web` | Product app (routes in `src/routes/`, oRPC in `src/rpc/`, machine server in `src/lib/machines/` + `src/routes/api/machines/ws.ts`, schemas in `src/schemas/db/`) |
 | `apps/machine` | Device agent (`src/`); its server side lives in `apps/web` |
 | `apps/orpc-contract` | Frozen `v1` wire (`src/`), imported by machine via relative path, never the reverse |
 | `apps/infra` | Pulumi (OCI + Cloudflare + Docker); `dev` stack skips the VM |

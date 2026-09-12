@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createDeviceCode } from "#/lib/machines/service.ts";
 
 /**
- * `POST /device/code` — OAuth device-authorization shim for `uma-machine
+ * `POST /api/machines/device/code` — OAuth device-authorization shim for `uma-machine
  * enroll`. Exact wire shape (not the oRPC envelope): the CLI posts
  * `{client_id, machineName?, scope?}` and parses `DeviceCodeResponse`.
  * Canonical typed equivalent: `device.code` at `/api/rpc/device/code`.

@@ -10,19 +10,19 @@ Machines join over plain HTTPS first, then claim work fairly. Schemas live in `a
 A familiar OAuth-style device flow over plain HTTPS (not an oRPC envelope):
 
 ```text
-POST /device/code   { client_id, machineName?, scope? }
+POST /api/machines/device/code   { client_id, machineName?, scope? }
   → { device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }
 
 (you approve the user_code in a browser at /device)
 
-POST /device/token  { client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }
+POST /api/machines/device/token  { client_id, device_code, grant_type: "urn:ietf:params:oauth:grant-type:device_code" }
   → { access_token, machine_id, token_type: "Bearer", expires_in? }
   → error { error: authorization_pending | slow_down | expired_token | access_denied, error_description? }
 ```
 
 Contract errors map to `AUTHORIZATION_PENDING | SLOW_DOWN | EXPIRED_TOKEN | ACCESS_DENIED` on `device.token`. Your machine handles them kindly: `authorization_pending` means keep polling, `slow_down` means back off, `expired_token` / `access_denied` means stop and let you retry. See [/cli/enroll](/cli/enroll) for the files we save.
 
-The browser approval lives at `/device` (`apps/web/src/routes/(app)/device.tsx`), and the raw shims are `POST /device/code` and `POST /device/token` (the binary uses plain `fetch`, not the oRPC envelope).
+The browser approval lives at `/device` (`apps/web/src/routes/(app)/device.tsx`), and the raw shims are `POST /api/machines/device/code` and `POST /api/machines/device/token` (the binary uses plain `fetch`, not the oRPC envelope).
 
 ## Winning a task fairly (`machines.claim`)
 
@@ -34,7 +34,7 @@ POST /api/machines/claim  { machineId, sandboxId, taskId }   (all min-1 strings)
 
 The claim is **atomic and authoritative**: a `409` simply means the server gave the task to someone else — your machine frees its sandbox and emits `claim-ack { ok: false }` (`rejected`). Network failure after retries gives `CLAIM_UNREACHABLE`. Only a claimed task moves on to `start`. Both daemon `assign` handling and `uma-machine run` use this path.
 
-The binary also talks to a raw `POST /api/machines/claim` shim (`apps/web/src/routes/api.machines.claim.ts`) — same service, same contract schemas.
+The binary also talks to a raw `POST /api/machines/claim` shim (`apps/web/src/routes/api/machines/claim.ts`) — same service, same contract schemas.
 
 ## Other `machines.*` HTTPS endpoints (served by `apps/web`)
 
