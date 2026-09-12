@@ -43,6 +43,15 @@ interface TasksSearch {
 
 export const Route = createFileRoute("/(app)/$projectSlug/tasks")({
 	component: TasksPage,
+	head: () => ({
+		meta: [
+			{ title: "Tasks — Planner" },
+			{
+				content: "Queue, start, retry and track agent-executable tasks.",
+				name: "description",
+			},
+		],
+	}),
 	validateSearch: (search: Record<string, unknown>): TasksSearch => {
 		const status = TaskStatusEnum.safeParse(search.status);
 		return {

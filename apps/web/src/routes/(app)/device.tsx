@@ -16,6 +16,16 @@ import { approveDevice } from "#/lib/machines/service.ts";
  */
 export const Route = createFileRoute("/(app)/device")({
 	component: DevicePage,
+	head: () => ({
+		meta: [
+			{ title: "Connect a machine — Planner" },
+			{
+				content:
+					"Approve a device code to connect a machine that runs agents on your behalf.",
+				name: "description",
+			},
+		],
+	}),
 	server: {
 		handlers: {
 			POST: async ({ request }) => {

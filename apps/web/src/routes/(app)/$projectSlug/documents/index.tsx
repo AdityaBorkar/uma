@@ -45,6 +45,15 @@ interface DocumentsSearch {
 
 export const Route = createFileRoute("/(app)/$projectSlug/documents/")({
 	component: DocumentsPage,
+	head: () => ({
+		meta: [
+			{ title: "Documents — Planner" },
+			{
+				content: "Browse wiki pages, specs, bug reports and changelogs.",
+				name: "description",
+			},
+		],
+	}),
 	validateSearch: (search: Record<string, unknown>): DocumentsSearch => {
 		const kind = DocumentKindEnum.safeParse(search.kind);
 		const state = DocumentStateEnum.safeParse(search.state);

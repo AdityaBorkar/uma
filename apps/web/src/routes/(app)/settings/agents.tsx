@@ -15,6 +15,15 @@ import { rpc, rpcPathKey } from "#/lib/rpc.ts";
 
 export const Route = createFileRoute("/(app)/settings/agents")({
 	component: AgentsPage,
+	head: () => ({
+		meta: [
+			{ title: "Agents — Planner" },
+			{
+				content: "Coding agents that can run tasks on your machines.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function statusVariant(status: string): "success" | "outline" | "destructive" {

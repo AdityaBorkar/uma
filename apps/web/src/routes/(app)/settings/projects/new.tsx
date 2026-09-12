@@ -15,6 +15,15 @@ import { rpc, rpcPathKey } from "#/lib/rpc.ts";
 
 export const Route = createFileRoute("/(app)/settings/projects/new")({
 	component: NewProjectPage,
+	head: () => ({
+		meta: [
+			{ title: "New project — Planner" },
+			{
+				content: "Create a project to group documents, signals and tasks.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function NewProjectPage() {

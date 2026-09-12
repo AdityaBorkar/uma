@@ -23,6 +23,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{ content: "width=device-width, initial-scale=1", name: "viewport" },
 			{ content: "light dark", name: "color-scheme" },
 			{ title: "Planner" },
+			{
+				content:
+					"Planner — projects, documents, signals and tasks in one workspace.",
+				name: "description",
+			},
 		],
 	}),
 	shellComponent: RootDocument,

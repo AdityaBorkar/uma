@@ -51,6 +51,16 @@ interface SignalsSearch {
 
 export const Route = createFileRoute("/(app)/$projectSlug/signals")({
 	component: SignalsPage,
+	head: () => ({
+		meta: [
+			{ title: "Signals — Planner" },
+			{
+				content:
+					"Capture inbound issues and triage them into tasks or dismiss them.",
+				name: "description",
+			},
+		],
+	}),
 	validateSearch: (search: Record<string, unknown>): SignalsSearch => {
 		const severity = SignalSeverityEnum.safeParse(search.severity);
 		const status = SignalStatusEnum.safeParse(search.status);

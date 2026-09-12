@@ -4,6 +4,15 @@ import { useWorkspace } from "#/components/workspace.tsx";
 
 export const Route = createFileRoute("/(app)/$projectSlug/monitor")({
 	component: RouteComponent,
+	head: () => ({
+		meta: [
+			{ title: "Monitor — Planner" },
+			{
+				content: "Live system status and recent activity for this scope.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function RouteComponent() {

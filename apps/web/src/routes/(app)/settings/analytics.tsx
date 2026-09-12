@@ -2,6 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/settings/analytics")({
 	component: AnalyticsPage,
+	head: () => ({
+		meta: [
+			{ title: "Analytics — Planner" },
+			{
+				content: "Flow and cycle analytics for your projects.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function AnalyticsPage() {

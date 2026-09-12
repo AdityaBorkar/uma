@@ -12,6 +12,15 @@ export const Route = createFileRoute(
 	"/(app)/$projectSlug/documents/$number/edit",
 )({
 	component: EditDocumentPage,
+	head: () => ({
+		meta: [
+			{ title: "Edit document — Planner" },
+			{
+				content: "Edit a document's title, body, labels and metadata.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function EditDocumentPage() {

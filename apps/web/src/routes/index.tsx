@@ -18,6 +18,16 @@ import { authClient } from "#/lib/auth/client.ts";
 
 export const Route = createFileRoute("/")({
 	component: LoginPage,
+	head: () => ({
+		meta: [
+			{ title: "Sign in — Planner" },
+			{
+				content:
+					"Sign in to Planner to manage projects, documents, signals and tasks.",
+				name: "description",
+			},
+		],
+	}),
 	validateSearch: (
 		search: Record<string, unknown>,
 	): { redirect: string; error?: string } => ({

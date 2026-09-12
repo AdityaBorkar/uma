@@ -23,6 +23,15 @@ import { rpc, rpcPathKey } from "#/lib/rpc.ts";
 
 export const Route = createFileRoute("/(app)/$projectSlug/documents/$number")({
 	component: DocumentDetailPage,
+	head: () => ({
+		meta: [
+			{ title: "Document — Planner" },
+			{
+				content: "View and edit a document with comments and history.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 // react-doctor-disable-next-line react-doctor/no-giant-component -- page composes Document* sections; further split would obscure data-flow (pending defer)

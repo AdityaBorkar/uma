@@ -1,4 +1,5 @@
 import {
+	AudioWaveformIcon,
 	BoldIcon,
 	BookOpenIcon,
 	BotMessageSquareIcon,
@@ -23,6 +24,7 @@ import {
 	Heading02Icon,
 	Heading03Icon,
 	Heading04Icon,
+	Image01Icon,
 	ItalicIcon,
 	KeyRoundIcon,
 	LayersIcon,
@@ -35,6 +37,8 @@ import {
 	Mail01Icon,
 	MinusIcon,
 	MonitorSmartphoneIcon,
+	MoreHorizontalIcon,
+	Pdf01Icon,
 	PlusIcon,
 	QuoteUpIcon,
 	RadarIcon,
@@ -52,6 +56,7 @@ import {
 	Undo02Icon,
 	Unlink01Icon,
 	UserIcon,
+	Video01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import type { ComponentType } from "react";
@@ -119,3 +124,8 @@ export const ExternalLink = makeIcon(ExternalLinkIcon);
 export const MonitorSmartphone = makeIcon(MonitorSmartphoneIcon);
 export const LogOut = makeIcon(Logout01Icon);
 export const KeyRound = makeIcon(KeyRoundIcon);
+export const MoreHorizontal = makeIcon(MoreHorizontalIcon);
+export const Image = makeIcon(Image01Icon);
+export const Video = makeIcon(Video01Icon);
+export const Audio = makeIcon(AudioWaveformIcon);
+export const Pdf = makeIcon(Pdf01Icon);

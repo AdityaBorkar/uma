@@ -20,6 +20,15 @@ import { rpc, rpcPathKey } from "#/lib/rpc.ts";
 
 export const Route = createFileRoute("/(app)/settings/projects/$projectId/")({
 	component: ProjectDetailPage,
+	head: () => ({
+		meta: [
+			{ title: "Project settings — Planner" },
+			{
+				content: "View and edit project details, status and workspace links.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function ProjectDetailPage() {

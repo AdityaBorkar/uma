@@ -19,6 +19,15 @@ import {
 
 export const Route = createFileRoute("/(app)/$projectSlug/documents/new")({
 	component: NewDocumentPage,
+	head: () => ({
+		meta: [
+			{ title: "New document — Planner" },
+			{
+				content: "Create a document — type and project lock after creation.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function NewDocumentPage() {

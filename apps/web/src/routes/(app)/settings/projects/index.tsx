@@ -26,6 +26,15 @@ import {
 
 export const Route = createFileRoute("/(app)/settings/projects/")({
 	component: ProjectsPage,
+	head: () => ({
+		meta: [
+			{ title: "Projects — Planner" },
+			{
+				content: "Organize your work into projects.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function ProjectsPage() {

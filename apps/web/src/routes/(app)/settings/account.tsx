@@ -17,6 +17,15 @@ import { authClient } from "#/lib/auth/client.ts";
 
 export const Route = createFileRoute("/(app)/settings/account")({
 	component: AccountPage,
+	head: () => ({
+		meta: [
+			{ title: "Account — Planner" },
+			{
+				content: "Manage your profile and sign out.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function AccountPage() {

@@ -16,6 +16,15 @@ import { rpc, rpcPathKey } from "#/lib/rpc.ts";
 
 export const Route = createFileRoute("/(app)/settings/machines")({
 	component: MachinesPage,
+	head: () => ({
+		meta: [
+			{ title: "Remote Machines — Planner" },
+			{
+				content: "Connect and manage machines that run agents on your behalf.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 function statusVariant(status: string): "success" | "outline" | "destructive" {

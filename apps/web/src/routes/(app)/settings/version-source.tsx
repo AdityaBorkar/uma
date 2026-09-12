@@ -5,6 +5,15 @@ import { Card } from "#/components/ui/card.tsx";
 
 export const Route = createFileRoute("/(app)/settings/version-source")({
 	component: VersionSourcePage,
+	head: () => ({
+		meta: [
+			{ title: "Version-Source — Planner" },
+			{
+				content: "Version control and source hosting for your projects.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 const VERSION_CONTROL = [

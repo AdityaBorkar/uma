@@ -17,6 +17,16 @@ import type { TaskStatus } from "#/schemas/schema.ts";
 
 export const Route = createFileRoute("/(app)/$projectSlug/dashboard")({
 	component: DashboardPage,
+	head: () => ({
+		meta: [
+			{ title: "Dashboard — Planner" },
+			{
+				content:
+					"Running and queued tasks plus new signals waiting for triage.",
+				name: "description",
+			},
+		],
+	}),
 });
 
 interface TaskRow {
