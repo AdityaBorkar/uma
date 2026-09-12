@@ -1,40 +1,35 @@
 import { parseKeyList } from "../utils/env.ts";
-import * as agents from "./agents.ts";
+import { AgentsKey } from "./agents.ts";
 import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
-import * as files from "./files.ts";
-import * as git from "./git.ts";
-import * as mcp from "./mcp.ts";
-import * as programs from "./programs.ts";
-import * as providers from "./providers.ts";
-import * as skills from "./skills.ts";
-import * as systemd from "./systemd.ts";
+import { FilesKey } from "./files.ts";
+import { GitLoginKey } from "./git.ts";
+import type { ConfigKey } from "./key.ts";
+import { McpKey } from "./mcp.ts";
+import { ProgramsKey } from "./programs.ts";
+import { ProvidersKey } from "./providers.ts";
+import { SkillsKey } from "./skills.ts";
+import { SystemdKey } from "./systemd.ts";
 
-export type { CheckResult, ResetOptions, ResetResult };
-
-interface KeyModule {
-	check: () => Promise<CheckResult>;
-	KEY: string;
-	reset: (opts?: ResetOptions) => Promise<ResetResult>;
-}
+export type { CheckResult, ConfigKey, ResetOptions, ResetResult };
 
 /** Dependency order from §7: programs -> git -> agents -> files -> providers -> mcp -> skills -> systemd */
-export const ORDERED_KEYS = [
-	programs,
-	git,
-	agents,
-	files,
-	providers,
-	mcp,
-	skills,
-	systemd,
-] satisfies KeyModule[];
+export const ORDERED_KEYS: ConfigKey[] = [
+	new ProgramsKey(),
+	new GitLoginKey(),
+	new AgentsKey(),
+	new FilesKey(),
+	new ProvidersKey(),
+	new McpKey(),
+	new SkillsKey(),
+	new SystemdKey(),
+];
 
-export function resolveKeys(only?: string[]): KeyModule[] {
+export function resolveKeys(only?: string[]): ConfigKey[] {
 	if (!only || only.length === 0) return ORDERED_KEYS;
 	const wanted = new Set(only.flatMap((s) => parseKeyList(s)));
 	// Allow alias "sync" for skills module key "skills".
 	return ORDERED_KEYS.filter(
-		(m) => wanted.has(m.KEY) || (m.KEY === "skills" && wanted.has("sync")),
+		(m) => wanted.has(m.key) || (m.key === "skills" && wanted.has("sync")),
 	);
 }
 
@@ -48,7 +43,7 @@ export async function checkAll(only?: string[]): Promise<CheckResult[]> {
 			out.push({
 				detail: e instanceof Error ? e.message : String(e),
 				drifted: true,
-				key: m.KEY,
+				key: m.key,
 			});
 		}
 	}
@@ -67,7 +62,7 @@ export async function resetAll(
 		} catch (e) {
 			out.push({
 				error: e instanceof Error ? e.message : String(e),
-				key: m.KEY,
+				key: m.key,
 				ok: false,
 			});
 		}

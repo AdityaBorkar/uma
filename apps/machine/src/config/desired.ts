@@ -137,18 +137,3 @@ export interface ResetResult {
 	key: string;
 	ok: boolean;
 }
-
-/**
- * Shared dry-run gate for all key modules. Returns a ResetResult when
- * opts.dryRun is set (caller must return it), else null to continue.
- */
-export async function maybeDryRun(
-	opts: ResetOptions | undefined,
-	key: string,
-	check: () => Promise<CheckResult>,
-	extra?: Partial<ResetResult>,
-): Promise<ResetResult | null> {
-	if (!opts?.dryRun) return null;
-	const c = await check();
-	return { changed: c.drifted, key, ok: true, ...extra };
-}

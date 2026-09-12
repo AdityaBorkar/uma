@@ -1,53 +1,57 @@
-import { runCapture } from "../utils/proc.ts";
-import {
-	type CheckResult,
-	loadDesiredResult,
-	maybeDryRun,
-	type ResetOptions,
-	type ResetResult,
-} from "./desired.ts";
+import { activeCodingAgent } from "../coding-agents/registry.ts";
+import type { CodingAgentAdapter } from "../coding-agents/types.ts";
+import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
+import { BaseConfigKey } from "./key.ts";
 
-export const KEY = "mcp";
+export class McpKey extends BaseConfigKey {
+	readonly key = "mcp";
 
-export async function check(): Promise<CheckResult> {
-	const loaded = loadDesiredResult();
-	if (loaded.status === "corrupt") {
+	/**
+	 * The active coding-agent adapter owns the MCP probe (CLI substring probe
+	 * for opencode, mcp.json diff for omp); probe failures surface as drift.
+	 */
+	constructor(private readonly agent: CodingAgentAdapter = activeCodingAgent()) {
+		super();
+	}
+
+	async check(): Promise<CheckResult> {
+		const { corrupt, state } = this.loadDesired();
+		if (corrupt) return corrupt;
+		const servers = state.mcp?.servers ?? [];
+		if (servers.length === 0)
+			return {
+				detail: "no mcp servers declared",
+				drifted: false,
+				key: this.key,
+			};
+		let missing: string[];
+		try {
+			missing = await this.agent.missingMcpServers(servers);
+		} catch (e) {
+			return {
+				detail: e instanceof Error ? e.message : String(e),
+				drifted: true,
+				key: this.key,
+			};
+		}
+		if (missing.length === 0)
+			return { detail: "mcp in sync", drifted: false, key: this.key };
 		return {
-			detail: `desired.json corrupt: ${loaded.error ?? "unreadable"}`,
+			detail: `missing mcp: ${missing.join(",")}`,
 			drifted: true,
-			key: KEY,
+			key: this.key,
 		};
 	}
-	const servers = loaded.state.mcp?.servers ?? [];
-	if (servers.length === 0)
-		return { detail: "no mcp servers declared", drifted: false, key: KEY };
-	// Best-effort probe: `opencode mcp list` if available, else drift if any declared
-	// but no CLI to verify (report as drift with remediation).
-	const r = await runCapture("opencode", ["mcp", "list"], 6000);
-	if (!r)
-		return {
-			detail: "opencode binary missing for mcp check",
-			drifted: true,
-			key: KEY,
-		};
-	const missing = servers.filter((s) => !r.stdout.includes(s));
-	if (missing.length === 0)
-		return { detail: "mcp in sync", drifted: false, key: KEY };
-	return {
-		detail: `missing mcp: ${missing.join(",")}`,
-		drifted: true,
-		key: KEY,
-	};
-}
 
-export async function reset(opts?: ResetOptions): Promise<ResetResult> {
-	const dry = await maybeDryRun(opts, KEY, check);
-	if (dry) return dry;
-	const c = await check();
-	if (!c.drifted) return { changed: false, key: KEY, ok: true };
-	return {
-		error: `mcp drifted: ${c.detail}. Add/remove entries via /settings/mcp instructions.`,
-		key: KEY,
-		ok: false,
-	};
+	async reset(opts?: ResetOptions): Promise<ResetResult> {
+		const dry = await this.maybeDryRun(opts);
+		if (dry) return dry;
+		const c = await this.check();
+		if (!c.drifted) return { changed: false, key: this.key, ok: true };
+		return {
+			error: `mcp drifted: ${c.detail}. Add/remove entries via /settings/mcp instructions.`,
+			key: this.key,
+			ok: false,
+		};
+	}
 }

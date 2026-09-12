@@ -84,11 +84,11 @@ describe("parseKeyList (shared comma-split helper)", () => {
 	});
 
 	test("resolveKeys honors comma-joined + alias", () => {
-		expect(resolveKeys(["programs,git-login"]).map((m) => m.KEY)).toEqual([
+		expect(resolveKeys(["programs,git-login"]).map((m) => m.key)).toEqual([
 			"programs",
 			"git-login",
 		]);
-		expect(resolveKeys(["sync"]).map((m) => m.KEY)).toEqual(["skills"]);
+		expect(resolveKeys(["sync"]).map((m) => m.key)).toEqual(["skills"]);
 		expect(resolveKeys(undefined).length).toBe(8);
 	});
 });

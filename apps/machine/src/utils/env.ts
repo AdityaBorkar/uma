@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 // biome-ignore lint/correctness/noUnresolvedImports: types resolve via @types/env-paths (tsc clean); biome resolver misses the exports map.
@@ -43,6 +44,11 @@ export function dataDir(): string {
 	if (process.env.UMA_MACHINE_ROOT)
 		return join(process.env.UMA_MACHINE_ROOT, "data");
 	return osDataDir();
+}
+
+/** User home honoring UMA_HOME (deterministic override in tests). */
+export function homeDir(): string {
+	return process.env.UMA_HOME ?? homedir();
 }
 
 export function identityPath(): string {

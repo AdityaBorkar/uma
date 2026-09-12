@@ -68,9 +68,9 @@ describe("limits precedence (single resolver)", () => {
 describe("desired.json corruption is surfaced", () => {
 	test("programs.check reports drift on invalid JSON", async () => {
 		const { desiredPath } = await import("../src/config/desired.ts");
-		const { check } = await import("../src/config/programs.ts");
+		const { ProgramsKey } = await import("../src/config/programs.ts");
 		writeFileSync(desiredPath(), "{not json");
-		const c = await check();
+		const c = await new ProgramsKey().check();
 		expect(c.drifted).toBe(true);
 		expect(c.detail).toContain("corrupt");
 	});
@@ -88,18 +88,18 @@ describe("declared file names are path-safe", () => {
 
 	test("files.reset refuses traversal names", async () => {
 		const { saveDesired } = await import("../src/config/desired.ts");
-		const { reset } = await import("../src/config/files.ts");
+		const { FilesKey } = await import("../src/config/files.ts");
 		saveDesired({ templates: { "../../evil.txt": "x" }, version: "v1" });
-		const r = await reset();
+		const r = await new FilesKey().reset();
 		expect(r.ok).toBe(false);
 		expect(r.error).toContain("unsafe file name");
 	});
 
 	test("skills.reset refuses traversal names", async () => {
 		const { saveDesired } = await import("../src/config/desired.ts");
-		const { reset } = await import("../src/config/skills.ts");
+		const { SkillsKey } = await import("../src/config/skills.ts");
 		saveDesired({ skills: { files: ["../../evil.md"] }, version: "v1" });
-		const r = await reset();
+		const r = await new SkillsKey().reset();
 		expect(r.ok).toBe(false);
 		expect(r.error).toContain("unsafe skill name");
 	});

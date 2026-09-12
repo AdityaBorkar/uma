@@ -1,96 +1,93 @@
 import { fingerprint } from "../execution/redact.ts";
 import { getProviderKeys, setProviderKey, withDb } from "../utils/db.ts";
 import { stateDbPath } from "../utils/env.ts";
-import {
-	type CheckResult,
-	loadDesiredResult,
-	maybeDryRun,
-	type ResetOptions,
-	type ResetResult,
-} from "./desired.ts";
-
-export const KEY = "providers";
+import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
+import { BaseConfigKey } from "./key.ts";
 
 export interface ProviderPush {
 	key: string;
 	provider: string;
 }
 
-/**
- * Check reachability + stored fingerprint vs desired fingerprint.
- * Never compares or prints secrets.
- */
-export async function check(): Promise<CheckResult> {
-	const loaded = loadDesiredResult();
-	if (loaded.status === "corrupt") {
-		return {
-			detail: `desired.json corrupt: ${loaded.error ?? "unreadable"}`,
-			drifted: true,
-			key: KEY,
-		};
-	}
-	const want = loaded.state.providers?.providers ?? [];
-	if (want.length === 0)
-		return { detail: "no providers declared", drifted: false, key: KEY };
-	let stored: Map<string, string>;
-	try {
-		stored = withDb(stateDbPath(), true, (db) => {
-			return new Map(
-				getProviderKeys(db).map((r) => [r.provider, r.fingerprint]),
-			);
-		});
-	} catch (e) {
-		return {
-			detail: `state.db unreadable: ${e instanceof Error ? e.message : String(e)}`,
-			drifted: true,
-			key: KEY,
-		};
-	}
-	const drifted: string[] = [];
-	for (const w of want) {
-		const have = stored.get(w.provider);
-		if (!have) drifted.push(`${w.provider}: missing`);
-		else if (have !== w.fingerprint)
-			drifted.push(`${w.provider}: fingerprint mismatch`);
-	}
-	if (drifted.length === 0)
-		return { detail: "fingerprints match", drifted: false, key: KEY };
-	return { detail: drifted.join("; "), drifted: true, key: KEY };
-}
+export class ProvidersKey extends BaseConfigKey {
+	readonly key = "providers";
 
-/** Write full key material from reset-config payload into provider_keys (0600). */
-export async function reset(opts?: ResetOptions): Promise<ResetResult> {
-	const payload = (opts?.payload ?? {}) as {
-		keys?: ProviderPush[];
-	};
-	const keys = payload.keys ?? [];
-	if (keys.length === 0) {
-		// No payload: just report check state (converge requires full-keys push).
-		const dry = await maybeDryRun(opts, KEY, check);
-		if (dry) return dry;
-		const c = await check();
-		if (!c.drifted) return { changed: false, key: KEY, ok: true };
-		return {
-			error: `providers drifted: ${c.detail}. Need full-keys reset-config payload to converge.`,
-			key: KEY,
-			ok: false,
-		};
+	/**
+	 * Check reachability + stored fingerprint vs desired fingerprint.
+	 * Never compares or prints secrets.
+	 */
+	async check(): Promise<CheckResult> {
+		const { corrupt, state } = this.loadDesired();
+		if (corrupt) return corrupt;
+		const want = state.providers?.providers ?? [];
+		if (want.length === 0)
+			return { detail: "no providers declared", drifted: false, key: this.key };
+		let stored: Map<string, string>;
+		try {
+			stored = withDb(stateDbPath(), true, (db) => {
+				return new Map(
+					getProviderKeys(db).map((r) => [r.provider, r.fingerprint]),
+				);
+			});
+		} catch (e) {
+			return {
+				detail: `state.db unreadable: ${e instanceof Error ? e.message : String(e)}`,
+				drifted: true,
+				key: this.key,
+			};
+		}
+		const drifted: string[] = [];
+		for (const w of want) {
+			const have = stored.get(w.provider);
+			if (!have) drifted.push(`${w.provider}: missing`);
+			else if (have !== w.fingerprint)
+				drifted.push(`${w.provider}: fingerprint mismatch`);
+		}
+		if (drifted.length === 0)
+			return { detail: "fingerprints match", drifted: false, key: this.key };
+		return { detail: drifted.join("; "), drifted: true, key: this.key };
 	}
-	if (opts?.dryRun) return { changed: true, key: KEY, ok: true };
-	try {
-		withDb(stateDbPath(), false, (db) => {
-			for (const k of keys) {
-				if (!k.provider || !k.key) continue;
-				setProviderKey(db, k.provider, fingerprint(k.key), k.key, Date.now());
-			}
-		});
-		return { changed: true, key: KEY, ok: true };
-	} catch (e) {
-		return {
-			error: e instanceof Error ? e.message : String(e),
-			key: KEY,
-			ok: false,
+
+	/** Write full key material from reset-config payload into provider_keys (0600). */
+	async reset(opts?: ResetOptions): Promise<ResetResult> {
+		const payload = (opts?.payload ?? {}) as {
+			keys?: ProviderPush[];
 		};
+		const keys = payload.keys ?? [];
+		if (keys.length === 0) {
+			// No payload: just report check state (converge requires full-keys push).
+			const dry = await this.maybeDryRun(opts);
+			if (dry) return dry;
+			const c = await this.check();
+			if (!c.drifted) return { changed: false, key: this.key, ok: true };
+			return {
+				error: `providers drifted: ${c.detail}. Need full-keys reset-config payload to converge.`,
+				key: this.key,
+				ok: false,
+			};
+		}
+		if (opts?.dryRun) return { changed: true, key: this.key, ok: true };
+		try {
+			withDb(stateDbPath(), false, (db) => {
+				for (const k of keys) {
+					if (!k.provider || !k.key) continue;
+					setProviderKey(
+						db,
+						k.provider,
+						fingerprint(k.key),
+						k.key,
+						Date.now(),
+					);
+				}
+			});
+			return { changed: true, key: this.key, ok: true };
+		} catch (e) {
+			return {
+				error: e instanceof Error ? e.message : String(e),
+				key: this.key,
+				ok: false,
+			};
+		}
 	}
 }
 

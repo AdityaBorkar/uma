@@ -31,7 +31,7 @@ afterEach(() => {
 describe("config check (linger, doctor, fingerprint-only)", () => {
 	test("checkAll returns all 8 keys in dependency order", async () => {
 		const { checkAll, ORDERED_KEYS } = await import("../src/config/mod.ts");
-		expect(ORDERED_KEYS.map((m) => m.KEY)).toEqual([
+		expect(ORDERED_KEYS.map((m) => m.key)).toEqual([
 			"programs",
 			"git-login",
 			"agents",
@@ -53,7 +53,7 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 		const { saveDesired } = await import("../src/config/desired.ts");
 		const { fingerprint } = await import("../src/execution/redact.ts");
 		const { openDb, setProviderKey } = await import("../src/utils/db.ts");
-		const { check } = await import("../src/config/providers.ts");
+		const { ProvidersKey } = await import("../src/config/providers.ts");
 		const secret = "sk-live-1234567890";
 		saveDesired({
 			providers: {
@@ -64,15 +64,15 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 		const db = openDb(process.env.UMA_STATE_DB as string);
 		setProviderKey(db, "openai", fingerprint(secret), secret, Date.now());
 		db.close();
-		const c = await check();
+		const c = await new ProvidersKey().check();
 		expect(c.drifted).toBe(false);
 		expect(JSON.stringify(c)).not.toContain("sk-live");
 	});
 
 	test("providers reset writes full-keys push", async () => {
-		const { reset } = await import("../src/config/providers.ts");
+		const { ProvidersKey } = await import("../src/config/providers.ts");
 		const { openDb, getProviderSecret } = await import("../src/utils/db.ts");
-		const r = await reset({
+		const r = await new ProvidersKey().reset({
 			payload: { keys: [{ key: "sk-new-key", provider: "openai" }] },
 		});
 		expect(r.ok).toBe(true);
@@ -82,8 +82,8 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 	});
 
 	test("systemd check owns lingering (fails cleanly without linger)", async () => {
-		const { check } = await import("../src/config/systemd.ts");
-		const c = await check();
+		const { SystemdKey } = await import("../src/config/systemd.ts");
+		const c = await new SystemdKey().check();
 		expect(c.key).toBe("systemd");
 		expect(typeof c.drifted).toBe("boolean");
 	});

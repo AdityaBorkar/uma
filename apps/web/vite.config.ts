@@ -9,22 +9,24 @@ import { defineConfig } from "vite";
 const config = defineConfig({
 	plugins: [
 		devtools(),
-		nitro({
-			features: { websocket: true },
-			handlers: [
-				{
-					handler: "./server/machines-ws.ts",
-					route: "/api/machines/ws",
-				},
-			],
-			rollupConfig: { external: [/^@sentry\//] },
+        nitro({
+            features: { websocket: true },
 		}),
 		tailwindcss(),
 		tanstackStart(),
 		viteReact(),
 		babel({ presets: [reactCompilerPreset()] }),
-	],
-	resolve: { tsconfigPaths: true },
+    ],
+	build: {
+		outDir: ".output",
+    },
+	server: {
+        port: 3000,
+		strictPort:true,host:"0.0.0.0"
+	},
+    resolve: {
+        tsconfigPaths: true
+    },
 });
 
 export default config;

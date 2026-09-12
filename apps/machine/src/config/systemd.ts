@@ -5,14 +5,8 @@ import writeFileAtomic from "write-file-atomic";
 import { configDir } from "../utils/env.ts";
 import { ensureParentDir } from "../utils/fs-utils.ts";
 import { runCapture } from "../utils/proc.ts";
-import {
-	type CheckResult,
-	maybeDryRun,
-	type ResetOptions,
-	type ResetResult,
-} from "./desired.ts";
-
-export const KEY = "systemd";
+import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
+import { BaseConfigKey } from "./key.ts";
 
 export function unitPath(): string {
 	if (process.env.UMA_SYSTEMD_UNIT) return process.env.UMA_SYSTEMD_UNIT;
@@ -55,30 +49,6 @@ WantedBy=default.target
 `;
 }
 
-export async function check(): Promise<CheckResult> {
-	const parts: string[] = [];
-	const user = process.env.USER ?? process.env.LOGNAME ?? "";
-	// Three independent probes (linger / is-enabled / is-active).
-	const [linger, enabled, active] = await Promise.all([
-		runCapture(
-			"loginctl",
-			["show-user", "--value", "--property=Lingering", user],
-			5000,
-		),
-		runCapture("systemctl", ["--user", "is-enabled", "uma-machine"], 5000),
-		runCapture("systemctl", ["--user", "is-active", "uma-machine"], 5000),
-	]);
-	if (!linger) parts.push("loginctl unavailable");
-	else if (!/^yes/i.test(linger.stdout.trim()))
-		parts.push("lingering not enabled");
-	if (enabled?.stdout.trim() !== "enabled") parts.push("unit not enabled");
-	if (active?.stdout.trim() !== "active") parts.push("unit not active");
-
-	if (parts.length === 0)
-		return { detail: "systemd ok", drifted: false, key: KEY };
-	return { detail: parts.join("; "), drifted: true, key: KEY };
-}
-
 /** Write the user unit file (0644, no secrets). Returns the path written. */
 export function writeUnitFile(execPath = executableCommand()): string {
 	const p = unitPath();
@@ -89,38 +59,68 @@ export function writeUnitFile(execPath = executableCommand()): string {
 	return p;
 }
 
-export async function reset(opts?: ResetOptions): Promise<ResetResult> {
-	const dry = await maybeDryRun(opts, KEY, check);
-	if (dry) return dry;
-	try {
-		// 1. lingering (owned by check/reset/sync). Scoped to our user; rootless
-		// containers without loginctl fail here and fall through to unit write.
+export class SystemdKey extends BaseConfigKey {
+	readonly key = "systemd";
+
+	async check(): Promise<CheckResult> {
+		const parts: string[] = [];
 		const user = process.env.USER ?? process.env.LOGNAME ?? "";
-		const lingerArgs = user ? ["enable-linger", user] : ["enable-linger"];
-		await runCapture("loginctl", lingerArgs, 8000);
-		// 2. write unit
-		writeUnitFile();
-		// 3. daemon-reload + enable --now (best-effort; fails cleanly in containers)
-		await runCapture("systemctl", ["--user", "daemon-reload"], 8000);
-		const en = await runCapture(
-			"systemctl",
-			["--user", "enable", "--now", "uma-machine"],
-			10000,
-		);
-		if (en?.code !== 0) {
+		// Three independent probes (linger / is-enabled / is-active).
+		const [linger, enabled, active] = await Promise.all([
+			runCapture(
+				"loginctl",
+				["show-user", "--value", "--property=Lingering", user],
+				5000,
+			),
+			runCapture("systemctl", ["--user", "is-enabled", "uma-machine"], 5000),
+			runCapture("systemctl", ["--user", "is-active", "uma-machine"], 5000),
+		]);
+		if (!linger) parts.push("loginctl unavailable");
+		else if (!/^yes/i.test(linger.stdout.trim()))
+			parts.push("lingering not enabled");
+		if (enabled?.stdout.trim() !== "enabled") parts.push("unit not enabled");
+		if (active?.stdout.trim() !== "active") parts.push("unit not active");
+
+		if (parts.length === 0)
+			return { detail: "systemd ok", drifted: false, key: this.key };
+		return { detail: parts.join("; "), drifted: true, key: this.key };
+	}
+
+	async reset(opts?: ResetOptions): Promise<ResetResult> {
+		const dry = await this.maybeDryRun(opts);
+		if (dry) return dry;
+		try {
+			// 1. lingering (owned by check/reset/sync). Scoped to our user; rootless
+			// containers without loginctl fail here and fall through to unit write.
+			const user = process.env.USER ?? process.env.LOGNAME ?? "";
+			const lingerArgs = user
+				? ["enable-linger", user]
+				: ["enable-linger"];
+			await runCapture("loginctl", lingerArgs, 8000);
+			// 2. write unit
+			writeUnitFile();
+			// 3. daemon-reload + enable --now (best-effort; fails cleanly in containers)
+			await runCapture("systemctl", ["--user", "daemon-reload"], 8000);
+			const en = await runCapture(
+				"systemctl",
+				["--user", "enable", "--now", "uma-machine"],
+				10000,
+			);
+			if (en?.code !== 0) {
+				return {
+					changed: true,
+					error: undefined,
+					key: this.key,
+					ok: true,
+				};
+			}
+			return { changed: true, key: this.key, ok: true };
+		} catch (e) {
 			return {
-				changed: true,
-				error: undefined,
-				key: KEY,
-				ok: true,
+				error: e instanceof Error ? e.message : String(e),
+				key: this.key,
+				ok: false,
 			};
 		}
-		return { changed: true, key: KEY, ok: true };
-	} catch (e) {
-		return {
-			error: e instanceof Error ? e.message : String(e),
-			key: KEY,
-			ok: false,
-		};
 	}
 }
