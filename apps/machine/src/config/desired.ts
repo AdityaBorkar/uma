@@ -8,9 +8,9 @@ import { saveJson0600 } from "../utils/fs-utils.ts";
 
 export interface DesiredState {
 	agents?: { bins: string[] };
-	limits?: { maxRunning?: number; maxTotal?: number };
+	limits?: { maxRunning?: number | undefined; maxTotal?: number | undefined };
 	mcp?: { servers: string[] };
-	programs?: { bins: string[]; msbVersion?: string };
+	programs?: { bins: string[]; msbVersion?: string | undefined };
 	providers?: { providers: { provider: string; fingerprint: string }[] };
 	skills?: { files: string[] };
 	templates?: Record<string, string>;
@@ -118,22 +118,22 @@ export function saveDesired(d: DesiredState): void {
 }
 
 export interface CheckResult {
-	detail?: string;
+	detail?: string | undefined;
 	drifted: boolean;
 	key: string;
 }
 
 export interface ResetOptions {
-	dryRun?: boolean;
-	freshStart?: boolean;
-	payload?: Record<string, unknown>;
-	prune?: boolean;
-	sandbox?: string;
+	dryRun?: boolean | undefined;
+	freshStart?: boolean | undefined;
+	payload?: Record<string, unknown> | undefined;
+	prune?: boolean | undefined;
+	sandbox?: string | undefined;
 }
 
 export interface ResetResult {
-	changed?: boolean;
-	error?: string;
+	changed?: boolean | undefined;
+	error?: string | undefined;
 	key: string;
 	ok: boolean;
 }

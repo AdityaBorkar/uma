@@ -12,7 +12,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 - `execution/`: `execution.ts` — `ExecutionEngine` class — admission (quota snapshot + create under an instance-scoped admission lock; server limits from `assign.limits`) → claim → start → bind → exec-stream → task-done → stop; in-flight executions are engine instance state; every outbound v1 frame via the `emit` passed to `executeTask`; failures free the sandbox; cancel via `stop --force` through in-flight state; `git-binding.ts`: `RepoBinding` class — clone/fetch/checkout/fresh-start via `Sandbox.exec` (driver-agnostic, not SDK-only); `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers; `redact.ts`: secrets + 256KB split.
 - `sandboxes/`: `sandbox.ts` — `Sandbox` handle class (create/start/stop/remove/list/exec/execStream/metrics; statics + instance ops route through an injected `DriverSelector`, default `defaultSelector`) + `snapshotQuota` + quota helpers. Drivers: `sandboxes/msb/sdk.ts` (`MsbSdkDriver`), `sandboxes/msb/cli.ts` (`MsbCliDriver`), `sandboxes/msb/mock.ts` (`MsbMockDriver`, constructor-injectable paths), `sandboxes/msb/driver.ts` (`DriverSelector` — SDK → CLI → mock selection, sticky availability probes, fail-closed; `sandboxes/msb/shared.ts`, `sandboxes/msb/types.ts`).
 - `config/`: `mod.ts` + `desired.ts` (desired-state cache load/save) + `<key>.ts` (9 keys in `ORDERED_KEYS` order; file `git.ts` exports KEY `git-login`, file `skills.ts` exports KEY `skills`) + `sync.ts`: check/reset + receipts.
-- `schemas/db/`: `schema.ts` (tables, re-exported via `schemas/db/index.ts`) + `schema-sync.ts` (runtime schema sync: DDL computed on the go from the drizzle schema, applied additively — `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS` — to the XDG state.db in one transaction; `PRAGMA user_version` mirrors the schema fingerprint).
+- `schemas/db/`: `index.ts` (drizzle tables + the additive `SCHEMA_STATEMENTS` DDL + `SCHEMA_VERSION`), applied on every writable open by `utils/client.ts` — `CREATE TABLE/INDEX IF NOT EXISTS` plus `ADD COLUMN` for post-v1 columns; `PRAGMA user_version` mirrors `SCHEMA_VERSION`.
 - `utils/`: `db.ts` (store facade) + `client.ts` (open/migrate/WAL) + `env.ts` (XDG + `UMA_*` resolution) + `proc.ts` (process runner, `runCapture`/`whichBin`) + `fs-utils.ts` (`chmod0600`, parent-dir helpers) + `version.ts` (`CLI_VERSION`/`CONFIG_VERSION`) — SQLite stores + retention + shared file/env/process helpers.
 
 ## Package
@@ -64,7 +64,7 @@ Outbound (driven by us, faked in tests):
 
 - Server port: ws frames + `POST /api/rpc/machines/claim` (`ExecutionEngine.claimTask` in `src/execution/execution.ts`, injectable via `ExecutionEngineOptions.claim`; non-ok frees the sandbox).
 - Sandbox port: `Sandbox` class (`create`/`start`/`stop`/`remove`/`exec`/`execStream`; static `list`/`metricsForPressure`) + `snapshotQuota` (`src/sandboxes/sandbox.ts`, backed by the `SandboxDriver` port).
-- Store port: `withDb` + `insert*/query*/persist*/record*` (`src/utils/db.ts`, `src/utils/client.ts`, `src/schemas/db/schema.ts`).
+- Store port: `withDb` + `insert*/query*/persist*/record*` (`src/utils/db.ts`, `src/utils/client.ts`, `src/schemas/db/index.ts`).
 - Clock/Random port: `Date.now()`, `customAlphabet` (names), `setInterval` (tick); `evaluateScopeHint` is pure and clock-free (server owns sustain/cooldown).
 - Platform port: `runCapture` (process spawn), `/proc` + `df` (metrics), `loginctl/systemctl` (systemd).
 
@@ -72,7 +72,7 @@ Outbound (driven by us, faked in tests):
 
 - **Server adapter**: `daemon/ws-client.ts` (ws transport) + `daemon/daemon.ts:handleResetConfig` (receipt mapping) + `execution/execution.ts:claimTask` (HTTPS claim, default claim for `executeTask`).
 - **Sandbox adapters**: `MsbSdkDriver` (`src/sandboxes/msb/sdk.ts`), `MsbCliDriver` (`src/sandboxes/msb/cli.ts`), `MsbMockDriver` (`src/sandboxes/msb/mock.ts`) implement the same `SandboxDriver` port (`create/start/stop/remove/list/exec/execStream/metrics`); `task.id`/`project.id` labels set on SDK + CLI create (`user.id` never set — `executeTask` passes no userId).
-- **Store adapter**: `utils/db.ts` + `schemas/db/schema.ts` + `utils/client.ts` + `schemas/db/schema-sync.ts` over `drizzle-orm` + `bun:sqlite` (WAL, `0600` incl sidecars, `withDb` open/close, runtime schema sync derived from `schemas/db/schema.ts` applied to the XDG state.db on every writable open).
+- **Store adapter**: `utils/db.ts` + `schemas/db/index.ts` + `utils/client.ts` over `drizzle-orm` + `bun:sqlite` (WAL, `0600` incl sidecars, `withDb` open/close, additive `SCHEMA_STATEMENTS` from `schemas/db/index.ts` applied to the XDG state.db on every writable open).
 - **Metrics adapters**: `collectCpu/collectRam/collectDisk` (Linux-first, degrade to `0`), `Sandbox.metricsForPressure` (SDK-only, `[]` when absent).
 - **Config adapters**: per-key `check/reset` shell-outs (`msb doctor`, `gh auth status`, `loginctl show-user`, binary `--version`).
 

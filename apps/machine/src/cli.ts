@@ -117,7 +117,7 @@ export function buildCli(): CAC {
 		return [
 			...base,
 			{
-				body: "  programs, git-login, adityab-agent, agents, files, providers, mcp, skills, systemd",
+				body: "  programs, git-login, agents, files, providers, mcp, skills, systemd",
 				title: "Keys",
 			},
 			{
@@ -199,7 +199,7 @@ Usage:
   uma-machine run --task <id> [--prompt <text>] [--project <id>] [--repo <url>] [--commit <sha>] [--branch <b>] [--agent <bin>]
   uma-machine version
 
-Keys: programs, git-login, adityab-agent, agents, files, providers, mcp, skills, systemd
+Keys: programs, git-login, agents, files, providers, mcp, skills, systemd
 Exit codes: 0 ok/clean, 2 drifted/partial, 1 error, 3 UPGRADE_REQUIRED
 `;
 }

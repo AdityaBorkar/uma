@@ -53,7 +53,11 @@ function errorMessage(e: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
-function receiptLine(r: { error?: string; key: string; ok: boolean }): string {
+function receiptLine(r: {
+	error?: string | undefined;
+	key: string;
+	ok: boolean;
+}): string {
 	const err = safeError(r.error);
 	return `${r.key}: ${r.ok ? "ok" : "FAILED"}${err ? ` — ${err}` : ""}`;
 }

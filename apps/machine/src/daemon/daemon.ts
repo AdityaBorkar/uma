@@ -20,8 +20,8 @@ import { Heartbeat } from "./heartbeat.ts";
 import { connectWithBackoff } from "./ws-client.ts";
 
 export interface DaemonOptions {
-	intervalS?: number;
-	once?: boolean;
+	intervalS?: number | undefined;
+	once?: boolean | undefined;
 }
 
 type Send = (f: Record<string, unknown>) => void;

@@ -54,8 +54,8 @@ export type Claim = (req: ClaimRequest) => Promise<ClaimResult>;
 /** Stable engine configuration (emit is per-connection and passed to executeTask). */
 export interface ExecutionEngineOptions {
 	/** Agent binary override (CLI --agent); falls back to UMA_AGENT_BIN. */
-	agentBin?: string;
-	claim?: Claim;
+	agentBin?: string | undefined;
+	claim?: Claim | undefined;
 }
 
 interface InFlightExecution {

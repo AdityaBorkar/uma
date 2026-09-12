@@ -1,5 +1,4 @@
 import { parseKeyList } from "../utils/env.ts";
-import * as adityabAgent from "./adityab-agent.ts";
 import * as agents from "./agents.ts";
 import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
 import * as files from "./files.ts";
@@ -18,11 +17,10 @@ interface KeyModule {
 	reset: (opts?: ResetOptions) => Promise<ResetResult>;
 }
 
-/** Dependency order from §7: programs -> git -> adityab-agent -> agents -> files -> providers -> mcp -> skills -> systemd */
+/** Dependency order from §7: programs -> git -> agents -> files -> providers -> mcp -> skills -> systemd */
 export const ORDERED_KEYS = [
 	programs,
 	git,
-	adityabAgent,
 	agents,
 	files,
 	providers,
@@ -58,7 +56,7 @@ export async function checkAll(only?: string[]): Promise<CheckResult[]> {
 }
 
 export async function resetAll(
-	opts?: ResetOptions & { only?: string[] },
+	opts?: ResetOptions & { only?: string[] | undefined },
 ): Promise<ResetResult[]> {
 	const mods = resolveKeys(opts?.only);
 	const out: ResetResult[] = [];

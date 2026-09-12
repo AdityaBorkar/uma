@@ -56,7 +56,7 @@ export interface ReceiptRow {
 }
 
 export interface ReceiptInput {
-	error?: string;
+	error?: string | undefined;
 	key: string;
 	ok: boolean;
 }
@@ -100,11 +100,11 @@ export function persistReceiptsBestEffort(
 
 /** One sandbox lifecycle event row. */
 export interface SandboxEventInput {
-	detail?: string;
+	detail?: string | undefined;
 	event: string;
 	sandboxId: string;
-	taskId?: string | null;
-	ts?: number;
+	taskId?: string | null | undefined;
+	ts?: number | undefined;
 }
 
 /** Record one sandbox lifecycle event (best-effort open/close in one place). */
@@ -301,8 +301,8 @@ export function insertSandboxEvent(
 		ts: number;
 		sandboxId: string;
 		event: string;
-		taskId?: string | null;
-		detail?: string;
+		taskId?: string | null | undefined;
+		detail?: string | undefined;
 	},
 ): void {
 	db.insert(sandboxEvents)
@@ -318,7 +318,13 @@ export function insertSandboxEvent(
 
 export function insertReceipt(
 	db: DbTx,
-	r: { ts: number; jobId: string; key: string; ok: boolean; error?: string },
+	r: {
+		ts: number;
+		jobId: string;
+		key: string;
+		ok: boolean;
+		error?: string | undefined;
+	},
 ): void {
 	db.insert(configReceipts)
 		.values({

@@ -1,6 +1,5 @@
 {
 	"file_scan_exclusions": [
-		"**/.agents",
 		"**/.git",
 		"**/.local",
 		"**/.output",

@@ -4,9 +4,9 @@ import pRetry from "p-retry";
 import { type ExecResult, Sandbox } from "../sandboxes/sandbox.ts";
 
 export interface BindingOpts {
-	branch?: string;
-	commit?: string;
-	defaultBranch?: string;
+	branch?: string | undefined;
+	commit?: string | undefined;
+	defaultBranch?: string | undefined;
 	repoUrl: string;
 	sandboxName: string;
 	taskId: string;
@@ -14,7 +14,7 @@ export interface BindingOpts {
 
 export interface BindingResult {
 	branch: string;
-	commit?: string;
+	commit?: string | undefined;
 	fresh: boolean;
 	notesOnly: boolean;
 }
@@ -25,7 +25,7 @@ export interface BindingResult {
  * explicit branch is never silently replaced by the task default.
  */
 export type FreshStartOpts = Omit<BindingOpts, "repoUrl"> & {
-	repoUrl?: string;
+	repoUrl?: string | undefined;
 };
 
 /** Ensure/fresh options minus the sandbox (carried by the RepoBinding handle). */

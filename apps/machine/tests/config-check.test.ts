@@ -29,12 +29,11 @@ afterEach(() => {
 });
 
 describe("config check (linger, doctor, fingerprint-only)", () => {
-	test("checkAll returns all 9 keys in dependency order", async () => {
+	test("checkAll returns all 8 keys in dependency order", async () => {
 		const { checkAll, ORDERED_KEYS } = await import("../src/config/mod.ts");
 		expect(ORDERED_KEYS.map((m) => m.KEY)).toEqual([
 			"programs",
 			"git-login",
-			"adityab-agent",
 			"agents",
 			"files",
 			"providers",
@@ -43,7 +42,7 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 			"systemd",
 		]);
 		const results = await checkAll();
-		expect(results.length).toBe(9);
+		expect(results.length).toBe(8);
 		for (const r of results) {
 			expect(typeof r.key).toBe("string");
 			expect(typeof r.drifted).toBe("boolean");
@@ -94,9 +93,9 @@ describe("config check (linger, doctor, fingerprint-only)", () => {
 		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { jobId, receipts } = await performSync({ dryRun: false });
 		expect(jobId.startsWith("local-")).toBe(true);
-		expect(receipts.length).toBe(9);
+		expect(receipts.length).toBe(8);
 		const db = openDb(process.env.UMA_STATE_DB as string, true);
-		expect(latestReceipts(db, 20).length).toBe(9);
+		expect(latestReceipts(db, 20).length).toBe(8);
 		db.close();
 	}, 20_000);
 });

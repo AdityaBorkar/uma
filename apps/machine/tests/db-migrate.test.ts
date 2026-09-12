@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { currentSchemaVersion } from "../src/schemas/db/schema-sync.ts";
 import {
 	countHeartbeats,
 	insertHeartbeat,
@@ -49,11 +48,11 @@ function tableNames(path: string): string[] {
 	}
 }
 
-describe("db schema sync (computed from src/schemas/db/schema.ts, XDG state.db)", () => {
+describe("db schema sync (SCHEMA_STATEMENTS, XDG state.db)", () => {
 	test("fresh openDb creates schema + stamps schema fingerprint", () => {
 		const db = openDb(dbPath);
 		db.close();
-		expect(userVersion(dbPath)).toBe(currentSchemaVersion());
+		expect(userVersion(dbPath)).toBe(latestSchemaVersion());
 		expect(userVersion(dbPath)).toBe(latestSchemaVersion());
 		const tables = tableNames(dbPath);
 		for (const t of [
@@ -101,7 +100,7 @@ describe("db schema sync (computed from src/schemas/db/schema.ts, XDG state.db)"
 		const db = openDb(dbPath);
 		expect(countHeartbeats(db)).toBe(1);
 		db.close();
-		expect(userVersion(dbPath)).toBe(currentSchemaVersion());
+		expect(userVersion(dbPath)).toBe(latestSchemaVersion());
 		const tables = tableNames(dbPath);
 		for (const t of [
 			"config_receipts",

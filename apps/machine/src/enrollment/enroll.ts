@@ -84,11 +84,11 @@ export async function probeRamGB(): Promise<number> {
 }
 
 export interface EnrollOptions {
-	clientId?: string;
-	machineName?: string;
-	pollTimeoutMs?: number;
+	clientId?: string | undefined;
+	machineName?: string | undefined;
+	pollTimeoutMs?: number | undefined;
 	server: string;
-	writeSystemd?: boolean;
+	writeSystemd?: boolean | undefined;
 }
 
 function sleep(ms: number): Promise<void> {

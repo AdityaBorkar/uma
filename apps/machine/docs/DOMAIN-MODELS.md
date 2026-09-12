@@ -2,7 +2,7 @@
 
 Single aggregate family on the device. Server owns Task lifecycle, Signal triage, Projects; here Task is an external reference (`AssignFrame.taskId`), Heartbeat is an outbound event (grill 2026-09-10).
 
-Source anchors: `../../orpc-contract/src/` (contract), `src/sandboxes/sandbox.ts`, `src/execution/execution.ts`, `src/daemon/heartbeat.ts`, `src/utils/db.ts` + `src/schemas/db/schema.ts`, `src/config/mod.ts`, `src/config/sync.ts`, `src/execution/git-binding.ts`.
+Source anchors: `../../orpc-contract/src/` (contract), `src/sandboxes/sandbox.ts`, `src/execution/execution.ts`, `src/daemon/heartbeat.ts`, `src/utils/db.ts` + `src/schemas/db/index.ts`, `src/config/mod.ts`, `src/config/sync.ts`, `src/execution/git-binding.ts`.
 
 ## Entity
 
@@ -10,8 +10,8 @@ Identity by stable id, mutable lifecycle.
 
 - **RemoteMachine** (`identity.json` via `src/enrollment/enroll.ts`): id = server `machineId` (uuid) + user-scoped `name`. Tracks `serverUrl`, `sessionToken`, `enrolledAt`.
 - **Microsandbox** (`src/sandboxes/sandbox.ts`, `SandboxInfo` in `../../orpc-contract/src/schemas/primitives.ts`): id = sandbox `name` (`task-<short>-<rand>`, ≤128 UTF-8 bytes). Lifecycle `created → running → stopped → destroyed` (`stop --force` = cancel, `remove --force` = reap; no `kill`/`destroy`). SDK uses `stopWithTimeout(0)` + `remove()`; CLI uses `stop --force` / `remove --force`.
-- **ProviderKey** (`provider_keys` in `src/schemas/db/schema.ts`): id = `provider`. Holds `fingerprint` + `secret` + `updatedAt`.
-- **ConvergenceReceipt** (`config_receipts` in `src/schemas/db/schema.ts`): id = `(jobId, key, ts)`. Holds `ok` + `error`.
+- **ProviderKey** (`provider_keys` in `src/schemas/db/index.ts`): id = `provider`. Holds `fingerprint` + `secret` + `updatedAt`.
+- **ConvergenceReceipt** (`config_receipts` in `src/schemas/db/index.ts`): id = `(jobId, key, ts)`. Holds `ok` + `error`.
 
 ## Value Object
 
@@ -27,7 +27,7 @@ Immutable, compared by value, no lifecycle.
 
 Consistency boundary; all writes go through the root.
 
-- **Machine Convergence aggregate**: keys `programs → git-login → adityab-agent → agents → files → providers → mcp → skills → systemd` in `ORDERED_KEYS` (`src/config/mod.ts`). `sync` = ordered `resetAll` (each key's `reset` checks internally; there is no separate check-all phase in `performSync`) + receipts (`src/config/sync.ts`).
+- **Machine Convergence aggregate**: keys `programs → git-login → agents → files → providers → mcp → skills → systemd` in `ORDERED_KEYS` (`src/config/mod.ts`). `sync` = ordered `resetAll` (each key's `reset` checks internally; there is no separate check-all phase in `performSync`) + receipts (`src/config/sync.ts`).
 - **Sandbox Execution aggregate**: one sandbox + its binding + its log stream + its claim for one `taskId`. Concurrent Tasks = N aggregates, bounded by quota. On success (or exec failure) the sandbox is left idle `stopped` for TTL reap; a pre-terminal failure frees it (`stop --force` + `remove --force`).
 
 ## Aggregate Root
@@ -61,7 +61,7 @@ Outbound facts, persisted before send (send failure ≠ loss).
 Higher-level rules with trade-offs.
 
 - **Pressure policy**: disk>90% or cpu>90% sustained 10min → server Signal; 60% attribution decides scoped (`projectId`) vs global (`null`); 10min cooldown per scope (`../../orpc-contract/src/constants.ts`).
-- **Retention policy**: `heartbeats` 30d raw + vacuum only when rows were actually deleted (steady state ≈ one vacuum at the retention boundary, no rollup v1, ~86k rows max); `sandbox_events` + `config_receipts` 90d; `log_buffer` 7d (`src/utils/db.ts`, `src/schemas/db/schema.ts`).
+- **Retention policy**: `heartbeats` 30d raw + vacuum only when rows were actually deleted (steady state ≈ one vacuum at the retention boundary, no rollup v1, ~86k rows max); `sandbox_events` + `config_receipts` 90d; `log_buffer` 7d (`src/utils/db.ts`, `src/schemas/db/index.ts`).
 - **Quota policy**: effective = server override ?? `limits.json` install defaults (`2×/5× GB RAM`); agent enforces locally, server wins on conflict (`src/daemon/heartbeat.ts`).
 - **Secret policy**: full-keys push only; fingerprint-only check; `--secret NAME@HOST` refs only (inline `NAME=VALUE@HOST` forbidden); redaction pre-send + server second pass (`src/config/providers.ts`, `src/execution/redact.ts`).
 
@@ -83,7 +83,7 @@ Boolean predicates, unit-testable.
 
 ## Repository
 
-SQLite via `drizzle-orm` + `bun:sqlite` (`src/utils/db.ts` + `src/schemas/db/schema.ts`), file `0600` incl `-wal`/`-shm`, cooperative single-writer (no lock — avoid concurrent daemon + CLI `sync`/`run`).
+SQLite via `drizzle-orm` + `bun:sqlite` (`src/utils/db.ts` + `src/schemas/db/index.ts`), file `0600` incl `-wal`/`-shm`, cooperative single-writer (no lock — avoid concurrent daemon + CLI `sync`/`run`).
 
 - **HeartbeatStore**: `insertHeartbeat / queryHistory / vacuumRetention / countHeartbeats`.
 - **SandboxEventStore**: `recordSandboxEvent / insertSandboxEvent / lastSandboxEventTs`.
@@ -91,7 +91,7 @@ SQLite via `drizzle-orm` + `bun:sqlite` (`src/utils/db.ts` + `src/schemas/db/sch
 - **ProviderKeyStore**: `setProviderKey / getProviderKeys / getProviderSecret` (secret never logged).
 - **LogBuffer**: `bufferLog / peekLogBuffer / deleteLogBufferThrough / drainLogBuffer / bufferedLogCount` (rowid-ordered, at-least-once replay, 7d prune).
 
-Schema source of truth is `src/schemas/db/schema.ts` (tables) with open/migrate in `src/utils/client.ts` (`withDb` owns open/close). There are no migration files: `src/schemas/db/schema-sync.ts` computes the DDL from the drizzle schema on the go and converges each state.db additively on open (`CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`, one transaction) — legacy pre-drizzle `state.db` files upgrade in place, and nothing destructive is ever emitted (`bun run db:migrate` applies to a state.db manually).
+Schema source of truth is `src/schemas/db/index.ts` (tables) with open/migrate in `src/utils/client.ts` (`withDb` owns open/close). There are no migration files: `SCHEMA_STATEMENTS` in `src/schemas/db/index.ts` is applied additively on every writable open (`CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`) — legacy pre-drizzle `state.db` files upgrade in place, and nothing destructive is ever emitted (`migrate()` in `src/utils/db.ts` applies to a state.db manually).
 
 ## Domain Primitive
 

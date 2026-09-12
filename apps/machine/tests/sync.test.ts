@@ -36,7 +36,7 @@ describe("sync (Perform Sync)", () => {
 		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { existsSync } = await import("node:fs");
 		const { receipts } = await performSync({ dryRun: true });
-		expect(receipts.length).toBe(9);
+		expect(receipts.length).toBe(8);
 		// Dry-run must not create or write the DB at all.
 		expect(existsSync(process.env.UMA_STATE_DB as string)).toBe(false);
 		if (existsSync(process.env.UMA_STATE_DB as string)) {
@@ -53,10 +53,10 @@ describe("sync (Perform Sync)", () => {
 		const { performSync } = await import("../src/config/sync.ts");
 		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { receipts } = await performSync({ dryRun: false });
-		expect(receipts.length).toBe(9);
+		expect(receipts.length).toBe(8);
 		const db = openDb(process.env.UMA_STATE_DB as string, true);
 		try {
-			expect(latestReceipts(db, 20).length).toBe(9);
+			expect(latestReceipts(db, 20).length).toBe(8);
 		} finally {
 			db.close();
 		}
@@ -100,7 +100,7 @@ describe("db aux retention + reap age", () => {
 			bufferedLogCount,
 		} = await import("../src/utils/db.ts");
 		const { sandboxEvents, logBuffer } = await import(
-			"../src/schemas/db/schema.ts"
+			"../src/schemas/db/index.ts"
 		);
 		const { count, asc } = await import("drizzle-orm");
 		const db = openDb(join(dir, "aux.db"));

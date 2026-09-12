@@ -5,8 +5,8 @@ import { stateDbPath } from "../utils/env.ts";
 import { type ResetOptions, resetAll } from "./mod.ts";
 
 export interface SyncOptions extends ResetOptions {
-	jobId?: string;
-	only?: string[];
+	jobId?: string | undefined;
+	only?: string[] | undefined;
 }
 
 /**

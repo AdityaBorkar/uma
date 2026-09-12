@@ -3,11 +3,7 @@ import { Database } from "bun:sqlite";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
 
-import {
-	currentSchemaVersion,
-	stampSchemaVersion,
-	syncSchema,
-} from "../schemas/db/schema-sync.ts";
+import { SCHEMA_STATEMENTS, SCHEMA_VERSION } from "../schemas/db/index.ts";
 import { chmod0600, ensureParentDir } from "./fs-utils.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
@@ -41,23 +37,30 @@ function applyPragmas(raw: Database): void {
 }
 
 /**
- * Converge state.db to the drizzle schema (`src/schemas/db/schema.ts`) on open.
+ * Converge state.db to the schema (`src/schemas/db/index.ts`) on open.
  *
- * No migration files exist: the DDL is computed on the go from the schema and
- * applied additively (CREATE TABLE IF NOT EXISTS / ADD COLUMN / CREATE INDEX
- * IF NOT EXISTS) by `syncSchema` — see `schemas/db/schema-sync.ts`. Nothing is
- * destructive, each open runs in one transaction, and a crash replays the
- * sync. `PRAGMA user_version` mirrors the schema fingerprint for ops
- * introspection.
+ * No migration files: `SCHEMA_STATEMENTS` is applied additively on every
+ * writable open — `CREATE TABLE/INDEX IF NOT EXISTS` plus `ADD COLUMN` for
+ * post-v1 columns, where only "duplicate column name" failures are tolerated.
+ * Nothing is destructive and every statement is idempotent, so a crash on any
+ * open simply replays the sync. `PRAGMA user_version` carries SCHEMA_VERSION
+ * for ops introspection.
  */
 function applyMigrations(raw: Database): void {
-	syncSchema(raw);
-	stampSchemaVersion(raw);
+	for (const stmt of SCHEMA_STATEMENTS) {
+		try {
+			raw.exec(stmt);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			if (!msg.includes("duplicate column name")) throw e;
+		}
+	}
+	raw.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
 }
 
-/** Schema fingerprint stamped into `PRAGMA user_version` after apply. */
+/** Current schema version (what `PRAGMA user_version` gets stamped with). */
 export function latestSchemaVersion(): number {
-	return currentSchemaVersion();
+	return SCHEMA_VERSION;
 }
 
 /**

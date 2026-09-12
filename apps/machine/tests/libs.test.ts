@@ -89,7 +89,7 @@ describe("parseKeyList (shared comma-split helper)", () => {
 			"git-login",
 		]);
 		expect(resolveKeys(["sync"]).map((m) => m.KEY)).toEqual(["skills"]);
-		expect(resolveKeys(undefined).length).toBe(9);
+		expect(resolveKeys(undefined).length).toBe(8);
 	});
 });
 

@@ -1,5 +1,7 @@
 # TODO
 
+get @machine completely done in code quality by 3PM (25 mins)
+
 Reorganize the code, verify the commands and RPC
 
 Connect machine to the server

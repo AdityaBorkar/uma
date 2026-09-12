@@ -9,7 +9,6 @@
 	},
 	"scripts": {
 		"build": "bun build --compile src/index.ts --outfile .output/uma-machine",
-		"db:migrate": "bun run scripts/db-migrate.ts",
 		"dev": "bun run src/index.ts",
 		"docs:wire": "bun run scripts/generate-wire-schema.ts",
 		"roundtrip": "bun run scripts/machine.roundtrip.ts",
