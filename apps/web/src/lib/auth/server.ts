@@ -1,5 +1,6 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { betterAuth } from "better-auth";
+import { multiSession } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 import { env } from "#/env.ts";
@@ -11,7 +12,7 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: false,
 	},
-	plugins: [tanstackStartCookies()],
+	plugins: [multiSession(), tanstackStartCookies()],
 	secret: env.AUTH_SECRET,
 	socialProviders: {
 		google: {

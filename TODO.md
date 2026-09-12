@@ -1,5 +1,9 @@
 # TODO
 
+Add Edit option for all the table items in
+
+---
+
 Reverse Engineer the Tally API to perform thefollowing list of  activities and design a REST API around it
 Create a Electron app for it with optimizations for RAM and Space overall (no tauri due to rust server management)
 

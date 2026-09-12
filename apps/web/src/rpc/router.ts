@@ -1,4 +1,5 @@
 import * as agents from "./procedures/agents.ts";
+import * as commands from "./procedures/commands.ts";
 import * as connections from "./procedures/connections.ts";
 import * as device from "./procedures/device.ts";
 import * as documents from "./procedures/documents.ts";
@@ -6,10 +7,12 @@ import * as machines from "./procedures/machines.ts";
 import * as projects from "./procedures/projects.ts";
 import * as runs from "./procedures/runs.ts";
 import * as signals from "./procedures/signals.ts";
+import * as subagents from "./procedures/subagents.ts";
 import * as tasks from "./procedures/tasks.ts";
 
 export default {
 	agents,
+	commands,
 	connections,
 	device,
 	documents: {
@@ -35,6 +38,7 @@ export default {
 	projects,
 	runs,
 	signals,
+	subagents,
 	tasks: {
 		create: tasks.create,
 		get: tasks.get,

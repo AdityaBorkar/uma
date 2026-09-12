@@ -98,10 +98,15 @@ describe("declared file names are path-safe", () => {
 	test("skills.reset refuses traversal names", async () => {
 		const { saveDesired } = await import("../src/config/desired.ts");
 		const { SkillsKey } = await import("../src/config/skills.ts");
-		saveDesired({ skills: { files: ["../../evil.md"] }, version: "v1" });
+		saveDesired({
+			skills: {
+				skills: [{ name: "../../evil.md", source: "../../evil.md" }],
+			},
+			version: "v1",
+		});
 		const r = await new SkillsKey().reset();
 		expect(r.ok).toBe(false);
-		expect(r.error).toContain("unsafe skill name");
+		expect(r.error).toContain("unsafe skill names");
 	});
 });
 

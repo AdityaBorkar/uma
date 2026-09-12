@@ -6,14 +6,6 @@
  * everything the user adds via Add Provider / Add Model / Add Account.
  */
 
-export interface ModelPricing {
-	cacheRead?: number | null;
-	cacheWrite?: number | null;
-	input?: number | null;
-	output?: number | null;
-	[key: string]: number | null | undefined;
-}
-
 export interface DetectedModel {
 	audio?: boolean | null;
 	id: string;
@@ -22,7 +14,6 @@ export interface DetectedModel {
 	maxOutputTokens?: number | null;
 	name: string;
 	pdf?: boolean | null;
-	pricing: ModelPricing;
 	reasoningVariants: string[];
 	video?: boolean | null;
 }
@@ -68,15 +59,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function asPricing(value: unknown): ModelPricing {
-	if (!isRecord(value)) return {};
-	const out: ModelPricing = {};
-	for (const [k, v] of Object.entries(value)) {
-		if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
-	}
-	return out;
-}
-
 function asStringArray(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];
 	return value
@@ -111,7 +93,6 @@ function asModel(value: unknown): DetectedModel | null {
 		maxOutputTokens: asPositiveInt(value.maxOutputTokens),
 		name,
 		pdf: asTriState(value.pdf),
-		pricing: asPricing(value.pricing),
 		reasoningVariants: asStringArray(value.reasoningVariants),
 		video: asTriState(value.video),
 	};

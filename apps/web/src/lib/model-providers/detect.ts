@@ -1,12 +1,12 @@
-import type { DetectedModel, ModelPricing } from "./types.ts";
+import type { DetectedModel } from "./types.ts";
 
 /**
  * Normalize `GET $BASE_URL/models` payloads.
  *
  * Providers disagree on shape: OpenAI-compatible gateways return
  * `{ data: [{ id, ... }] }` with no capability metadata, while richer
- * gateways (OpenRouter-style) return per-model `architecture`/`modalities`,
- * `pricing`, and reasoning info under various key spellings. Every lookup
+ * gateways (OpenRouter-style) return per-model `architecture`/`modalities`
+ * and reasoning info under various key spellings. Every lookup
  * below is lenient — unknown fields degrade to `null`/`[]` and render as
  * "—" in the UI instead of failing the whole detection.
  */
@@ -114,57 +114,6 @@ const REASONING_KEYS = [
 	"efforts",
 ];
 
-/** Canonical pricing keys with the alias spellings seen in the wild. */
-const PRICING_ALIASES: Record<string, string[]> = {
-	cacheRead: [
-		"cacheRead",
-		"cache_read",
-		"cached_input",
-		"cachedInput",
-		"input_cache_read",
-		"cache_read_input",
-		"prompt_cache_hit",
-	],
-	cacheWrite: [
-		"cacheWrite",
-		"cache_write",
-		"cache_creation",
-		"input_cache_write",
-		"cache_write_5m",
-		"cache_write_1h",
-		"prompt_cache_miss",
-	],
-	input: ["input", "prompt", "input_price", "prompt_price", "inputPrice"],
-	output: ["output", "completion", "output_price", "completion_price"],
-};
-
-function normalizePricing(raw: unknown): ModelPricing {
-	const pricing: ModelPricing = {};
-	if (!isRecord(raw)) return pricing;
-	const used = new Set<string>();
-	for (const [canonical, aliases] of Object.entries(PRICING_ALIASES)) {
-		for (const alias of aliases) {
-			const n = toNumber(raw[alias]);
-			if (n !== null) {
-				pricing[canonical] = n;
-				used.add(alias);
-				break;
-			}
-		}
-	}
-	// Keep any other numeric pricing keys (per-request, per-image, …) as-is.
-	let extra = 0;
-	for (const [key, value] of Object.entries(raw)) {
-		if (used.has(key) || key in pricing) continue;
-		const n = toNumber(value);
-		if (n !== null && extra < 8) {
-			pricing[key] = n;
-			extra += 1;
-		}
-	}
-	return pricing;
-}
-
 /** Split OpenRouter-style modality strings like `"text+image->text"`. */
 function splitModality(value: string): string[] {
 	return value
@@ -259,7 +208,6 @@ export function normalizeModel(entry: unknown): DetectedModel | null {
 		typeof rawName === "string" && rawName.trim() ? rawName.trim() : id;
 
 	const tokens = modalityTokens(entry);
-	const pricingRaw = pick(entry, ["pricing", "price", "prices", "cost"]);
 
 	return {
 		audio: detectSupport(
@@ -287,7 +235,6 @@ export function normalizeModel(entry: unknown): DetectedModel | null {
 			["pdf", "documents"],
 			["pdf", "file", "document"],
 		),
-		pricing: normalizePricing(pricingRaw),
 		reasoningVariants: normalizeReasoning(entry),
 		video: detectSupport(entry, tokens, VIDEO_KEYS, ["video"], ["video"]),
 	};

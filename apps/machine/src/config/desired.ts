@@ -6,13 +6,19 @@ import { z } from "zod";
 import { configDir } from "../utils/env.ts";
 import { saveJson0600 } from "../utils/fs-utils.ts";
 
+export interface SkillRef {
+	name: string;
+	source: string;
+	version?: string | undefined;
+}
+
 export interface DesiredState {
 	agents?: { bins: string[] };
 	limits?: { maxRunning?: number | undefined; maxTotal?: number | undefined };
 	mcp?: { servers: string[] };
 	programs?: { bins: string[]; msbVersion?: string | undefined };
 	providers?: { providers: { provider: string; fingerprint: string }[] };
-	skills?: { files: string[] };
+	skills?: { skills: SkillRef[] };
 	templates?: Record<string, string>;
 	version: string;
 }
@@ -22,13 +28,38 @@ const DEFAULT_DESIRED: DesiredState = {
 	mcp: { servers: [] },
 	programs: { bins: ["git", "gh", "bun"] },
 	providers: { providers: [] },
-	skills: { files: [] },
+	skills: { skills: [] },
 	templates: {},
 	version: "v1",
 };
 
 export function desiredPath(): string {
 	return join(configDir(), "desired.json");
+}
+
+const SkillRefSchema = z.object({
+	name: z.string(),
+	source: z.string(),
+	version: z.string().optional(),
+});
+
+/**
+ * Accept the legacy `{ files: string[] }` shape by mapping each file name
+ * to a `{ name, source }` ref. Unknown shapes fall through to the `.catch()`
+ * default below (per-key fallback, never corrupt).
+ */
+function migrateSkills(raw: unknown): unknown {
+	if (typeof raw !== "object" || raw === null) return raw;
+	const r = raw as Record<string, unknown>;
+	if (Array.isArray(r.skills)) return raw;
+	if (Array.isArray(r.files)) {
+		return {
+			skills: (r.files as unknown[]).map((f) =>
+				typeof f === "string" ? { name: f, source: f } : f,
+			),
+		};
+	}
+	return raw;
 }
 
 export const DesiredStateSchema = z.object({
@@ -54,7 +85,12 @@ export const DesiredStateSchema = z.object({
 			),
 		})
 		.catch({ providers: [] }),
-	skills: z.object({ files: z.array(z.string()) }).catch({ files: [] }),
+	skills: z
+		.preprocess(
+			migrateSkills,
+			z.object({ skills: z.array(SkillRefSchema).catch([]) }),
+		)
+		.catch({ skills: [] }),
 	templates: z.record(z.string(), z.string()).catch({}),
 	version: z.string().catch("v1"),
 });

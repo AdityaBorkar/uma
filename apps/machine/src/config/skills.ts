@@ -4,8 +4,50 @@ import { join } from "node:path";
 
 import { homeDir } from "../utils/env.ts";
 import { isSafeFileName, writeFile0600 } from "../utils/fs-utils.ts";
-import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
+import type {
+	CheckResult,
+	ResetOptions,
+	ResetResult,
+	SkillRef,
+} from "./desired.ts";
 import { BaseConfigKey } from "./key.ts";
+
+/**
+ * Source is stored verbatim (skills.sh `owner/skill` slug or pack URL) and
+ * never interpreted here. Reject only empty/oversized values and whitespace
+ * or control characters; the future installer validates resolvability.
+ */
+function isSafeSkillSource(source: string): boolean {
+	if (source.length === 0 || source.length > 512) return false;
+	for (const ch of source) {
+		const code = ch.codePointAt(0) ?? 0;
+		if (code <= 0x20 || code === 0x7f) return false;
+	}
+	return true;
+}
+
+/**
+ * Optional version pin (tag/SHA). Stored as-is and interpreted later by the
+ * installer; reject only empty/oversized values and characters outside the
+ * tag/SHA/URL-ref alphabet.
+ */
+function isSafeSkillVersion(version: string): boolean {
+	return (
+		version.length > 0 &&
+		version.length <= 128 &&
+		/^[A-Za-z0-9._\-/:@+^~]+$/.test(version)
+	);
+}
+
+function duplicateNames(skills: SkillRef[]): string[] {
+	const seen = new Set<string>();
+	const dupes = new Set<string>();
+	for (const s of skills) {
+		if (seen.has(s.name)) dupes.add(s.name);
+		else seen.add(s.name);
+	}
+	return [...dupes].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
 
 export class SkillsKey extends BaseConfigKey {
 	readonly key = "skills";
@@ -26,33 +68,53 @@ export class SkillsKey extends BaseConfigKey {
 		}
 	}
 
-	private declaredSkills(): string[] | null {
+	private declaredSkills(): SkillRef[] | null {
 		const { corrupt, state } = this.loadDesired();
 		if (corrupt) return null;
-		return state.skills?.files ?? [];
+		return state.skills?.skills ?? [];
+	}
+
+	/** Shared declaration validation; null means valid. */
+	private invalidDetail(want: SkillRef[]): string | null {
+		const unsafeNames = want.filter((w) => !isSafeFileName(w.name));
+		if (unsafeNames.length > 0) {
+			return `unsafe skill names: ${unsafeNames.map((w) => w.name).join(",")}`;
+		}
+		const unsafeSources = want.filter((w) => !isSafeSkillSource(w.source));
+		if (unsafeSources.length > 0) {
+			return `unsafe skill sources: ${unsafeSources.map((w) => w.name).join(",")}`;
+		}
+		const unsafeVersions = want.filter(
+			(w) => w.version !== undefined && !isSafeSkillVersion(w.version),
+		);
+		if (unsafeVersions.length > 0) {
+			return `unsafe skill versions: ${unsafeVersions.map((w) => w.name).join(",")}`;
+		}
+		const dupes = duplicateNames(want);
+		if (dupes.length > 0) {
+			return `duplicate skill names: ${dupes.join(",")}`;
+		}
+		return null;
 	}
 
 	async check(): Promise<CheckResult> {
 		const { corrupt, state } = this.loadDesired();
 		if (corrupt) return corrupt;
-		const want = state.skills?.files ?? [];
+		const want = state.skills?.skills ?? [];
 		if (want.length === 0)
 			return { detail: "no skills declared", drifted: false, key: this.key };
-		const unsafe = want.filter((w) => !isSafeFileName(w));
-		if (unsafe.length > 0) {
-			return {
-				detail: `unsafe skill names: ${unsafe.join(",")}`,
-				drifted: true,
-				key: this.key,
-			};
+		const invalid = this.invalidDetail(want);
+		if (invalid) {
+			return { detail: invalid, drifted: true, key: this.key };
 		}
+		const names = want.map((w) => w.name);
 		const have = this.localFiles();
-		const wh = manifestHash(want);
+		const wh = manifestHash(names);
 		const hh = manifestHash(have);
 		if (wh === hh)
 			return { detail: "skills in sync", drifted: false, key: this.key };
-		const missing = want.filter((w) => !have.includes(w));
-		const extra = have.filter((h) => !want.includes(h));
+		const missing = names.filter((n) => !have.includes(n));
+		const extra = have.filter((h) => !names.includes(h));
 		const parts: string[] = [];
 		if (missing.length > 0) parts.push(`missing: ${missing.join(",")}`);
 		if (extra.length > 0) parts.push(`extra: ${extra.join(",")}`);
@@ -73,14 +135,9 @@ export class SkillsKey extends BaseConfigKey {
 			};
 		}
 		if (want.length === 0) return { changed: false, key: this.key, ok: true };
-		for (const w of want) {
-			if (!isSafeFileName(w)) {
-				return {
-					error: `unsafe skill name: ${JSON.stringify(w)}`,
-					key: this.key,
-					ok: false,
-				};
-			}
+		const invalid = this.invalidDetail(want);
+		if (invalid) {
+			return { error: invalid, key: this.key, ok: false };
 		}
 		const dry = await this.maybeDryRun(opts);
 		if (dry) return dry;
@@ -88,21 +145,23 @@ export class SkillsKey extends BaseConfigKey {
 			const dir = this.skillsDir();
 			mkdirSync(dir, { recursive: true });
 			const have = new Set(this.localFiles());
+			const wanted = new Set(want.map((w) => w.name));
 			let changed = false;
 			for (const w of want) {
-				if (!have.has(w)) {
+				if (!have.has(w.name)) {
 					// Placeholder converge: create stub manifest entry. Real content
-					// comes from /settings/skills sync; we never fabricate skill bodies.
-					writeFile0600(
-						join(dir, w),
-						`# skill ${w}\n# synced by uma-machine\n`,
-					);
+					// comes from the future skills.sh installer; we never fabricate
+					// skill bodies.
+					const lines = [`# skill ${w.name}`, `# source ${w.source}`];
+					if (w.version !== undefined) lines.push(`# version ${w.version}`);
+					lines.push("# synced by uma-machine", "");
+					writeFile0600(join(dir, w.name), `${lines.join("\n")}`);
 					changed = true;
 				}
 			}
 			if (opts?.prune) {
 				for (const h of have) {
-					if (!want.includes(h)) {
+					if (!wanted.has(h)) {
 						rmSync(join(dir, h), { force: true });
 						changed = true;
 					}

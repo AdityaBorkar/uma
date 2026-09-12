@@ -112,6 +112,74 @@ function useProviderStore() {
 			});
 		},
 		store,
+		updateAccount(
+			id: string,
+			patch: Omit<ProviderAccount, "createdAt" | "id">,
+		) {
+			update({
+				...store,
+				accounts: store.accounts.map((a) =>
+					a.id === id ? { ...a, ...patch } : a,
+				),
+			});
+		},
+		updateDetectedModel(
+			providerId: string,
+			modelId: string,
+			patch: DetectedModel,
+		) {
+			update({
+				...store,
+				providers: store.providers.map((p) =>
+					p.id === providerId
+						? {
+								...p,
+								models: p.models.map((m) =>
+									m.id === modelId ? { ...patch } : m,
+								),
+							}
+						: p,
+				),
+			});
+		},
+		updateManualModel(customId: string, patch: Omit<CustomModel, "customId">) {
+			update({
+				...store,
+				models: store.models.map((m) =>
+					m.customId === customId ? { ...m, ...patch } : m,
+				),
+			});
+		},
+		updateProvider(
+			id: string,
+			patch: { baseUrl: string; models?: DetectedModel[]; name: string },
+		) {
+			const prev = store.providers.find((p) => p.id === id);
+			const renamed = prev && prev.name !== patch.name;
+			update({
+				...store,
+				accounts: renamed
+					? store.accounts.map((a) =>
+							a.provider === prev.name ? { ...a, provider: patch.name } : a,
+						)
+					: store.accounts,
+				models: renamed
+					? store.models.map((m) =>
+							m.provider === prev.name ? { ...m, provider: patch.name } : m,
+						)
+					: store.models,
+				providers: store.providers.map((p) =>
+					p.id === id
+						? {
+								...p,
+								baseUrl: patch.baseUrl,
+								models: patch.models ?? p.models,
+								name: patch.name,
+							}
+						: p,
+				),
+			});
+		},
 	};
 }
 
@@ -191,44 +259,9 @@ function ReasoningCell({ variants }: { variants: string[] }) {
 	);
 }
 
-function formatPrice(n: number): string {
-	if (n !== 0 && Math.abs(n) < 0.0001) return n.toExponential(1);
-	return String(Math.round(n * 10000) / 10000);
-}
-
-function PriceCell({ pricing }: { pricing: DetectedModel["pricing"] }) {
-	const entries = Object.entries(pricing).filter(
-		([, v]) => typeof v === "number",
-	);
-	if (entries.length === 0)
-		return <span className="text-muted-foreground">—</span>;
-	const order = ["input", "output", "cacheRead", "cacheWrite"];
-	const sorted = [...entries].sort(
-		([a], [b]) => order.indexOf(a) - order.indexOf(b),
-	);
-	const short: Record<string, string> = {
-		cacheRead: "cr",
-		cacheWrite: "cw",
-		input: "in",
-		output: "out",
-	};
-	const summary = sorted
-		.map(([k, v]) => `${short[k] ?? k} ${formatPrice(v as number)}`)
-		.join(" · ");
-	const full = sorted
-		.map(([k, v]) => `${k} ${formatPrice(v as number)}`)
-		.join(", ");
-	return (
-		<span
-			className="block max-w-[180px] truncate font-mono text-[11px] whitespace-nowrap"
-			title={full}
-		>
-			{summary}
-		</span>
-	);
-}
-
 interface ModelRow {
+	/** Open the edit dialog for this row. */
+	edit?: () => void;
 	key: string;
 	model: DetectedModel;
 	provider: string;
@@ -241,9 +274,11 @@ const menuItemClass =
 
 function RowActions({
 	modelId,
+	onEdit,
 	remove,
 }: {
 	modelId: string;
+	onEdit: (() => void) | undefined;
 	remove: (() => void) | undefined;
 }) {
 	return (
@@ -270,6 +305,11 @@ function RowActions({
 						>
 							Copy model ID
 						</Menu.Item>
+						{onEdit ? (
+							<Menu.Item className={menuItemClass} onClick={onEdit}>
+								Edit model
+							</Menu.Item>
+						) : null}
 						{remove ? (
 							<Menu.Item
 								className={`${menuItemClass} text-destructive data-highlighted:text-destructive`}
@@ -288,10 +328,12 @@ function RowActions({
 function ProviderActions({
 	baseUrl,
 	name,
+	onEdit,
 	remove,
 }: {
 	baseUrl: string;
 	name: string;
+	onEdit: () => void;
 	remove: () => void;
 }) {
 	return (
@@ -318,6 +360,9 @@ function ProviderActions({
 						>
 							Copy base URL
 						</Menu.Item>
+						<Menu.Item className={menuItemClass} onClick={onEdit}>
+							Edit provider
+						</Menu.Item>
 						<Menu.Item
 							className={`${menuItemClass} text-destructive data-highlighted:text-destructive`}
 							onClick={remove}
@@ -333,9 +378,11 @@ function ProviderActions({
 
 function AccountActions({
 	label,
+	onEdit,
 	remove,
 }: {
 	label: string;
+	onEdit: () => void;
 	remove: () => void;
 }) {
 	return (
@@ -354,6 +401,9 @@ function AccountActions({
 					sideOffset={4}
 				>
 					<Menu.Popup className="min-w-40 rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-none">
+						<Menu.Item className={menuItemClass} onClick={onEdit}>
+							Edit account
+						</Menu.Item>
 						<Menu.Item
 							className={`${menuItemClass} text-destructive data-highlighted:text-destructive`}
 							onClick={remove}
@@ -378,7 +428,6 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 					<TableHead className="w-24 text-right">Max output</TableHead>
 					<TableHead className="w-24 text-right">Max input</TableHead>
 					<TableHead className="max-w-[160px]">Reasoning</TableHead>
-					<TableHead className="max-w-[180px]">Price</TableHead>
 					<TableHead className="max-w-[120px]">Provider</TableHead>
 					<TableHead className="w-12 text-right">
 						<span className="sr-only">More actions</span>
@@ -390,7 +439,7 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 					<TableRow>
 						<TableCell
 							className="text-center text-muted-foreground"
-							colSpan={9}
+							colSpan={8}
 						>
 							No models
 						</TableCell>
@@ -426,9 +475,6 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 						<TableCell className="max-w-[160px] whitespace-nowrap">
 							<ReasoningCell variants={row.model.reasoningVariants} />
 						</TableCell>
-						<TableCell className="max-w-[180px] whitespace-nowrap">
-							<PriceCell pricing={row.model.pricing} />
-						</TableCell>
 						<TableCell className="max-w-[120px]">
 							<span
 								className="block truncate text-muted-foreground text-xs"
@@ -438,7 +484,11 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 							</span>
 						</TableCell>
 						<TableCell className="w-12 text-right whitespace-nowrap">
-							<RowActions modelId={row.model.id} remove={row.remove} />
+							<RowActions
+								modelId={row.model.id}
+								onEdit={row.edit}
+								remove={row.remove}
+							/>
 						</TableCell>
 					</TableRow>
 				))}
@@ -704,10 +754,6 @@ function AddModelDialog({
 	const [audio, setAudio] = useState<boolean | null>(null);
 	const [pdf, setPdf] = useState<boolean | null>(null);
 	const [reasoning, setReasoning] = useState("");
-	const [priceInput, setPriceInput] = useState("");
-	const [priceOutput, setPriceOutput] = useState("");
-	const [priceCacheRead, setPriceCacheRead] = useState("");
-	const [priceCacheWrite, setPriceCacheWrite] = useState("");
 
 	useEffect(() => {
 		if (open && providerNames.length > 0 && !providerNames.includes(provider)) {
@@ -726,10 +772,6 @@ function AddModelDialog({
 		setAudio(null);
 		setPdf(null);
 		setReasoning("");
-		setPriceInput("");
-		setPriceOutput("");
-		setPriceCacheRead("");
-		setPriceCacheWrite("");
 	}
 
 	const modelId =
@@ -746,15 +788,6 @@ function AddModelDialog({
 			.split(",")
 			.map((v) => v.trim())
 			.filter(Boolean);
-		const pricing: DetectedModel["pricing"] = {};
-		const input = parseOptionalNumber(priceInput);
-		const output = parseOptionalNumber(priceOutput);
-		const cacheRead = parseOptionalNumber(priceCacheRead);
-		const cacheWrite = parseOptionalNumber(priceCacheWrite);
-		if (input !== null) pricing.input = input;
-		if (output !== null) pricing.output = output;
-		if (cacheRead !== null) pricing.cacheRead = cacheRead;
-		if (cacheWrite !== null) pricing.cacheWrite = cacheWrite;
 		onSave({
 			audio,
 			customId: crypto.randomUUID(),
@@ -764,7 +797,6 @@ function AddModelDialog({
 			maxOutputTokens: parseOptionalNumber(maxOutput),
 			name: name.trim(),
 			pdf,
-			pricing,
 			provider,
 			reasoningVariants: [...new Set(variants)],
 			video,
@@ -895,39 +927,6 @@ function AddModelDialog({
 							placeholder="low, medium, high (comma-separated)"
 							value={reasoning}
 						/>
-					</div>
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold">Price</Label>
-						<div className="grid gap-4 sm:grid-cols-2">
-							<Input
-								aria-label="Price input"
-								inputMode="decimal"
-								onChange={(e) => setPriceInput(e.target.value)}
-								placeholder="Input"
-								value={priceInput}
-							/>
-							<Input
-								aria-label="Price output"
-								inputMode="decimal"
-								onChange={(e) => setPriceOutput(e.target.value)}
-								placeholder="Output"
-								value={priceOutput}
-							/>
-							<Input
-								aria-label="Price cache read"
-								inputMode="decimal"
-								onChange={(e) => setPriceCacheRead(e.target.value)}
-								placeholder="Cache read"
-								value={priceCacheRead}
-							/>
-							<Input
-								aria-label="Price cache write"
-								inputMode="decimal"
-								onChange={(e) => setPriceCacheWrite(e.target.value)}
-								placeholder="Cache write"
-								value={priceCacheWrite}
-							/>
-						</div>
 					</div>
 					<div className="flex items-center justify-end gap-2">
 						<Button
@@ -1085,6 +1084,524 @@ function AddAccountDialog({
 	);
 }
 
+function EditProviderDialog({
+	existingNames,
+	onOpenChange,
+	onSave,
+	open,
+	provider,
+}: {
+	existingNames: string[];
+	onOpenChange: (open: boolean) => void;
+	onSave: (patch: {
+		baseUrl: string;
+		models: DetectedModel[];
+		name: string;
+	}) => void;
+	open: boolean;
+	provider: CustomProvider | null;
+}) {
+	const [name, setName] = useState("");
+	const [baseUrl, setBaseUrl] = useState("");
+	const [status, setStatus] = useState<DetectStatus>("idle");
+	const [error, setError] = useState("");
+	const [models, setModels] = useState<DetectedModel[]>([]);
+	const [modelsUrl, setModelsUrl] = useState("");
+
+	useEffect(() => {
+		if (open && provider) {
+			setName(provider.name);
+			setBaseUrl(provider.baseUrl);
+			setModels(provider.models);
+			setModelsUrl("");
+			setStatus("idle");
+			setError("");
+		}
+	}, [open, provider]);
+
+	const duplicate =
+		provider &&
+		name.trim() !== "" &&
+		name.trim().toLowerCase() !== provider.name.toLowerCase() &&
+		existingNames.some((n) => n === name.trim().toLowerCase());
+
+	async function handleDetect() {
+		setStatus("detecting");
+		setError("");
+		try {
+			const res = await fetch(
+				`/api/model-providers/detect?baseUrl=${encodeURIComponent(baseUrl.trim())}`,
+			);
+			const data = (await res.json()) as {
+				count?: number;
+				error?: string;
+				models?: DetectedModel[];
+				modelsUrl?: string;
+			};
+			if (!res.ok) {
+				throw new Error(data.error ?? "Detection failed");
+			}
+			setModels(Array.isArray(data.models) ? data.models : []);
+			setModelsUrl(data.modelsUrl ?? "");
+			setStatus("detected");
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Detection failed");
+			setStatus("error");
+		}
+	}
+
+	function handleSave() {
+		if (!provider) return;
+		onSave({
+			baseUrl: baseUrl.trim().replace(/\/+$/, ""),
+			models,
+			name: name.trim(),
+		});
+		onOpenChange(false);
+	}
+
+	return (
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent
+				className="max-w-3xl p-0"
+				onClose={() => onOpenChange(false)}
+			>
+				<DialogHeader className="px-4 py-3">
+					<DialogTitle>Edit provider</DialogTitle>
+					<DialogDescription>
+						Rename the provider, update its base URL, optionally re-detect its
+						models via GET $BASE_URL/models, then save.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-1.5">
+							<Label
+								className="text-xs font-semibold"
+								htmlFor="edit-provider-name"
+							>
+								Provider Name
+							</Label>
+							<Input
+								id="edit-provider-name"
+								onChange={(e) => setName(e.target.value)}
+								value={name}
+							/>
+							{duplicate ? (
+								<p className="text-destructive text-xs">
+									A provider with this name already exists.
+								</p>
+							) : null}
+						</div>
+						<div className="space-y-1.5">
+							<Label
+								className="text-xs font-semibold"
+								htmlFor="edit-provider-base-url"
+							>
+								Provider Base URL
+							</Label>
+							<Input
+								id="edit-provider-base-url"
+								inputMode="url"
+								onChange={(e) => {
+									setBaseUrl(e.target.value);
+									setStatus("idle");
+								}}
+								value={baseUrl}
+							/>
+							<p className="text-muted-foreground text-xs">
+								Models are fetched from GET $BASE_URL/models.
+							</p>
+						</div>
+					</div>
+
+					<div className="flex items-center gap-2">
+						<Button
+							disabled={baseUrl.trim() === "" || status === "detecting"}
+							onClick={() => void handleDetect()}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							{status === "detecting" ? "Detecting…" : "Re-detect models"}
+						</Button>
+						{status === "detected" ? (
+							<span className="text-muted-foreground text-xs">
+								{models.length} model{models.length === 1 ? "" : "s"} found
+								{modelsUrl ? ` at ${modelsUrl}` : ""}
+							</span>
+						) : (
+							<span className="text-muted-foreground text-xs">
+								{models.length} model{models.length === 1 ? "" : "s"} currently
+								saved
+							</span>
+						)}
+					</div>
+
+					{status === "error" ? (
+						<Alert variant="destructive">
+							<AlertTitle>Detection failed</AlertTitle>
+							<AlertDescription>{error}</AlertDescription>
+						</Alert>
+					) : null}
+
+					{models.length > 0 ? (
+						<Card className="overflow-hidden p-0">
+							<ModelTable
+								rows={models.map((m) => ({
+									key: m.id,
+									model: m,
+									provider: name.trim() || "Preview",
+								}))}
+							/>
+						</Card>
+					) : null}
+
+					<div className="flex items-center justify-end gap-2">
+						<Button
+							onClick={() => onOpenChange(false)}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							Cancel
+						</Button>
+						<Button
+							disabled={
+								name.trim() === "" || !!duplicate || baseUrl.trim() === ""
+							}
+							onClick={handleSave}
+							size="sm"
+							type="button"
+							variant="primary"
+						>
+							Save changes
+						</Button>
+					</div>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function EditAccountDialog({
+	account,
+	onOpenChange,
+	onSave,
+	open,
+	providerNames,
+}: {
+	account: ProviderAccount | null;
+	onOpenChange: (open: boolean) => void;
+	onSave: (patch: Omit<ProviderAccount, "createdAt" | "id">) => void;
+	open: boolean;
+	providerNames: string[];
+}) {
+	const [provider, setProvider] = useState("");
+	const [label, setLabel] = useState("");
+	const [apiKey, setApiKey] = useState("");
+
+	useEffect(() => {
+		if (open && account) {
+			setProvider(account.provider);
+			setLabel(account.label);
+			setApiKey(account.apiKey);
+		}
+	}, [open, account]);
+
+	function handleSave() {
+		onSave({ apiKey, label: label.trim(), provider });
+		onOpenChange(false);
+	}
+
+	return (
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent className="p-0" onClose={() => onOpenChange(false)}>
+				<DialogHeader className="px-4 py-3">
+					<DialogTitle>Edit account</DialogTitle>
+					<DialogDescription>
+						Update the label, provider, or API key. Keys stay in this browser
+						only.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+					<div className="space-y-1.5">
+						<Label
+							className="text-xs font-semibold"
+							htmlFor="edit-account-provider"
+						>
+							Provider
+						</Label>
+						<Select
+							id="edit-account-provider"
+							onChange={(e) => setProvider(e.target.value)}
+							value={provider}
+						>
+							{providerNames.map((n) => (
+								<option key={n} value={n}>
+									{n}
+								</option>
+							))}
+						</Select>
+					</div>
+					<div className="space-y-1.5">
+						<Label
+							className="text-xs font-semibold"
+							htmlFor="edit-account-label"
+						>
+							Account Label
+						</Label>
+						<Input
+							id="edit-account-label"
+							onChange={(e) => setLabel(e.target.value)}
+							value={label}
+						/>
+					</div>
+					<div className="space-y-1.5">
+						<Label className="text-xs font-semibold" htmlFor="edit-account-key">
+							API Key
+						</Label>
+						<Input
+							autoComplete="off"
+							id="edit-account-key"
+							onChange={(e) => setApiKey(e.target.value)}
+							type="password"
+							value={apiKey}
+						/>
+					</div>
+					<div className="flex items-center justify-end gap-2">
+						<Button
+							onClick={() => onOpenChange(false)}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							Cancel
+						</Button>
+						<Button
+							disabled={provider === "" || label.trim() === "" || apiKey === ""}
+							onClick={handleSave}
+							size="sm"
+							type="button"
+							variant="primary"
+						>
+							Save changes
+						</Button>
+					</div>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function EditModelDialog({
+	allowProviderChange,
+	initial,
+	onOpenChange,
+	onSave,
+	open,
+	providerNames,
+	title,
+}: {
+	allowProviderChange: boolean;
+	initial: (DetectedModel & { provider: string }) | null;
+	onOpenChange: (open: boolean) => void;
+	onSave: (patch: DetectedModel & { provider: string }) => void;
+	open: boolean;
+	providerNames: string[];
+	title: string;
+}) {
+	const [provider, setProvider] = useState("");
+	const [name, setName] = useState("");
+	const [id, setId] = useState("");
+	const [maxInput, setMaxInput] = useState("");
+	const [maxOutput, setMaxOutput] = useState("");
+	const [image, setImage] = useState<boolean | null>(null);
+	const [video, setVideo] = useState<boolean | null>(null);
+	const [audio, setAudio] = useState<boolean | null>(null);
+	const [pdf, setPdf] = useState<boolean | null>(null);
+	const [reasoning, setReasoning] = useState("");
+
+	useEffect(() => {
+		if (open && initial) {
+			setProvider(initial.provider);
+			setName(initial.name);
+			setId(initial.id);
+			setMaxInput(initial.maxInputTokens?.toString() ?? "");
+			setMaxOutput(initial.maxOutputTokens?.toString() ?? "");
+			setImage(initial.image ?? null);
+			setVideo(initial.video ?? null);
+			setAudio(initial.audio ?? null);
+			setPdf(initial.pdf ?? null);
+			setReasoning(initial.reasoningVariants.join(", "));
+		}
+	}, [open, initial]);
+
+	function handleSave() {
+		const variants = reasoning
+			.split(",")
+			.map((v) => v.trim())
+			.filter(Boolean);
+		onSave({
+			audio,
+			id: id.trim(),
+			image,
+			maxInputTokens: parseOptionalNumber(maxInput),
+			maxOutputTokens: parseOptionalNumber(maxOutput),
+			name: name.trim(),
+			pdf,
+			provider,
+			reasoningVariants: [...new Set(variants)],
+			video,
+		});
+		onOpenChange(false);
+	}
+
+	return (
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent className="p-0" onClose={() => onOpenChange(false)}>
+				<DialogHeader className="px-4 py-3">
+					<DialogTitle>{title}</DialogTitle>
+					<DialogDescription>
+						Update the model details, then save.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+					{allowProviderChange ? (
+						<div className="space-y-1.5">
+							<Label
+								className="text-xs font-semibold"
+								htmlFor="edit-model-provider"
+							>
+								Provider
+							</Label>
+							<Select
+								id="edit-model-provider"
+								onChange={(e) => setProvider(e.target.value)}
+								value={provider}
+							>
+								{providerNames.map((n) => (
+									<option key={n} value={n}>
+										{n}
+									</option>
+								))}
+							</Select>
+						</div>
+					) : null}
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-1.5">
+							<Label
+								className="text-xs font-semibold"
+								htmlFor="edit-model-name"
+							>
+								Model Name
+							</Label>
+							<Input
+								id="edit-model-name"
+								onChange={(e) => setName(e.target.value)}
+								value={name}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label className="text-xs font-semibold" htmlFor="edit-model-id">
+								Model ID
+							</Label>
+							<Input
+								id="edit-model-id"
+								onChange={(e) => setId(e.target.value)}
+								value={id}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label
+								className="text-xs font-semibold"
+								htmlFor="edit-model-max-input"
+							>
+								Max. Input Tokens
+							</Label>
+							<Input
+								id="edit-model-max-input"
+								inputMode="numeric"
+								onChange={(e) => setMaxInput(e.target.value)}
+								value={maxInput}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label
+								className="text-xs font-semibold"
+								htmlFor="edit-model-max-output"
+							>
+								Max. Output Tokens
+							</Label>
+							<Input
+								id="edit-model-max-output"
+								inputMode="numeric"
+								onChange={(e) => setMaxOutput(e.target.value)}
+								value={maxOutput}
+							/>
+						</div>
+					</div>
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-1.5">
+							<Label className="text-xs font-semibold">Image Support?</Label>
+							<SupportSelect onChange={setImage} value={image} />
+						</div>
+						<div className="space-y-1.5">
+							<Label className="text-xs font-semibold">Video Support?</Label>
+							<SupportSelect onChange={setVideo} value={video} />
+						</div>
+						<div className="space-y-1.5">
+							<Label className="text-xs font-semibold">Audio Support?</Label>
+							<SupportSelect onChange={setAudio} value={audio} />
+						</div>
+						<div className="space-y-1.5">
+							<Label className="text-xs font-semibold">PDF Support?</Label>
+							<SupportSelect onChange={setPdf} value={pdf} />
+						</div>
+					</div>
+					<div className="space-y-1.5">
+						<Label
+							className="text-xs font-semibold"
+							htmlFor="edit-model-reasoning"
+						>
+							Reasoning Variants
+						</Label>
+						<Input
+							id="edit-model-reasoning"
+							onChange={(e) => setReasoning(e.target.value)}
+							placeholder="low, medium, high (comma-separated)"
+							value={reasoning}
+						/>
+					</div>
+					<div className="flex items-center justify-end gap-2">
+						<Button
+							onClick={() => onOpenChange(false)}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							Cancel
+						</Button>
+						<Button
+							disabled={
+								name.trim() === "" ||
+								id.trim() === "" ||
+								(allowProviderChange && provider === "")
+							}
+							onClick={handleSave}
+							size="sm"
+							type="button"
+							variant="primary"
+						>
+							Save changes
+						</Button>
+					</div>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
 function ModelProvidersPage() {
 	const { toast } = useToast();
 	const {
@@ -1095,11 +1612,28 @@ function ModelProvidersPage() {
 		removeModel,
 		removeProvider,
 		store,
+		updateAccount,
+		updateDetectedModel,
+		updateManualModel,
+		updateProvider,
 	} = useProviderStore();
 	const [providerOpen, setProviderOpen] = useState(false);
 	const [modelOpen, setModelOpen] = useState(false);
 	const [accountOpen, setAccountOpen] = useState(false);
 	const [accountProvider, setAccountProvider] = useState<string>("");
+	const [editingProvider, setEditingProvider] = useState<CustomProvider | null>(
+		null,
+	);
+	const [editingAccount, setEditingAccount] = useState<ProviderAccount | null>(
+		null,
+	);
+	const [editingManualModel, setEditingManualModel] =
+		useState<CustomModel | null>(null);
+	const [editingDetected, setEditingDetected] = useState<{
+		providerId: string;
+		model: DetectedModel;
+		providerName: string;
+	} | null>(null);
 
 	const providerNames = useMemo(
 		() => store.providers.map((p) => p.name),
@@ -1114,12 +1648,19 @@ function ModelProvidersPage() {
 	const customRows: ModelRow[] = [
 		...store.providers.flatMap((p) =>
 			p.models.map((m) => ({
+				edit: () =>
+					setEditingDetected({
+						model: m,
+						providerId: p.id,
+						providerName: p.name,
+					}),
 				key: `custom:${p.id}:${m.id}`,
 				model: m,
 				provider: p.name,
 			})),
 		),
 		...store.models.map((m) => ({
+			edit: () => setEditingManualModel(m),
 			key: `manual:${m.customId}`,
 			model: m,
 			provider: m.provider,
@@ -1129,10 +1670,6 @@ function ModelProvidersPage() {
 			},
 		})),
 	];
-
-	function hasKey(providerName: string): boolean {
-		return store.accounts.some((a) => a.provider === providerName);
-	}
 
 	function openAccountDialog(providerName: string) {
 		setAccountProvider(providerName);
@@ -1199,7 +1736,6 @@ function ModelProvidersPage() {
 									<TableHead className="max-w-[220px]">Provider</TableHead>
 									<TableHead className="max-w-[260px]">Base URL</TableHead>
 									<TableHead className="w-24">Models</TableHead>
-									<TableHead className="w-28">API key</TableHead>
 									<TableHead className="w-12 text-right">
 										<span className="sr-only">More actions</span>
 									</TableHead>
@@ -1235,18 +1771,11 @@ function ModelProvidersPage() {
 												{p.models.length === 1 ? "" : "s"}
 											</Badge>
 										</TableCell>
-										<TableCell className="w-28 whitespace-nowrap">
-											<Badge
-												className="whitespace-nowrap"
-												variant={hasKey(p.name) ? "success" : "outline"}
-											>
-												{hasKey(p.name) ? "API key set" : "no API key"}
-											</Badge>
-										</TableCell>
 										<TableCell className="w-12 text-right whitespace-nowrap">
 											<ProviderActions
 												baseUrl={p.baseUrl}
 												name={p.name}
+												onEdit={() => setEditingProvider(p)}
 												remove={() => {
 													removeProvider(p.id);
 													toast({
@@ -1321,6 +1850,7 @@ function ModelProvidersPage() {
 										<TableCell className="w-12 text-right whitespace-nowrap">
 											<AccountActions
 												label={a.label}
+												onEdit={() => setEditingAccount(a)}
 												remove={() => {
 													removeAccount(a.id);
 													toast({
@@ -1381,6 +1911,89 @@ function ModelProvidersPage() {
 				}}
 				open={accountOpen}
 				providerNames={providerNames}
+			/>
+			<EditProviderDialog
+				existingNames={existingNames}
+				onOpenChange={(next) => {
+					if (!next) setEditingProvider(null);
+				}}
+				onSave={(patch) => {
+					if (!editingProvider) return;
+					updateProvider(editingProvider.id, patch);
+					toast({
+						description: patch.name,
+						title: "Provider updated",
+					});
+					setEditingProvider(null);
+				}}
+				open={editingProvider !== null}
+				provider={editingProvider}
+			/>
+			<EditAccountDialog
+				account={editingAccount}
+				onOpenChange={(next) => {
+					if (!next) setEditingAccount(null);
+				}}
+				onSave={(patch) => {
+					if (!editingAccount) return;
+					updateAccount(editingAccount.id, patch);
+					toast({
+						description: patch.label,
+						title: "Account updated",
+					});
+					setEditingAccount(null);
+				}}
+				open={editingAccount !== null}
+				providerNames={providerNames}
+			/>
+			<EditModelDialog
+				allowProviderChange={true}
+				initial={editingManualModel}
+				onOpenChange={(next) => {
+					if (!next) setEditingManualModel(null);
+				}}
+				onSave={(patch) => {
+					if (!editingManualModel) return;
+					updateManualModel(editingManualModel.customId, patch);
+					toast({
+						description: patch.id,
+						title: "Model updated",
+					});
+					setEditingManualModel(null);
+				}}
+				open={editingManualModel !== null}
+				providerNames={providerNames}
+				title="Edit model"
+			/>
+			<EditModelDialog
+				allowProviderChange={false}
+				initial={
+					editingDetected
+						? {
+								...editingDetected.model,
+								provider: editingDetected.providerName,
+							}
+						: null
+				}
+				onOpenChange={(next) => {
+					if (!next) setEditingDetected(null);
+				}}
+				onSave={(patch) => {
+					if (!editingDetected) return;
+					updateDetectedModel(
+						editingDetected.providerId,
+						editingDetected.model.id,
+						patch,
+					);
+					toast({
+						description: patch.id,
+						title: "Model updated",
+					});
+					setEditingDetected(null);
+				}}
+				open={editingDetected !== null}
+				providerNames={providerNames}
+				title="Edit detected model"
 			/>
 		</div>
 	);

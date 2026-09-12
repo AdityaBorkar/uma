@@ -18,6 +18,12 @@ export const relations = defineRelations(schema, (r) => ({
 			to: r.user.id,
 		}),
 	},
+	commands: {
+		owner: r.one.user({
+			from: r.commands.userId,
+			to: r.user.id,
+		}),
+	},
 	connections: {
 		owner: r.one.user({
 			from: r.connections.userId,
@@ -162,6 +168,12 @@ export const relations = defineRelations(schema, (r) => ({
 		tasks: r.many.tasks({
 			from: r.signals.id,
 			to: r.tasks.signalId,
+		}),
+	},
+	subagents: {
+		owner: r.one.user({
+			from: r.subagents.userId,
+			to: r.user.id,
 		}),
 	},
 	taskLogs: {
