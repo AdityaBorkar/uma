@@ -1,1 +1,3 @@
-export const CLI_VERSION = "0.1.0";
+import pkg from "../../machine/package.json" with { type: "json" };
+
+export const CLI_VERSION = pkg.version;

@@ -58,65 +58,125 @@ export function isQuotaError(e: unknown): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Public sandbox port (SDK → CLI → mock selection lives in sandboxes/msb/driver.ts)
+// Sandbox handle (class-based port; SDK → CLI → mock selection lives in sandboxes/msb/driver.ts)
 // ---------------------------------------------------------------------------
 
-export async function createSandbox(
-	opts: CreateOpts,
-): Promise<{ name: string; id: string }> {
-	validateSandboxName(opts.name);
-	return (await driver()).create(opts);
-}
+/**
+ * Handle to one sandbox. `new Sandbox(name)` addresses an existing sandbox;
+ * `Sandbox.create(opts)` provisions one and returns its handle. Lifecycle and
+ * exec calls bind to the instance so callers stop threading names around.
+ */
+export class Sandbox {
+	/** Driver sandbox name (primary key for all driver ops). */
+	readonly name: string;
+	/** Runtime id when known from create; equals name for CLI/mock drivers. */
+	readonly id: string;
 
-export async function startSandbox(name: string): Promise<void> {
-	return (await driver()).start(name);
-}
+	constructor(name: string, id?: string) {
+		this.name = name;
+		this.id = id ?? name;
+	}
 
-export async function stopSandbox(name: string, force = true): Promise<void> {
-	return (await driver()).stop(name, force);
-}
+	/** Provision a sandbox and return its handle. Quota admission is the caller's job (snapshotQuota + quotaPreCheck). */
+	static async create(opts: CreateOpts): Promise<Sandbox> {
+		validateSandboxName(opts.name);
+		const { id } = await (await driver()).create(opts);
+		return new Sandbox(opts.name, id);
+	}
 
-export async function removeSandbox(name: string): Promise<void> {
-	return (await driver()).remove(name);
-}
+	static async list(): Promise<SandboxInfo[]> {
+		return (await driver()).list();
+	}
 
-export async function listSandboxes(): Promise<SandboxInfo[]> {
-	return (await driver()).list();
+	/** Per-sandbox pressure attribution; degrades to [] when the runtime is absent. */
+	static async metricsForPressure(): Promise<SandboxMetrics[]> {
+		try {
+			return await (await driver()).metrics();
+		} catch {
+			return [];
+		}
+	}
+
+	async start(): Promise<void> {
+		return (await driver()).start(this.name);
+	}
+
+	async stop(force = true): Promise<void> {
+		return (await driver()).stop(this.name, force);
+	}
+
+	async remove(): Promise<void> {
+		return (await driver()).remove(this.name);
+	}
+
+	/** Unstreamed exec inside the sandbox (git-binding + task runs). */
+	async exec(cmd: string, args: string[] = []): Promise<ExecResult> {
+		return (await driver()).exec(this.name, cmd, args);
+	}
+
+	/** Streaming exec (pipe mode, stdout/stderr separate) for execution logs. */
+	async execStream(
+		cmd: string,
+		args: string[],
+		onEvent: (stream: StreamName, data: string) => void,
+	): Promise<number> {
+		return (await driver()).execStream(this.name, cmd, args, onEvent);
+	}
 }
 
 /** Single home for running/total counts (daemon, task admission, heartbeat). */
 export async function snapshotQuota(): Promise<QuotaUsage> {
-	const sandboxes = await listSandboxes();
+	const sandboxes = await Sandbox.list();
 	return {
 		running: sandboxes.filter((s) => s.status === "running").length,
 		total: sandboxes.length,
 	};
 }
 
-/** Unstreamed exec inside the sandbox (git-binding + task runs). */
+// ---------------------------------------------------------------------------
+// Deprecated function facade — thin delegates kept for existing callers/tests.
+// Prefer the Sandbox class.
+// ---------------------------------------------------------------------------
+
+export async function createSandbox(
+	opts: CreateOpts,
+): Promise<{ name: string; id: string }> {
+	return Sandbox.create(opts);
+}
+
+export async function startSandbox(name: string): Promise<void> {
+	return new Sandbox(name).start();
+}
+
+export async function stopSandbox(name: string, force = true): Promise<void> {
+	return new Sandbox(name).stop(force);
+}
+
+export async function removeSandbox(name: string): Promise<void> {
+	return new Sandbox(name).remove();
+}
+
+export async function listSandboxes(): Promise<SandboxInfo[]> {
+	return Sandbox.list();
+}
+
 export async function execInSandbox(
 	name: string,
 	cmd: string,
 	args: string[] = [],
 ): Promise<ExecResult> {
-	return (await driver()).exec(name, cmd, args);
+	return new Sandbox(name).exec(cmd, args);
 }
 
-/** Streaming exec (pipe mode, stdout/stderr separate) for execution logs. */
 export async function execStreamInSandbox(
 	name: string,
 	cmd: string,
 	args: string[] = [],
 	onEvent: (stream: StreamName, data: string) => void,
 ): Promise<number> {
-	return (await driver()).execStream(name, cmd, args, onEvent);
+	return new Sandbox(name).execStream(cmd, args, onEvent);
 }
 
-/** Per-sandbox pressure attribution; degrades to [] when the runtime is absent. */
 export async function sandboxMetricsForPressure(): Promise<SandboxMetrics[]> {
-	try {
-		return await (await driver()).metrics();
-	} catch {
-		return [];
-	}
+	return Sandbox.metricsForPressure();
 }

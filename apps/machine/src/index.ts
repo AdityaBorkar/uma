@@ -4,7 +4,7 @@ import pc from "picocolors";
 
 import { type CliFlags, helpText, parseCli } from "./cli.ts";
 import { checkAll, resetAll } from "./config/mod.ts";
-import { runDaemon } from "./daemon.ts";
+import { Daemon } from "./daemon.ts";
 import { enroll } from "./enroll.ts";
 import {
 	daemonIntervalS,
@@ -13,10 +13,10 @@ import {
 	serverUrl,
 } from "./env.ts";
 import { executeTask } from "./execution.ts";
-import { freshStart } from "./git-binding.ts";
-import { readHistory } from "./heartbeat.ts";
+import { RepoBinding } from "./git-binding.ts";
+import { Heartbeat } from "./heartbeat.ts";
 import { Redactor } from "./redact.ts";
-import { listSandboxes, removeSandbox } from "./sandbox.ts";
+import { Sandbox } from "./sandbox.ts";
 import { performSync, syncExitCode } from "./sync.ts";
 import { CLI_VERSION } from "./version.ts";
 
@@ -100,11 +100,10 @@ async function cmdReset(flags: CliFlags, rest: string[]): Promise<number> {
 			return 0;
 		}
 		try {
-			await freshStart({
+			await new RepoBinding(sandbox).freshStart({
 				branch: flagString(flags, "branch"),
 				commit: flagString(flags, "commit"),
 				repoUrl: flagString(flags, "repo"),
-				sandboxName: sandbox,
 				taskId: flagString(flags, "task") ?? "task",
 			});
 			console.log(`fresh-start ${sandbox}: clean`);
@@ -144,7 +143,7 @@ async function cmdSync(flags: CliFlags): Promise<number> {
 
 async function cmdHistory(flags: CliFlags): Promise<number> {
 	const range = flagString(flags, "range") ?? "24h";
-	const rows = readHistory(range);
+	const rows = new Heartbeat().history(range);
 	printJsonOr(flags, rows, () => {
 		const table = humanTable([
 			pc.bold("ts"),
@@ -184,7 +183,7 @@ function colorSandboxStatus(status: string): string {
 async function cmdSandbox(flags: CliFlags, rest: string[]): Promise<number> {
 	const sub = rest[0] ?? "list";
 	if (sub === "list") {
-		const list = await listSandboxes();
+		const list = await Sandbox.list();
 		printJsonOr(flags, list, () => {
 			const table = humanTable([
 				pc.bold("id"),
@@ -205,13 +204,13 @@ async function cmdSandbox(flags: CliFlags, rest: string[]): Promise<number> {
 		return 0;
 	}
 	if (sub === "prune") {
-		const list = await listSandboxes();
+		const list = await Sandbox.list();
 		let n = 0;
 		for (const s of list) {
 			if (s.status === "stopped") {
 				if (flagBool(flags, "dry-run")) console.log(`would prune ${s.id}`);
 				else {
-					await removeSandbox(s.id);
+					await new Sandbox(s.id).remove();
 					console.log(`pruned ${s.id}`);
 				}
 				n++;
@@ -312,8 +311,8 @@ async function main(): Promise<number> {
 					? daemonIntervalS(flags.interval)
 					: undefined;
 			console.log(`uma-machine daemon ${CLI_VERSION} starting...`);
-			await runDaemon({ intervalS });
-			// runDaemon installs SIGINT/SIGTERM handlers; keep alive.
+			await new Daemon({ intervalS }).run();
+			// Daemon.run installs SIGINT/SIGTERM handlers; keep alive.
 			await new Promise(() => {});
 			return 0;
 		}

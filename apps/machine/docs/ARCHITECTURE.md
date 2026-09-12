@@ -7,10 +7,10 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 `src/` ownership:
 
 - `index.ts`: CLI dispatcher (composition root edge) + exit codes. `cli.ts`: arg parsing + help text.
-- `daemon.ts`: tick loop + ws dispatch (assign/cancel/reset-config) + TTL reap. `ws-client.ts`: reconnecting ws.
+- `daemon.ts`: `Daemon` class — tick loop + ws dispatch (assign/cancel/reset-config) + TTL reap. `ws-client.ts`: reconnecting ws.
 - `enroll.ts`: device flow + `identity.json` + `limits.json` + SQLite init + systemd writer (Ubuntu pre-pull lives in `install.sh` + `programs` reset best-effort, not here).
-- `heartbeat.ts`: host (`/proc`, `df`) + SDK collectors + `scopeHint` + persist-then-send + `history` query.
-- `sandbox.ts`: facade over `sandboxes/msb/driver.ts` (SDK → CLI → mock; fails closed when no runtime is installed) + `sandboxes/msb/sdk.ts`, `sandboxes/msb/cli.ts`, `sandboxes/msb/mock.ts`, `sandboxes/msb/shared.ts`, `sandboxes/msb/types.ts`, `sandboxes/msb/driver.ts` (selector + `driverKind` diagnostics); create/start/stop/remove/list/exec/execStream/metrics. `git-binding.ts`: clone/fetch/checkout/fresh-start via `execInSandbox` (driver-agnostic, not SDK-only).
+- `heartbeat.ts`: `Heartbeat` class — host (`/proc`, `df`) + SDK collectors + `scopeHint` + persist-then-send + `history` query.
+- `sandbox.ts`: facade over `sandboxes/msb/driver.ts` (SDK → CLI → mock; fails closed when no runtime is installed) + `sandboxes/msb/sdk.ts`, `sandboxes/msb/cli.ts`, `sandboxes/msb/mock.ts`, `sandboxes/msb/shared.ts`, `sandboxes/msb/types.ts`, `sandboxes/msb/driver.ts` (selector + `driverKind` diagnostics); `Sandbox` class (create/start/stop/remove/list/exec/execStream/metrics) + `snapshotQuota`. `git-binding.ts`: `RepoBinding` class — clone/fetch/checkout/fresh-start via `Sandbox.exec` (driver-agnostic, not SDK-only).
 - `execution.ts`: Sandbox Execution module: admission (quota snapshot + create under an internal lock; server limits from `assign.limits`) → claim → start → bind → exec-stream → task-done → stop; every outbound v1 frame via injected `emit`; failures free the sandbox; cancel via `stop --force` through in-flight state.
 - `sync.ts` + `config/mod.ts` + `config/desired.ts` (desired-state cache load/save) + `config/<key>.ts` (9 keys in `ORDERED_KEYS` order; file `git.ts` exports KEY `git-login`, file `skills.ts` exports KEY `skills`): check/reset + receipts.
 - `utils/db.ts` (store facade) + `utils/client.ts` (open/migrate/WAL) + `schemas/db/schema.ts` (tables, re-exported via `schemas/db/index.ts`) + `schemas/db/schema-sync.ts` (runtime schema sync: DDL computed on the go from the drizzle schema, applied additively — `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS` — to the XDG state.db in one transaction; `PRAGMA user_version` mirrors the schema fingerprint): SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`. `fs-utils.ts`: `chmod0600`, parent-dir helpers.
@@ -26,7 +26,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 Runtime pieces and their processes:
 
 - **CLI**: one-shot commands `enroll|daemon|check|reset|sync|history|sandbox|run|version` (`src/index.ts`, `src/cli.ts`). Exit `0` ok, `2` drifted/partial, `1` error, `3` upgrade-required.
-- **Daemon**: `runDaemon` (`src/daemon.ts`): heartbeat tick (default 30s) + ws loop; assigns delegate to `executeTask`, cancels to `cancelTask`; opportunistic reap of `stopped` older than `UMA_SANDBOX_TTL_S` (1h).
+- **Daemon**: `Daemon.run()` (`src/daemon.ts`): heartbeat tick (default 30s) + ws loop; assigns delegate to `executeTask`, cancels to `cancelTask`; opportunistic reap of `stopped` older than `UMA_SANDBOX_TTL_S` (1h).
 - **WsClient**: one ws per machine, Bearer auth, jittered backoff (`src/ws-client.ts`), logical `heartbeat|claim|logs|config` channels multiplexed as v1 JSON frames (no explicit channel field on the wire).
 - **HeartbeatCollector**: `collectHostMetrics` + `listSandboxes` + `sandboxMetricsForPressure` → `buildHeartbeat` → `persistHeartbeat`.
 - **SandboxDrivers**: `driver()` selects `sdk` → `cli` → fail closed (`src/sandboxes/msb/driver.ts`); mock only when `MSB_MOCK`/`UMA_MSB_MOCK` is set, file-backed (`mock-sandboxes.json` + `msb-root-meta/<name>/meta.json` under `dataDir`, tests/dev). SDK = streaming + `secretEnv`; CLI = `msb create/start/stop --force/remove --force/exec`. True streaming is SDK-only; CLI/mock funnel through capture.
@@ -63,7 +63,7 @@ Inbound (driven by outside):
 Outbound (driven by us, faked in tests):
 
 - Server port: ws frames + `POST /api/rpc/machines/claim` (`claimTask` in `src/execution.ts`, injectable via `ExecutionDeps.claim`; non-ok frees the sandbox).
-- Sandbox port: `createSandbox/startSandbox/stopSandbox/removeSandbox/listSandboxes/snapshotQuota/execInSandbox/execStreamInSandbox/sandboxMetricsForPressure` (`src/sandbox.ts`, backed by the `SandboxDriver` port).
+- Sandbox port: `Sandbox` class (`create`/`start`/`stop`/`remove`/`exec`/`execStream`; static `list`/`metricsForPressure`) + `snapshotQuota` (`src/sandbox.ts`, backed by the `SandboxDriver` port).
 - Store port: `withDb` + `insert*/query*/persist*/record*` (`src/utils/db.ts`, `src/utils/client.ts`, `src/schemas/db/schema.ts`).
 - Clock/Random port: `Date.now()`, `customAlphabet` (names), `setInterval` (tick); `evaluateScopeHint` is pure and clock-free (server owns sustain/cooldown).
 - Platform port: `runCapture` (process spawn), `/proc` + `df` (metrics), `loginctl/systemctl` (systemd).

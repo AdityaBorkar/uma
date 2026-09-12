@@ -1,6 +1,10 @@
 # TODO
 
+Reorganize the code, verify the commands and RPC
 
+Connect machine to the server
+/debug
+- Ensure a Sandbox Server to test the connection and execute anything arbitrary and ensuring results.
 
 bun dev
 Pulumi postgres database

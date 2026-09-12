@@ -66,8 +66,8 @@ HTTP (after `uma mcp start --port 3456`):
 ## Layout
 
 - `src/index.ts` — CLI dispatcher (composition root edge). `src/cli.ts` — arg
-  parsing + help text. `src/version.ts` — `CLI_VERSION` (keep in sync with
-  `package.json`).
+  parsing + help text. `src/version.ts` — `CLI_VERSION` (derived from
+  `apps/machine/package.json`).
 - `src/docs.ts` — docs corpus: root resolution, `listDocFiles`, `readDoc`,
   `queryDocs`. Pure filesystem, no MCP dependency — shared by the CLI and the
   server.

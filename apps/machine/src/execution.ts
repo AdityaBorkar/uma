@@ -11,20 +11,15 @@ import pRetry, { AbortError } from "p-retry";
 import { buildSecretSpecs, exportProviderEnv } from "./config/providers.ts";
 import { loadIdentity } from "./enroll.ts";
 import { stateDbPath } from "./env.ts";
-import { ensureBinding, freshStart } from "./git-binding.ts";
+import { RepoBinding } from "./git-binding.ts";
 import { resolveLimits } from "./limits.ts";
 import { assertMachineFrame, quotaRefusalFrames } from "./protocol.ts";
 import { Redactor, splitChunks } from "./redact.ts";
 import {
-	createSandbox,
-	execStreamInSandbox,
-	listSandboxes,
 	QuotaExceededError,
 	quotaPreCheck,
-	removeSandbox,
+	Sandbox,
 	snapshotQuota,
-	startSandbox,
-	stopSandbox,
 } from "./sandbox.ts";
 import {
 	bufferLog,
@@ -323,13 +318,13 @@ export async function executeTask(
 	// Server limits live on the assign frame; resolveLimits keeps file/default precedence.
 	const limits = resolveLimits(assign.limits ?? null);
 
-	let created: { id: string; name: string };
+	let created: Sandbox;
 	try {
 		created = await withAdmission(async () => {
 			const { running, total } = await snapshotQuota();
 			quotaPreCheck(running, total, limits);
 			exportProviderEnv(storedKeys);
-			const sb = await createSandbox({
+			const sb = await Sandbox.create({
 				name: sandboxNameFor(assign.taskId),
 				projectId: assign.projectId,
 				secrets: secretSpecs,
@@ -411,7 +406,7 @@ export async function executeTask(
 		// Replay any SQLite-buffered logs for this task before live streaming.
 		resendBufferedLogs(assign.taskId, identity.machineId, redactor, deps.emit);
 
-		await startSandbox(sandboxId);
+		await created.start();
 		recordSandboxEventBestEffort(stateDbPath(), {
 			event: "running",
 			sandboxId,
@@ -420,15 +415,15 @@ export async function executeTask(
 
 		// Start then bind: binding is verified before exec
 		// (start -> ensureBinding -> exec).
+		const repo = new RepoBinding(sandboxId);
 		const binding = {
 			branch: assign.branch,
 			commit: assign.commit,
 			repoUrl: assign.repoUrl ?? "",
-			sandboxName: sandboxId,
 			taskId: assign.taskId,
 		};
-		await ensureBinding(binding);
-		if (assign.freshStart) await freshStart(binding);
+		await repo.ensure(binding);
+		if (assign.freshStart) await repo.freshStart(binding);
 
 		const flush = makeFlush(
 			assign.taskId,
@@ -462,7 +457,7 @@ export async function executeTask(
 				taskId: assign.taskId,
 			});
 			try {
-				await stopSandbox(sandboxId, true);
+				await created.stop(true);
 				recordSandboxEventBestEffort(stateDbPath(), {
 					event: "stopped",
 					sandboxId,
@@ -485,7 +480,7 @@ export async function executeTask(
 
 		let code = 1;
 		try {
-			code = await execStreamInSandbox(sandboxId, bin, args, flush);
+			code = await created.execStream(bin, args, flush);
 		} catch (e) {
 			if (isCancelled(assign.taskId)) {
 				terminal = true;
@@ -525,7 +520,7 @@ export async function executeTask(
 
 		// Idle stopped for TTL reap (reap owns removal; never remove here).
 		try {
-			await stopSandbox(sandboxId, true);
+			await created.stop(true);
 			recordSandboxEventBestEffort(stateDbPath(), {
 				event: "stopped",
 				sandboxId,
@@ -548,8 +543,8 @@ export async function executeTask(
 		inFlight.delete(assign.taskId);
 		// Failure cleanup: an unclaimed/unstarted sandbox must not eat quota.
 		if (!terminal) {
-			await stopSandbox(sandboxId, true).catch(() => {});
-			await removeSandbox(sandboxId).catch(() => {});
+			await created.stop(true).catch(() => {});
+			await created.remove().catch(() => {});
 			recordSandboxEventBestEffort(stateDbPath(), {
 				event: "destroyed",
 				sandboxId,
@@ -567,7 +562,7 @@ export async function cancelTask(taskId: string): Promise<boolean> {
 		// Fallback: resolve via sandbox labels (task.id) so cancels work even if
 		// the daemon restarted and lost its in-flight state.
 		try {
-			const all = await listSandboxes();
+			const all = await Sandbox.list();
 			sandboxId = all.find((s) => s.taskId === taskId)?.id;
 		} catch {
 			// ignore
@@ -575,7 +570,7 @@ export async function cancelTask(taskId: string): Promise<boolean> {
 	}
 	if (!sandboxId) return false;
 	if (flight) flight.cancelled = true;
-	await stopSandbox(sandboxId, true);
+	await new Sandbox(sandboxId).stop(true);
 	recordSandboxEventBestEffort(stateDbPath(), {
 		event: "stopped",
 		sandboxId,
