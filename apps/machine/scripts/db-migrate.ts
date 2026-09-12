@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { migrate } from "../src/db.ts";
-/** Apply pending embedded migrations to state.db (manual ops path). */
+/** Converge state.db to the schema (manual ops path). */
 import { stateDbPath } from "../src/env.ts";
 
 const target = process.argv[2] ?? stateDbPath();

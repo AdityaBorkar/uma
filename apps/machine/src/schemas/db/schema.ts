@@ -9,10 +9,9 @@ import {
 /**
  * Drizzle schema for the device-side SQLite state.db.
  *
- * Source of truth for migrations: `drizzle-kit generate` diffs this file
- * into `./drizzle/<timestamp>_<name>/migration.sql`, and
- * `bun run db:codegen` embeds that SQL into `src/db/migrations.ts`
- * (`bun run db:generate` does both — never hand-edit the embedded SQL).
+ * Single source of truth for the database layout: no migration files exist —
+ * `src/db/schema-sync.ts` computes the DDL from these table definitions at
+ * runtime and converges each state.db additively on open.
  *
  * Tables:
  * - heartbeats(ts PK, cpu/ram/disk REAL, pids/sandboxes/config_version/quota_usage TEXT)

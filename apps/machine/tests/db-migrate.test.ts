@@ -1,14 +1,14 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { LATEST_VERSION, MIGRATIONS_JOURNAL } from "../src/db/migrations.ts";
+import { currentSchemaVersion } from "../src/db/schema-sync.ts";
 import {
 	countHeartbeats,
 	insertHeartbeat,
-	latestMigrationVersion,
+	latestSchemaVersion,
 	migrate,
 	openDb,
 } from "../src/db.ts";
@@ -49,12 +49,12 @@ function tableNames(path: string): string[] {
 	}
 }
 
-describe("db migrations (embedded, XDG state.db)", () => {
-	test("fresh openDb creates schema + stamps user_version", () => {
+describe("db schema sync (computed from src/db/schema.ts, XDG state.db)", () => {
+	test("fresh openDb creates schema + stamps schema fingerprint", () => {
 		const db = openDb(dbPath);
 		db.close();
-		expect(userVersion(dbPath)).toBe(LATEST_VERSION);
-		expect(userVersion(dbPath)).toBe(latestMigrationVersion());
+		expect(userVersion(dbPath)).toBe(currentSchemaVersion());
+		expect(userVersion(dbPath)).toBe(latestSchemaVersion());
 		const tables = tableNames(dbPath);
 		for (const t of [
 			"config_receipts",
@@ -87,8 +87,8 @@ describe("db migrations (embedded, XDG state.db)", () => {
 		expect(userVersion(dbPath)).toBe(v1);
 	});
 
-	test("legacy pre-migration db (tables, version 0) upgrades without data loss", () => {
-		// Simulate a pre-drizzle state.db: tables exist, user_version untouched.
+	test("legacy pre-sync db (tables, version 0) upgrades without data loss", () => {
+		// Simulate a legacy state.db: tables exist, user_version untouched.
 		const raw = new Database(dbPath, { create: true });
 		raw.exec(`
       CREATE TABLE heartbeats(ts INTEGER PRIMARY KEY, cpu REAL NOT NULL, ram REAL NOT NULL, disk REAL NOT NULL, pids TEXT NOT NULL DEFAULT '[]', sandboxes TEXT NOT NULL DEFAULT '[]', config_version TEXT NOT NULL DEFAULT 'v1', quota_usage TEXT NOT NULL DEFAULT '{}');
@@ -101,7 +101,7 @@ describe("db migrations (embedded, XDG state.db)", () => {
 		const db = openDb(dbPath);
 		expect(countHeartbeats(db)).toBe(1);
 		db.close();
-		expect(userVersion(dbPath)).toBe(LATEST_VERSION);
+		expect(userVersion(dbPath)).toBe(currentSchemaVersion());
 		const tables = tableNames(dbPath);
 		for (const t of [
 			"config_receipts",
@@ -114,43 +114,30 @@ describe("db migrations (embedded, XDG state.db)", () => {
 		}
 	});
 
+	test("missing columns are added additively without data loss", () => {
+		// Older schema: heartbeats without quota_usage.
+		const raw = new Database(dbPath, { create: true });
+		raw.exec(`
+      CREATE TABLE heartbeats(ts INTEGER PRIMARY KEY, cpu REAL NOT NULL, ram REAL NOT NULL, disk REAL NOT NULL, pids TEXT NOT NULL DEFAULT '[]', sandboxes TEXT NOT NULL DEFAULT '[]', config_version TEXT NOT NULL DEFAULT 'v1');
+      INSERT INTO heartbeats(ts, cpu, ram, disk, pids, sandboxes, config_version) VALUES (42, 1, 2, 3, '[]', '[]', 'v1');
+    `);
+		raw.close();
+
+		const db = openDb(dbPath);
+		expect(countHeartbeats(db)).toBe(1);
+		const col = new Database(dbPath, { readonly: true })
+			.query("PRAGMA table_info(heartbeats);")
+			.all() as { name: string }[];
+		expect(col.map((c) => c.name)).toContain("quota_usage");
+		db.close();
+	});
+
 	test("migrate() targets any XDG-style path", () => {
 		const nested = join(dir, "sub", "state.db");
 		migrate(nested);
-		expect(userVersion(nested)).toBe(LATEST_VERSION);
+		expect(userVersion(nested)).toBe(latestSchemaVersion());
 		// Second run is a no-op success.
 		migrate(nested);
-		expect(userVersion(nested)).toBe(LATEST_VERSION);
-	});
-
-	test("drizzle journal tracks applied migrations", () => {
-		const db = openDb(dbPath);
-		db.close();
-		const raw = new Database(dbPath, { readonly: true });
-		try {
-			const rows = raw
-				.query("SELECT name FROM __drizzle_migrations ORDER BY name;")
-				.all() as { name: string }[];
-			expect(rows.length).toBe(LATEST_VERSION);
-			expect(rows.map((r) => r.name)).toEqual(
-				MIGRATIONS_JOURNAL.map((m) => m.name),
-			);
-		} finally {
-			raw.close();
-		}
-	});
-
-	test("embedded journal matches drizzle-kit output (run bun run db:codegen)", () => {
-		const drizzleDir = join(import.meta.dir, "..", "drizzle");
-		const folders = readdirSync(drizzleDir, { withFileTypes: true })
-			.filter(
-				(e) =>
-					e.isDirectory() &&
-					existsSync(join(drizzleDir, e.name, "migration.sql")),
-			)
-			.map((e) => e.name)
-			.sort();
-		expect(MIGRATIONS_JOURNAL.map((m) => m.name)).toEqual(folders);
-		expect(LATEST_VERSION).toBe(folders.length);
+		expect(userVersion(nested)).toBe(latestSchemaVersion());
 	});
 });

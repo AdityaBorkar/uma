@@ -2,10 +2,13 @@ import { existsSync } from "node:fs";
 import { Database } from "bun:sqlite";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate as drizzleMigrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { chmod0600, ensureParentDir } from "../fs-utils.ts";
-import { LATEST_VERSION, MIGRATIONS_JOURNAL } from "./migrations.ts";
+import {
+	currentSchemaVersion,
+	stampSchemaVersion,
+	syncSchema,
+} from "./schema-sync.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
 export type Db = DrizzleDb;
@@ -38,25 +41,23 @@ function applyPragmas(raw: Database): void {
 }
 
 /**
- * Apply pending embedded migrations to the XDG state.db.
+ * Converge state.db to the drizzle schema (`src/db/schema.ts`) on open.
  *
- * The machine has no repo checkout (compiled single binary), so the SQL is
- * embedded in the bundle: `src/db/migrations.ts` is generated from
- * drizzle-kit's `./drizzle` folder (`bun run db:codegen`) and applied here
- * via drizzle-orm's embedded-journal mode — no migration folder is read at
- * runtime. Applied migrations are tracked in the `__drizzle_migrations`
- * table inside the database file itself; each migration applies atomically,
- * so a crash replays the same migration. `PRAGMA user_version` mirrors the
- * applied count for ops introspection.
+ * No migration files exist: the DDL is computed on the go from the schema and
+ * applied additively (CREATE TABLE IF NOT EXISTS / ADD COLUMN / CREATE INDEX
+ * IF NOT EXISTS) by `syncSchema` — see `db/schema-sync.ts`. Nothing is
+ * destructive, each open runs in one transaction, and a crash replays the
+ * sync. `PRAGMA user_version` mirrors the schema fingerprint for ops
+ * introspection.
  */
-function applyMigrations(db: DrizzleDb, raw: Database): void {
-	drizzleMigrate(db, { migrationsJournal: MIGRATIONS_JOURNAL });
-	raw.exec(`PRAGMA user_version = ${LATEST_VERSION};`);
+function applyMigrations(raw: Database): void {
+	syncSchema(raw);
+	stampSchemaVersion(raw);
 }
 
-/** Highest embedded migration version (for tests/ops introspection). */
-export function latestMigrationVersion(): number {
-	return LATEST_VERSION;
+/** Schema fingerprint stamped into `PRAGMA user_version` after apply. */
+export function latestSchemaVersion(): number {
+	return currentSchemaVersion();
 }
 
 /**
@@ -81,7 +82,7 @@ export function openDb(
 		close: () => void;
 	};
 	if (!readonly) {
-		applyMigrations(db, raw);
+		applyMigrations(raw);
 		chmodDb0600(dbPath);
 	}
 	db.close = () => {
@@ -94,7 +95,7 @@ export function openDb(
 	return db;
 }
 
-/** Apply pending embedded migrations to an existing path (enroll/ops path). */
+/** Apply pending schema sync to an existing path (enroll/ops path). */
 export function migrate(dbPath: string): void {
 	const db = openDb(dbPath, false);
 	try {
