@@ -10,7 +10,9 @@ export class McpKey extends BaseConfigKey {
 	 * The active coding-agent adapter owns the MCP probe (CLI substring probe
 	 * for opencode, mcp.json diff for omp); probe failures surface as drift.
 	 */
-	constructor(private readonly agent: CodingAgentAdapter = activeCodingAgent()) {
+	constructor(
+		private readonly agent: CodingAgentAdapter = activeCodingAgent(),
+	) {
 		super();
 	}
 

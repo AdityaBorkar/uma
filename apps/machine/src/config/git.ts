@@ -7,7 +7,8 @@ export class GitLoginKey extends BaseConfigKey {
 
 	async check(): Promise<CheckResult> {
 		const r = await runCapture("gh", ["auth", "status"], 8000);
-		if (!r) return { detail: "gh binary missing", drifted: true, key: this.key };
+		if (!r)
+			return { detail: "gh binary missing", drifted: true, key: this.key };
 		if (r.code !== 0) {
 			return {
 				detail: `gh auth status failed: ${(r.stderr || r.stdout).slice(0, 300)}`,

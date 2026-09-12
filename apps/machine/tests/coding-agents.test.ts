@@ -76,7 +76,9 @@ describe("adapter data pattern", () => {
 			}),
 		);
 		const { OmpAdapter } = await import("../src/coding-agents/omp/index.ts");
+		// "b" is in disabledServers => not configured => missing; same for "c".
 		expect(await new OmpAdapter().missingMcpServers(["a", "b", "c"])).toEqual([
+			"b",
 			"c",
 		]);
 	});
@@ -91,9 +93,9 @@ describe("adapter data pattern", () => {
 		mkdirSync(agentDir, { recursive: true });
 		writeFileSync(join(agentDir, "mcp.json"), "{nope");
 		const { OmpAdapter } = await import("../src/coding-agents/omp/index.ts");
-		await expect(
-			new OmpAdapter().missingMcpServers(["a"]),
-		).rejects.toThrow(/mcp.json unreadable/);
+		await expect(new OmpAdapter().missingMcpServers(["a"])).rejects.toThrow(
+			/mcp.json unreadable/,
+		);
 	});
 
 	test("files key routes agent-owned templates via the active adapter", async () => {

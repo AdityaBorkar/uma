@@ -93,9 +93,7 @@ export class SystemdKey extends BaseConfigKey {
 			// 1. lingering (owned by check/reset/sync). Scoped to our user; rootless
 			// containers without loginctl fail here and fall through to unit write.
 			const user = process.env.USER ?? process.env.LOGNAME ?? "";
-			const lingerArgs = user
-				? ["enable-linger", user]
-				: ["enable-linger"];
+			const lingerArgs = user ? ["enable-linger", user] : ["enable-linger"];
 			await runCapture("loginctl", lingerArgs, 8000);
 			// 2. write unit
 			writeUnitFile();

@@ -21,7 +21,9 @@ export class FilesKey extends BaseConfigKey {
 	 * opencode.json via the OpenCode layout, mcp.json/config.yml via the omp
 	 * layout); uma-owned files keep the historic layout.
 	 */
-	constructor(private readonly agent: CodingAgentAdapter = activeCodingAgent()) {
+	constructor(
+		private readonly agent: CodingAgentAdapter = activeCodingAgent(),
+	) {
 		super();
 	}
 
@@ -86,8 +88,7 @@ export class FilesKey extends BaseConfigKey {
 			};
 		}
 		const { names, templates } = parsed;
-		if (names.length === 0)
-			return { changed: false, key: this.key, ok: true };
+		if (names.length === 0) return { changed: false, key: this.key, ok: true };
 		const dry = await this.maybeDryRun(opts);
 		if (dry) return dry;
 		try {

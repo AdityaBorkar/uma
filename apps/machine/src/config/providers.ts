@@ -71,13 +71,7 @@ export class ProvidersKey extends BaseConfigKey {
 			withDb(stateDbPath(), false, (db) => {
 				for (const k of keys) {
 					if (!k.provider || !k.key) continue;
-					setProviderKey(
-						db,
-						k.provider,
-						fingerprint(k.key),
-						k.key,
-						Date.now(),
-					);
+					setProviderKey(db, k.provider, fingerprint(k.key), k.key, Date.now());
 				}
 			});
 			return { changed: true, key: this.key, ok: true };
