@@ -32,7 +32,9 @@ const command = program.args;
 const options = program.opts();
 
 try {
-	const PROJECT_DIR = resolve(import.meta.dir, "../../");
+	// Repo root (where Pulumi.yaml lives). run-command.ts lives in apps/infra/utils,
+	// so that's three levels up. Pulumi would walk up on its own, but be explicit.
+	const PROJECT_DIR = resolve(import.meta.dir, "../../../");
 
 	const passphrase =
 		process.env.PULUMI_CONFIG_PASSPHRASE ??
@@ -91,7 +93,10 @@ try {
 
 	log.step(`${options.stack} $ ${command.join(" ")}`);
 	const child = spawn([commandName, ...commandArgs], {
-		cwd: PROJECT_DIR,
+		// Run the command in the caller's working directory (e.g. apps/web for
+		// `bun run dev`), not PROJECT_DIR — PROJECT_DIR is only for the Pulumi
+		// config lookup above.
+		cwd: process.cwd(),
 		env: { ...process.env, ...env },
 		stdio: ["inherit", "inherit", "inherit"],
 	});

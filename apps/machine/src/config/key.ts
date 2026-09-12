@@ -1,5 +1,5 @@
 import type { CheckResult, ResetOptions, ResetResult } from "./desired.ts";
-import { loadDesiredResult, type DesiredState } from "./desired.ts";
+import { type DesiredState, loadDesiredResult } from "./desired.ts";
 
 /**
  * Uniform contract for one §7 config key. The ordered registry in mod.ts

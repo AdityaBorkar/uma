@@ -7,6 +7,9 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
 const config = defineConfig({
+	build: {
+		outDir: ".output",
+	},
 	plugins: [
 		devtools(),
 		nitro({
@@ -17,16 +20,13 @@ const config = defineConfig({
 		viteReact(),
 		babel({ presets: [reactCompilerPreset()] }),
 	],
-	build: {
-		outDir: ".output",
-	},
-	server: {
-		port: 3000,
-		strictPort: true,
-		host: "0.0.0.0",
-	},
 	resolve: {
 		tsconfigPaths: true,
+	},
+	server: {
+		host: "0.0.0.0",
+		port: 3000,
+		strictPort: true,
 	},
 });
 
