@@ -1,15 +1,15 @@
 import type { Limits, QuotaUsage, SandboxInfo } from "@uma/orpc-contract";
 
-import { driver } from "./sandbox/driver.ts";
+import { driver } from "./sandboxes/msb/driver.ts";
 import type {
 	CreateOpts,
 	ExecResult,
 	SandboxMetrics,
 	SecretSpec,
 	StreamName,
-} from "./sandbox/types.ts";
+} from "./sandboxes/msb/types.ts";
 
-export { driverKind } from "./sandbox/driver.ts";
+export { driverKind } from "./sandboxes/msb/driver.ts";
 export type { CreateOpts, ExecResult, SecretSpec, StreamName };
 
 const SANDBOX_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,127}$/;
@@ -58,7 +58,7 @@ export function isQuotaError(e: unknown): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Public sandbox port (SDK → CLI → mock selection lives in sandbox/driver.ts)
+// Public sandbox port (SDK → CLI → mock selection lives in sandboxes/msb/driver.ts)
 // ---------------------------------------------------------------------------
 
 export async function createSandbox(

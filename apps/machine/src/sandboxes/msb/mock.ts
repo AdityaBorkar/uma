@@ -5,7 +5,7 @@ import type { SandboxInfo } from "@uma/orpc-contract";
 import { nanoid } from "nanoid";
 import writeFileAtomic from "write-file-atomic";
 
-import { dataDir } from "../env.ts";
+import { dataDir } from "../../env.ts";
 import type {
 	CreateOpts,
 	ExecResult,

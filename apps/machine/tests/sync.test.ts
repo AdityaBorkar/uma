@@ -33,7 +33,7 @@ afterEach(() => {
 describe("sync (Perform Sync)", () => {
 	test("dry-run previews without persisting receipts", async () => {
 		const { performSync } = await import("../src/sync.ts");
-		const { openDb, latestReceipts } = await import("../src/db.ts");
+		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { existsSync } = await import("node:fs");
 		const { receipts } = await performSync({ dryRun: true });
 		expect(receipts.length).toBe(9);
@@ -51,7 +51,7 @@ describe("sync (Perform Sync)", () => {
 
 	test("real sync persists per-key receipts", async () => {
 		const { performSync } = await import("../src/sync.ts");
-		const { openDb, latestReceipts } = await import("../src/db.ts");
+		const { openDb, latestReceipts } = await import("../src/utils/db.ts");
 		const { receipts } = await performSync({ dryRun: false });
 		expect(receipts.length).toBe(9);
 		const db = openDb(process.env.UMA_STATE_DB as string, true);
@@ -98,8 +98,10 @@ describe("db aux retention + reap age", () => {
 			pruneAuxTables,
 			latestReceipts,
 			bufferedLogCount,
-		} = await import("../src/db.ts");
-		const { sandboxEvents, logBuffer } = await import("../src/db/schema.ts");
+		} = await import("../src/utils/db.ts");
+		const { sandboxEvents, logBuffer } = await import(
+			"../src/schemas/db/schema.ts"
+		);
 		const { count, asc } = await import("drizzle-orm");
 		const db = openDb(join(dir, "aux.db"));
 		const now = Date.now();
@@ -135,7 +137,7 @@ describe("db aux retention + reap age", () => {
 
 	test("lastSandboxEventTs tracks latest event per sandbox", async () => {
 		const { openDb, insertSandboxEvent, lastSandboxEventTs } = await import(
-			"../src/db.ts"
+			"../src/utils/db.ts"
 		);
 		const db = openDb(join(dir, "ev.db"));
 		expect(lastSandboxEventTs(db, "nope")).toBeNull();

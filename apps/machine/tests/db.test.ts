@@ -19,7 +19,7 @@ import {
 	queryHistory,
 	setProviderKey,
 	vacuumRetention,
-} from "../src/db.ts";
+} from "../src/utils/db.ts";
 
 let dir: string;
 let dbPath: string;

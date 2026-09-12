@@ -1,4 +1,4 @@
-import { msbPath } from "../env.ts";
+import { msbPath } from "../../env.ts";
 import { cliDriver } from "./cli.ts";
 import { mockDriver, useMock } from "./mock.ts";
 import { sdkDriver } from "./sdk.ts";

@@ -14,9 +14,9 @@ import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 
 import { writeUnitFile } from "./config/systemd.ts";
-import { migrate } from "./db.ts";
 import { identityPath, limitsPath, stateDbPath } from "./env.ts";
 import { ensureParentDir, saveJson0600 } from "./fs-utils.ts";
+import { migrate } from "./utils/db.ts";
 
 export const IdentitySchema = z.object({
 	enrolledAt: z.number().int(),

@@ -9,14 +9,6 @@ import { customAlphabet } from "nanoid";
 import pRetry, { AbortError } from "p-retry";
 
 import { buildSecretSpecs, exportProviderEnv } from "./config/providers.ts";
-import {
-	bufferLog,
-	deleteLogBufferThrough,
-	peekLogBuffer,
-	readProviderKeys,
-	recordSandboxEventBestEffort,
-	withDb,
-} from "./db.ts";
 import { loadIdentity } from "./enroll.ts";
 import { stateDbPath } from "./env.ts";
 import { ensureBinding, freshStart } from "./git-binding.ts";
@@ -34,6 +26,14 @@ import {
 	startSandbox,
 	stopSandbox,
 } from "./sandbox.ts";
+import {
+	bufferLog,
+	deleteLogBufferThrough,
+	peekLogBuffer,
+	readProviderKeys,
+	recordSandboxEventBestEffort,
+	withDb,
+} from "./utils/db.ts";
 
 /** Terminal state of one Sandbox Execution (CONTEXT.md: Execution Outcome). */
 export type ExecutionOutcome =

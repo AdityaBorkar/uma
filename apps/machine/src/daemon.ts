@@ -4,18 +4,18 @@ import ms from "ms";
 
 import { loadDesired, saveDesired } from "./config/desired.ts";
 import { resetAll } from "./config/mod.ts";
-import {
-	lastSandboxEventTsBatch,
-	persistReceiptsBestEffort,
-	recordSandboxEventBestEffort,
-	withDb,
-} from "./db.ts";
 import { loadIdentity } from "./enroll.ts";
 import { daemonIntervalS, sandboxTtlMs, stateDbPath } from "./env.ts";
 import { cancelTask, executeTask } from "./execution.ts";
 import { buildHeartbeat, persistHeartbeat } from "./heartbeat.ts";
 import { Redactor } from "./redact.ts";
 import { listSandboxes, removeSandbox, snapshotQuota } from "./sandbox.ts";
+import {
+	lastSandboxEventTsBatch,
+	persistReceiptsBestEffort,
+	recordSandboxEventBestEffort,
+	withDb,
+} from "./utils/db.ts";
 import { CLI_VERSION } from "./version.ts";
 import { connectWithBackoff } from "./ws-client.ts";
 

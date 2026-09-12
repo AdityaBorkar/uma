@@ -11,17 +11,17 @@ import {
 import { maxBy, uniq } from "es-toolkit/array";
 import ms from "ms";
 
+import { loadIdentity } from "./enroll.ts";
+import { heartbeatRetentionDays, stateDbPath } from "./env.ts";
+import { runCapture } from "./proc.ts";
+import { listSandboxes, sandboxMetricsForPressure } from "./sandbox.ts";
 import {
 	insertHeartbeat,
 	pruneAuxTables,
 	queryHistory,
 	vacuumRetention,
 	withDb,
-} from "./db.ts";
-import { loadIdentity } from "./enroll.ts";
-import { heartbeatRetentionDays, stateDbPath } from "./env.ts";
-import { runCapture } from "./proc.ts";
-import { listSandboxes, sandboxMetricsForPressure } from "./sandbox.ts";
+} from "./utils/db.ts";
 import { CLI_VERSION, CONFIG_VERSION } from "./version.ts";
 
 // ---------------------------------------------------------------------------

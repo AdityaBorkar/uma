@@ -2,8 +2,9 @@
  * Runtime schema sync for the device-side state.db.
  *
  * Instead of generated/hardcoded migrations, the DDL is computed on the go
- * from `src/db/schema.ts` (drizzle table definitions are the single source of
- * truth): every open compares the drizzle schema against the live database
+ * from `src/schemas/db/schema.ts` (drizzle table definitions are the single
+ * source of truth): every open compares the drizzle schema against the live
+ * database
  * (`sqlite_master` + `PRAGMA table_info`) and applies only the additive
  * SQLite statements needed to converge —
  *
@@ -26,7 +27,7 @@ import {
 	type SQLiteTable,
 } from "drizzle-orm/sqlite-core";
 
-import { schema } from "../../db/schema.tsdb/schema.ts";
+import { schema } from "./schema.ts";
 
 export interface SchemaSyncResult {
 	addedColumns: string[];

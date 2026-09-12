@@ -10,10 +10,10 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 - `daemon.ts`: tick loop + ws dispatch (assign/cancel/reset-config) + TTL reap. `ws-client.ts`: reconnecting ws.
 - `enroll.ts`: device flow + `identity.json` + `limits.json` + SQLite init + systemd writer (Ubuntu pre-pull lives in `install.sh` + `programs` reset best-effort, not here).
 - `heartbeat.ts`: host (`/proc`, `df`) + SDK collectors + `scopeHint` + persist-then-send + `history` query.
-- `sandbox.ts`: facade over `sandbox/driver.ts` (SDK → CLI → mock; fails closed when no runtime is installed) + `sandbox/sdk.ts`, `sandbox/cli.ts`, `sandbox/mock.ts`, `sandbox/shared.ts`, `sandbox/types.ts`, `sandbox/driver.ts` (selector + `driverKind` diagnostics); create/start/stop/remove/list/exec/execStream/metrics. `git-binding.ts`: clone/fetch/checkout/fresh-start via `execInSandbox` (driver-agnostic, not SDK-only).
+- `sandbox.ts`: facade over `sandboxes/msb/driver.ts` (SDK → CLI → mock; fails closed when no runtime is installed) + `sandboxes/msb/sdk.ts`, `sandboxes/msb/cli.ts`, `sandboxes/msb/mock.ts`, `sandboxes/msb/shared.ts`, `sandboxes/msb/types.ts`, `sandboxes/msb/driver.ts` (selector + `driverKind` diagnostics); create/start/stop/remove/list/exec/execStream/metrics. `git-binding.ts`: clone/fetch/checkout/fresh-start via `execInSandbox` (driver-agnostic, not SDK-only).
 - `execution.ts`: Sandbox Execution module: admission (quota snapshot + create under an internal lock; server limits from `assign.limits`) → claim → start → bind → exec-stream → task-done → stop; every outbound v1 frame via injected `emit`; failures free the sandbox; cancel via `stop --force` through in-flight state.
 - `sync.ts` + `config/mod.ts` + `config/desired.ts` (desired-state cache load/save) + `config/<key>.ts` (9 keys in `ORDERED_KEYS` order; file `git.ts` exports KEY `git-login`, file `skills.ts` exports KEY `skills`): check/reset + receipts.
-- `db.ts` (store facade) + `db/schema.ts` (tables) + `db/client.ts` (open/migrate/WAL) + `db/schema-sync.ts` (runtime schema sync: DDL computed on the go from the drizzle schema, applied additively — `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS` — to the XDG state.db in one transaction; `PRAGMA user_version` mirrors the schema fingerprint): SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`. `fs-utils.ts`: `chmod0600`, parent-dir helpers.
+- `utils/db.ts` (store facade) + `utils/client.ts` (open/migrate/WAL) + `schemas/db/schema.ts` (tables, re-exported via `schemas/db/index.ts`) + `schemas/db/schema-sync.ts` (runtime schema sync: DDL computed on the go from the drizzle schema, applied additively — `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS` — to the XDG state.db in one transaction; `PRAGMA user_version` mirrors the schema fingerprint): SQLite stores + retention. `redact.ts`: secrets + 256KB split. `env.ts`: XDG + `UMA_*` resolution. `protocol.ts`: re-export of `orpc-contract` + validated frame/refusal helpers. `proc.ts`: process runner (`runCapture`/`whichBin`). `limits.ts`: single quota resolver. `version.ts`: `CLI_VERSION`/`CONFIG_VERSION`. `fs-utils.ts`: `chmod0600`, parent-dir helpers.
 
 ## Package
 
@@ -29,7 +29,7 @@ Runtime pieces and their processes:
 - **Daemon**: `runDaemon` (`src/daemon.ts`): heartbeat tick (default 30s) + ws loop; assigns delegate to `executeTask`, cancels to `cancelTask`; opportunistic reap of `stopped` older than `UMA_SANDBOX_TTL_S` (1h).
 - **WsClient**: one ws per machine, Bearer auth, jittered backoff (`src/ws-client.ts`), logical `heartbeat|claim|logs|config` channels multiplexed as v1 JSON frames (no explicit channel field on the wire).
 - **HeartbeatCollector**: `collectHostMetrics` + `listSandboxes` + `sandboxMetricsForPressure` → `buildHeartbeat` → `persistHeartbeat`.
-- **SandboxDrivers**: `driver()` selects `sdk` → `cli` → fail closed (`src/sandbox/driver.ts`); mock only when `MSB_MOCK`/`UMA_MSB_MOCK` is set, file-backed (`mock-sandboxes.json` + `msb-root-meta/<name>/meta.json` under `dataDir`, tests/dev). SDK = streaming + `secretEnv`; CLI = `msb create/start/stop --force/remove --force/exec`. True streaming is SDK-only; CLI/mock funnel through capture.
+- **SandboxDrivers**: `driver()` selects `sdk` → `cli` → fail closed (`src/sandboxes/msb/driver.ts`); mock only when `MSB_MOCK`/`UMA_MSB_MOCK` is set, file-backed (`mock-sandboxes.json` + `msb-root-meta/<name>/meta.json` under `dataDir`, tests/dev). SDK = streaming + `secretEnv`; CLI = `msb create/start/stop --force/remove --force/exec`. True streaming is SDK-only; CLI/mock funnel through capture.
 - **ConfigConvergers**: 9 `KeyModule {KEY, check, reset}` run in `ORDERED_KEYS` order; `resolveKeys(--only)` filters (alias `"sync"` → `"skills"`); `desired.json` corruption is reported as drift, not silently defaulted.
 
 ## Service
@@ -44,12 +44,12 @@ Two senses, kept distinct:
 Allowed direction (no cycles):
 
 `index → cli, daemon, enroll, execution, heartbeat, sandbox, sync, env, git-binding`
-`daemon → ws-client, heartbeat, execution, sandbox, db, enroll, env, config/mod, config/desired, redact, version`
-`execution → sandbox, git-binding, limits, db, redact, enroll, env, config/providers, protocol`
-`heartbeat → sandbox(list/metrics), db, enroll, env, proc, version`
-`config/* → desired, db, env, proc, fs-utils`; `config/mod → 9 keys`; `config/providers → db, redact`
-`all → orpc-contract` (contract has zero deps on `src/`); `sandbox → env, proc, sandbox/*`; `limits → enroll + orpc-contract`
-`db → drizzle-orm/bun-sqlite` + `node:fs/path` only; `ws-client → enroll(identity) + orpc-contract` only.
+`daemon → ws-client, heartbeat, execution, sandbox, utils/db, enroll, env, config/mod, config/desired, redact, version`
+`execution → sandbox, git-binding, limits, utils/db, redact, enroll, env, config/providers, protocol`
+`heartbeat → sandbox(list/metrics), utils/db, enroll, env, proc, version`
+`config/* → desired, utils/db, env, proc, fs-utils`; `config/mod → 9 keys`; `config/providers → utils/db, redact`
+`all → orpc-contract` (contract has zero deps on `src/`); `sandbox → env, proc, sandboxes/msb/*`; `limits → enroll + orpc-contract`
+`utils/db → drizzle-orm/bun-sqlite` + `node:fs/path` only; `ws-client → enroll(identity) + orpc-contract` only.
 
 Rule: `orpc-contract` never imports from `src/`; `db` never imports drivers; drivers never import `execution`.
 
@@ -64,15 +64,15 @@ Outbound (driven by us, faked in tests):
 
 - Server port: ws frames + `POST /api/rpc/machines/claim` (`claimTask` in `src/execution.ts`, injectable via `ExecutionDeps.claim`; non-ok frees the sandbox).
 - Sandbox port: `createSandbox/startSandbox/stopSandbox/removeSandbox/listSandboxes/snapshotQuota/execInSandbox/execStreamInSandbox/sandboxMetricsForPressure` (`src/sandbox.ts`, backed by the `SandboxDriver` port).
-- Store port: `withDb` + `insert*/query*/persist*/record*` (`src/db.ts`, `src/db/client.ts`, `src/db/schema.ts`).
+- Store port: `withDb` + `insert*/query*/persist*/record*` (`src/utils/db.ts`, `src/utils/client.ts`, `src/schemas/db/schema.ts`).
 - Clock/Random port: `Date.now()`, `customAlphabet` (names), `setInterval` (tick); `evaluateScopeHint` is pure and clock-free (server owns sustain/cooldown).
 - Platform port: `runCapture` (process spawn), `/proc` + `df` (metrics), `loginctl/systemctl` (systemd).
 
 ## Adapter
 
 - **Server adapter**: `ws-client.ts` (ws transport) + `daemon.ts:handleResetConfig` (receipt mapping) + `execution.ts:claimTask` (HTTPS claim, default claim for `executeTask`).
-- **Sandbox adapters**: `src/sandbox/sdk.ts`, `src/sandbox/cli.ts`, `src/sandbox/mock.ts` implement the same `SandboxDriver` port (`create/start/stop/remove/list/exec/execStream/metrics`); `task.id`/`project.id` labels set on SDK + CLI create (`user.id` never set — `executeTask` passes no userId).
-- **Store adapter**: `db.ts` + `db/schema.ts` + `db/client.ts` + `db/schema-sync.ts` over `drizzle-orm` + `bun:sqlite` (WAL, `0600` incl sidecars, `withDb` open/close, runtime schema sync derived from `db/schema.ts` applied to the XDG state.db on every writable open).
+- **Sandbox adapters**: `src/sandboxes/msb/sdk.ts`, `src/sandboxes/msb/cli.ts`, `src/sandboxes/msb/mock.ts` implement the same `SandboxDriver` port (`create/start/stop/remove/list/exec/execStream/metrics`); `task.id`/`project.id` labels set on SDK + CLI create (`user.id` never set — `executeTask` passes no userId).
+- **Store adapter**: `utils/db.ts` + `schemas/db/schema.ts` + `utils/client.ts` + `schemas/db/schema-sync.ts` over `drizzle-orm` + `bun:sqlite` (WAL, `0600` incl sidecars, `withDb` open/close, runtime schema sync derived from `schemas/db/schema.ts` applied to the XDG state.db on every writable open).
 - **Metrics adapters**: `collectCpu/collectRam/collectDisk` (Linux-first, degrade to `0`), `sandboxMetricsForPressure` (SDK-only, `[]` when absent).
 - **Config adapters**: per-key `check/reset` shell-outs (`msb doctor`, `gh auth status`, `loginctl show-user`, binary `--version`).
 
@@ -121,7 +121,7 @@ No framework. Function-arg injection throughout:
 - `connectWithBackoff(handlers, {shouldStop, url, maxBackoffMs})` — tests inject `shouldStop`.
 - `performSync({dryRun, only, jobId, payload})` (always `prune:false`; `dryRun` previews without persisting), `resetAll({only, dryRun, payload})`, `evaluateScopeHint(cpu, disk, metrics)` (pure, clock-free; sustain lives server-side), `resolveLimits(serverOverride)` (server > file > default).
 - `driver()` fails closed when no SDK/CLI runtime is installed; `useMock()` is opt-in via `MSB_MOCK`/`UMA_MSB_MOCK`.
-- Env access lives in `env.ts` helpers, but is not exclusive: `sandbox/mock.ts` reads `MSB_MOCK`/`UMA_MSB_MOCK`, `execution.ts` reads `GH_TOKEN`/`GITHUB_TOKEN` + `UMA_AGENT_BIN`, `systemd.ts` reads `USER`/`LOGNAME`/`UMA_SYSTEMD_UNIT`/`UMA_EXEC_PATH`/`XDG_CONFIG_HOME`, `enroll.ts` reads `UMA_RAM_GB`. Secrets passthrough (`exportProviderEnv`, `MSB_PATH`) intentionally bypasses `env.ts`.
+- Env access lives in `env.ts` helpers, but is not exclusive: `sandboxes/msb/mock.ts` reads `MSB_MOCK`/`UMA_MSB_MOCK`, `execution.ts` reads `GH_TOKEN`/`GITHUB_TOKEN` + `UMA_AGENT_BIN`, `systemd.ts` reads `USER`/`LOGNAME`/`UMA_SYSTEMD_UNIT`/`UMA_EXEC_PATH`/`XDG_CONFIG_HOME`, `enroll.ts` reads `UMA_RAM_GB`. Secrets passthrough (`exportProviderEnv`, `MSB_PATH`) intentionally bypasses `env.ts`.
 
 ## Configuration
 
@@ -132,9 +132,9 @@ No framework. Function-arg injection throughout:
 ## Cross-cutting Concern
 
 - Redaction: `Redactor` (`src/redact.ts`) seeded with session token + provider secrets + `GH_TOKEN`/`GITHUB_TOKEN`, plus generic secret patterns; applied to log chunks pre-send (buffered chunks are already redacted); `redactObject` fails closed (buffers rather than sends unredacted); `log_buffer` treated as sensitive.
-- Permissions: `chmod0600` on `identity.json`, `state.db` + `-wal/-shm/-journal` (`src/fs-utils.ts`, `src/db/client.ts`).
+- Permissions: `chmod0600` on `identity.json`, `state.db` + `-wal/-shm/-journal` (`src/fs-utils.ts`, `src/utils/client.ts`).
 - Validation: Zod at trust boundaries (`identity.json`/`limits.json`, ws frames, machine-name, `--only` parsing); `parseServerFrame` enforced inbound, `assertMachineFrame` enforced on every outbound `send`; declared template/skill names are allowlisted against path traversal.
 - Observability: `cliVersion` + `configVersion` every heartbeat; `history` command; `sandbox_events` + `config_receipts` audit; `journald` when under systemd.
 - Resilience: persist-then-send for heartbeats/receipts/logs; `persistReceiptsBestEffort` never masks converge; per-key try/catch in `checkAll/resetAll`; `send` failures isolated per frame; jittered backoff; `pruneAuxTables` best-effort.
-- Retention: 30d heartbeats + vacuum only when deletes (`src/db.ts`), 90d events/receipts, 7d log buffer (`src/db.ts` + `pruneAuxTables`).
+- Retention: 30d heartbeats + vacuum only when deletes (`src/utils/db.ts`), 90d events/receipts, 7d log buffer (`src/utils/db.ts` + `pruneAuxTables`).
 - Docs generation: `docs/wire-schema.json` is generated from the frozen contract (`bun run docs:wire` → `scripts/generate-wire-schema.ts`). Do not edit by hand.

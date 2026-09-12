@@ -1,7 +1,7 @@
 import type { SandboxInfo } from "@uma/orpc-contract";
 
-import { msbBin } from "../env.ts";
-import { runCapture } from "../proc.ts";
+import { msbBin } from "../../env.ts";
+import { runCapture } from "../../proc.ts";
 
 /** Canonical runner for `msb ...` (shared timeout/kill shape with runCapture). */
 export async function runCli(

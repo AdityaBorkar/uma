@@ -10,7 +10,7 @@ import {
  * Drizzle schema for the device-side SQLite state.db.
  *
  * Single source of truth for the database layout: no migration files exist —
- * `src/db/schema-sync.ts` computes the DDL from these table definitions at
+ * `schema-sync.ts` computes the DDL from these table definitions at
  * runtime and converges each state.db additively on open.
  *
  * Tables:

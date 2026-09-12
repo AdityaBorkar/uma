@@ -8,7 +8,7 @@ import {
 	currentSchemaVersion,
 	stampSchemaVersion,
 	syncSchema,
-} from "./schema-sync.ts";
+} from "../schemas/db/schema-sync.ts";
 
 export type DrizzleDb = ReturnType<typeof createDrizzle>;
 export type Db = DrizzleDb;
@@ -41,11 +41,11 @@ function applyPragmas(raw: Database): void {
 }
 
 /**
- * Converge state.db to the drizzle schema (`src/db/schema.ts`) on open.
+ * Converge state.db to the drizzle schema (`src/schemas/db/schema.ts`) on open.
  *
  * No migration files exist: the DDL is computed on the go from the schema and
  * applied additively (CREATE TABLE IF NOT EXISTS / ADD COLUMN / CREATE INDEX
- * IF NOT EXISTS) by `syncSchema` — see `db/schema-sync.ts`. Nothing is
+ * IF NOT EXISTS) by `syncSchema` — see `schemas/db/schema-sync.ts`. Nothing is
  * destructive, each open runs in one transaction, and a crash replays the
  * sync. `PRAGMA user_version` mirrors the schema fingerprint for ops
  * introspection.

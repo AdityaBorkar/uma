@@ -4,14 +4,14 @@ import { join } from "node:path";
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { currentSchemaVersion } from "../src/db/schema-sync.ts";
+import { currentSchemaVersion } from "../src/schemas/db/schema-sync.ts";
 import {
 	countHeartbeats,
 	insertHeartbeat,
 	latestSchemaVersion,
 	migrate,
 	openDb,
-} from "../src/db.ts";
+} from "../src/utils/db.ts";
 
 let dir: string;
 let dbPath: string;
@@ -49,7 +49,7 @@ function tableNames(path: string): string[] {
 	}
 }
 
-describe("db schema sync (computed from src/db/schema.ts, XDG state.db)", () => {
+describe("db schema sync (computed from src/schemas/db/schema.ts, XDG state.db)", () => {
 	test("fresh openDb creates schema + stamps schema fingerprint", () => {
 		const db = openDb(dbPath);
 		db.close();
