@@ -56,7 +56,7 @@ export function DocumentEditor({
 		editorProps: {
 			attributes: {
 				class:
-					"prose prose-sm dark:prose-invert max-w-none min-h-72 px-4 py-3 focus:outline-none",
+					"prose prose-sm prose-invert max-w-none min-h-72 px-4 py-3 focus:outline-none",
 			},
 		},
 		extensions,

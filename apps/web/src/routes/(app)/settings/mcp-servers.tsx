@@ -590,7 +590,7 @@ function McpServersPage() {
 												? ` · latest ${item.latestVersion}`
 												: ""}
 										</ListRowSubtitle>
-										<code className="mt-1 block max-h-24 overflow-auto rounded-md border bg-muted/50 px-2 py-1 font-mono text-[11px] whitespace-pre">
+										<code className="mt-1 block max-h-24 overflow-auto rounded-md border bg-muted/50 px-2 py-1 font-mono text-micro whitespace-pre">
 											{buildMcpJson(item)}
 										</code>
 									</ListRowMain>

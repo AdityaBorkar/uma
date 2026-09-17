@@ -169,7 +169,7 @@ function DocumentsPage() {
 								<Badge
 									className={
 										search.label === label
-											? "cursor-pointer border-[#0969da]"
+											? "cursor-pointer border-accent-fg"
 											: "cursor-pointer"
 									}
 									key={label}
@@ -247,7 +247,7 @@ function DocumentsPage() {
 									</TableCell>
 									<TableCell>
 										<Link
-											className="font-medium text-sm hover:text-[var(--color-accent-fg)] hover:underline"
+											className="font-medium text-sm hover:text-accent-fg hover:underline"
 											params={{
 												number: String(doc.number),
 												projectSlug: ws.projectSlug,
@@ -267,7 +267,7 @@ function DocumentsPage() {
 										<div className="flex flex-wrap gap-1">
 											{doc.labels.slice(0, 3).map((label) => (
 												<Badge
-													className="px-1.5 py-0 text-[11px]"
+													className="px-1.5 py-0 text-micro"
 													key={label}
 													variant="outline"
 												>

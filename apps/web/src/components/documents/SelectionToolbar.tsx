@@ -107,7 +107,7 @@ export function SelectionToolbar({ editor }: { editor: Editor }) {
 	return (
 		<BubbleMenu
 			appendTo={() => document.body}
-			className="relative z-50 flex items-center gap-0.5 rounded-md border bg-background/95 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+			className="relative z-50 flex items-center gap-0.5 rounded-md border bg-background/95 p-1.5 backdrop-blur"
 			editor={editor}
 			options={{
 				flip: {},
@@ -178,7 +178,7 @@ export function SelectionToolbar({ editor }: { editor: Editor }) {
 			)}
 
 			{linkOpen ? (
-				<div className="absolute top-full right-2 z-10 mt-1 flex items-center gap-1 rounded-md border bg-background p-1.5 shadow-md">
+				<div className="absolute top-full right-2 z-10 mt-1 flex items-center gap-1 rounded-md border bg-background p-1.5">
 					<Input
 						aria-label="Link URL"
 						className="h-7 w-56 text-xs"

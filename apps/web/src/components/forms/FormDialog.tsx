@@ -11,7 +11,7 @@ import { cn } from "#/lib/utils.ts";
 
 /**
  * Standard dialog shell: Dialog > DialogContent (p-0) > DialogHeader
- * (px-4 py-3) > scrollable body (max-h-[70vh] px-4 py-4).
+ * (px-4 py-3) > scrollable body (dialog-body px-4 py-4).
  * Unifies tasks/signals dialogs (previously missing padding/scroll) with
  * AppShell CreateProjectDialog and all settings registry dialogs.
  */
@@ -57,7 +57,7 @@ export function FormDialog({
 						<DialogDescription>{description}</DialogDescription>
 					) : null}
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					{children}
 				</div>
 			</DialogContent>

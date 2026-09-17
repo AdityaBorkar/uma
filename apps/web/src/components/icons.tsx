@@ -67,7 +67,13 @@ export type IconComponent = ComponentType<{ className?: string }>;
 function makeIcon(icon: IconSvgElement): IconComponent {
 	return function Icon({ className }: { className?: string }) {
 		return (
-			<HugeiconsIcon className={className} icon={icon} strokeWidth={2.25} />
+			<HugeiconsIcon
+				aria-hidden={true}
+				className={className}
+				focusable={false}
+				icon={icon}
+				strokeWidth={2.25}
+			/>
 		);
 	};
 }

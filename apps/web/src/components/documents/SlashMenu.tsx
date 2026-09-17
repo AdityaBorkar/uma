@@ -248,7 +248,7 @@ export function SlashMenu({ editor }: { editor: Editor }) {
 	return (
 		<div
 			aria-label="Block commands"
-			className="fixed z-50 w-64 rounded-md border bg-background/95 p-1 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+			className="fixed z-50 w-64 rounded-md border bg-background/95 p-1 backdrop-blur"
 			role="listbox"
 			style={{
 				left: Math.max(8, Math.min(coords.left, window.innerWidth - 272)),
@@ -279,7 +279,7 @@ export function SlashMenu({ editor }: { editor: Editor }) {
 							>
 								<item.icon className="size-4 shrink-0" />
 								<span className="min-w-0">
-									<span className="block text-[13px] font-medium leading-tight">
+									<span className="block text-compact font-medium leading-tight">
 										{item.title}
 									</span>
 									<span className="block truncate text-muted-foreground text-xs leading-tight">

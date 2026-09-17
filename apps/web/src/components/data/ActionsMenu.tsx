@@ -10,7 +10,7 @@ import { cn } from "#/lib/utils.ts";
  * Menu Trigger/Portal/Positioner/Popup shell and `menuItemClass`.
  */
 export const actionsMenuItemClass =
-	"flex w-full cursor-default items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-sm outline-none select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:opacity-50";
+	"flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:opacity-50";
 
 export function ActionsMenu({
 	children,
@@ -23,7 +23,7 @@ export function ActionsMenu({
 		<Menu.Root>
 			<Menu.Trigger
 				aria-label={label}
-				className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 data-[popup-open]:bg-muted data-[popup-open]:text-foreground"
+				className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 data-[popup-open]:bg-muted data-[popup-open]:text-foreground"
 			>
 				<MoreHorizontal className="size-4" />
 			</Menu.Trigger>

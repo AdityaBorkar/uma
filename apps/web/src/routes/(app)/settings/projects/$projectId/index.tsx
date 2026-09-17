@@ -79,7 +79,7 @@ function ProjectDetailPage() {
 				<AlertDescription>
 					{msg}{" "}
 					<Link
-						className="underline hover:text-[var(--color-accent-fg)]"
+						className="underline hover:text-accent-fg"
 						to="/settings/projects"
 					>
 						Back to projects
@@ -95,7 +95,7 @@ function ProjectDetailPage() {
 			<div className="space-y-6">
 				<div className="flex items-center gap-2 text-sm">
 					<Link
-						className="text-muted-foreground hover:text-[var(--color-accent-fg)] hover:underline"
+						className="text-muted-foreground hover:text-accent-fg hover:underline"
 						to="/settings/projects"
 					>
 						Projects
@@ -141,7 +141,7 @@ function ProjectDetailPage() {
 		<div className="space-y-6">
 			<div className="flex items-center gap-2 text-sm">
 				<Link
-					className="text-muted-foreground hover:text-[var(--color-accent-fg)] hover:underline"
+					className="text-muted-foreground hover:text-accent-fg hover:underline"
 					to="/settings/projects"
 				>
 					Projects
@@ -169,7 +169,7 @@ function ProjectDetailPage() {
 					<div className="flex flex-wrap items-center gap-2">
 						{project.githubRepoFullName ? (
 							<a
-								className="text-xs underline hover:text-[var(--color-accent-fg)]"
+								className="text-xs underline hover:text-accent-fg"
 								href={
 									project.githubRepoUrl ??
 									`https://github.com/${project.githubRepoFullName}`

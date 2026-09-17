@@ -1,14 +1,16 @@
-# Style Guide — GitHub-like Layout (Primer)
+# Style Guide — Vercel-like Dark Theme (Black/White)
 
-Planner Q3 mirrors GitHub’s Primer design system: **border, not shadow; bundled variable fonts; UnderlineNav; Box; Label/StateLabel; Blankslate; Timeline**. This is the single source of truth for layout, tokens, and component usage.
+Planner Q3 is dark-only, mirroring Vercel's Geist aesthetic: **true-black canvas, white primary actions, gray borders, border over shadow; bundled variable fonts; UnderlineNav; Box; Label/StateLabel; Blankslate; Timeline**. This is the single source of truth for layout, tokens, and component usage.
 
 ## Principles
 
 - **Content first** — filters and tables live in bordered Boxes, not floating Cards with shadows.
-- **Border over shadow** — `rounded-md border` (`--radius 6px`) + `border: #d0d7de` (light) / `#30363d` (dark). No `shadow-sm/xl`.
+- **Border over shadow** — `rounded-md border` (`--radius 6px`) + `border: #262626` on a `#000000` canvas. No `shadow-sm/xl`.
+- **Black/white base** — background `#000000`, foreground `#ededed`, muted text `#a1a1a1`, borders `#262626` / `#1f1f1f`. Color is reserved for status indication only (success green, danger red, attention amber); everything else is monochrome.
+- **Dark-only** — `:root` and `.dark` carry the same tokens, `color-scheme: dark`, `<body className="dark">`. Never add light-mode branches (`dark:` variants, `light` color-scheme).
 - **Bundled variable fonts** — Schibsted Grotesk Variable for sans, JetBrains Mono Variable for code, both via `@fontsource-variable/*` (self-hosted, no Google Fonts / no network).
 - **Text + color** — never color alone. Badges/StateLabels include text and pass contrast.
-- **One shell** — the `AppShell` component (`src/components/layout/AppShell.tsx`) renders exactly one shell per viewport, swapped at `md:`, never both. Desktop (`md+`): `AppSidebar` (project selector, nav — no brand mark, chat actions, or user footer as committed) beside centered content (`max-w-[1280px] px-4 sm:px-6`). Mobile: project selector bar → sticky `UnderlineNav` → content (no dark header; the sidebar is hidden).
+- **One shell** — the `AppShell` component (`src/components/layout/AppShell.tsx`) renders exactly one shell per viewport, swapped at `md:`, never both. Desktop (`md+`): `AppSidebar` (project selector, nav — no brand mark, chat actions, or user footer as committed) beside centered content (`max-w-320` = 80rem content width, `px-4 sm:px-6`). Mobile: project selector bar → sticky `UnderlineNav` → content (no dark header; the sidebar is hidden).
 
 ## Layout (App Shell)
 
@@ -20,11 +22,11 @@ below `md`, and hosts the "Create project" dialog. There is no global footer.
 Desktop (`md+`) — `AppSidebar` (sticky, fixed 280px) + content column:
 
 ```
-AppSidebar (sticky top-0 h-screen w-[280px] border-r, hidden below md)
+AppSidebar (sticky top-0 h-screen w-70 = 17.5rem sidebar, border-r, hidden below md)
   project selector: Base UI Select — Settings · Global Workspace (~) · per-project slugs
   nav: items prop (navItems / settingsNavItems)
   (no brand P-mark block, no chat actions, no avatar/user footer as committed)
-Main (mx-auto max-w-[1280px] px-4 py-6 sm:px-6)
+Main (mx-auto max-w-320 px-4 py-6 sm:px-6)
   Page header → Filters Box → Content Box → (optional) Timeline aside
 ```
 
@@ -35,8 +37,8 @@ Project selector bar (border-b bg-muted/50 px-4 py-2, native select)
   Multi-Project · per-project slugs · Create Project
 UnderlineNav (sticky top-14 z-30, bg-background, border-b, scroll-x, hides scrollbar)
   tabs: current nav items (items prop)
-  active: text-foreground font-semibold border-b-2 border-[#fd8c73]
-Main (mx-auto max-w-[1280px] px-4 py-6 sm:px-6)
+  active: text-foreground font-semibold border-b-2 border-underline
+Main (mx-auto max-w-320 px-4 py-6 sm:px-6)
 ```
 
 Nav items are defined in `navItems`
@@ -50,39 +52,70 @@ routes rendering explicit placeholders. `connections` has full backend
 (oRPC `connections.*` + `/api/connections.*` OAuth callbacks) but no settings
 UI page — tokens/scopes/metadata are not editable from the UI in v1.
 
-Files: `src/components/layout/AppShell.tsx`, `src/components/layout/AppSidebar.tsx`, `src/components/layout/UnderlineNav.tsx`, `src/routes/(app)/$projectSlug/route.tsx`, `src/routes/(app)/settings/route.tsx`, `src/routes/__root.tsx` (`<body className="dark">` forces dark — see Deviations; meta is `color-scheme: light dark`).
+Files: `src/components/layout/AppShell.tsx`, `src/components/layout/AppSidebar.tsx`, `src/components/layout/UnderlineNav.tsx`, `src/routes/(app)/$projectSlug/route.tsx`, `src/routes/(app)/settings/route.tsx`, `src/routes/__root.tsx` (`<body className="dark">` forces dark-only — intentional; meta is `color-scheme: dark`).
 `src/routeTree.gen.ts` is generated (`bun run gen:routes`); do not hand-edit.
 
 ## Tokens (`src/styles.css`)
 
-| Token | Light | Dark | Alias |
-|---|---|---|---|
-| `--background` | `#ffffff` | `#0d1117` | canvas default |
-| `--foreground` | `#1f2328` | `#e6edf3` | fg default |
-| `--card` | `#ffffff` | `#161b22` | Box bg |
-| `--muted` | `#f6f8fa` | `#21262d` | Box header / subnav |
-| `--muted-foreground` | `#656d76` | `#7d8590` | secondary text |
-| `--border` / `--input` | `#d0d7de` | `#30363d` | border default |
-| `--ring` | `#0969da` | `#1f6feb` | focus |
-| `--primary` | `#1f883d` | `#238636` | btn primary (green) |
-| `--primary-foreground` | `#ffffff` | `#ffffff` | |
-| `--secondary` | `#f6f8fa` | `#21262d` | btn default gray |
-| `--secondary-foreground` | `#24292f` | `#e6edf3` | |
-| `--destructive` | `#cf222e` | `#da3633` | danger |
-| `--radius` | `0.375rem` (6px) | same | sm 4px, md 6px |
-| `--sidebar` | `#f6f8fa` | `#010409` | sidebar canvas |
-| `--sidebar-foreground` | `#1f2328` | `#e6edf3` | |
-| `--sidebar-primary` | `#1f883d` | `#238636` | P mark |
-| `--sidebar-border` | `#d0d7de` | `#30363d` | |
-| `--chart-1..5` | blue/green/purple/amber/red | darker set | charts |
-| Semantic | `--color-accent-fg #0969da` | `#58a6ff` | link / accent |
-| | `--color-success-fg #1a7f37` | `#3fb950` | open / success |
-| | `--color-danger-fg #cf222e` | `#f85149` | closed / danger |
-| | `--color-attention-fg #9a6700` | `#d29922` | warning |
-| | `--color-done-fg #8250df` | `#bc8cff` | closed purple |
-| | `--color-open-fg #1a7f37` | `#3fb950` | |
-| | `--color-closed-fg #656d76` | `#7d8590` | closed **gray** (not purple) |
+Dark-only, Vercel-like. `:root` and `.dark` are identical.
+
+| Token | Dark-only | Notes |
+|---|---|---|
+| `--background` | `#000000` | canvas default |
+| `--foreground` | `#ededed` | fg default |
+| `--card` / `--popover` | `#0a0a0a` | Box bg |
+| `--muted` | `#111111` | Box header / subnav |
+| `--muted-foreground` | `#a1a1a1` | secondary text |
+| `--border` / `--input` | `#262626` | border default |
+| `--ring` | `#737373` | focus (neutral gray, not blue) |
+| `--primary` | `#ededed` | btn primary (white bg, black text) |
+| `--primary-foreground` | `#000000` | |
+| `--secondary` / `--accent` | `#1a1a1a` | btn default gray |
+| `--secondary-foreground` | `#ededed` | |
+| `--destructive` | `#e5484d` | danger (status-only color) |
+| `--radius` | `0.375rem` (6px) | sm 4px, md 6px |
+| `--sidebar` | `#000000` | sidebar canvas |
+| `--sidebar-foreground` | `#ededed` | |
+| `--sidebar-primary` | `#ededed` | white primary |
+| `--sidebar-border` | `#1f1f1f` | |
+| `--chart-1..5` | `#ededed / #a1a1a1 / #737373 / #525252 / #404040` | grayscale ramp |
+| Semantic | `--color-accent-fg #ededed` | link / accent (neutral, not blue) |
+| | `--color-success-fg #46a758` | open / success |
+| | `--color-danger-fg #e5484d` | closed-failed / danger |
+| | `--color-attention-fg #f5a524` | warning |
+| | `--color-done-fg #a1a1a1` | neutral gray (no purple) |
+| | `--color-open-fg #46a758` | |
+| | `--color-closed-fg #a1a1a1` | closed **gray** |
+| Subtle bg | `--color-success-bg #0e1f14` | badge/alert green wash |
+| | `--color-attention-bg #201503` | badge amber wash |
+| | `--color-danger-bg #251314` | badge/alert red wash |
+| | `--color-done-bg #1a1a1a` | neutral wash (no purple) |
+| | `--color-info-bg #1a1a1a` | neutral wash (no blue — running states are gray) |
+| Edge | `--color-success-border #2e5a3e` | success border |
+| | `--color-danger-edge #e5484d` | alert destructive border |
+| | `--color-overlay #000000` | dialog scrim (`bg-overlay/50`) |
+| | `--color-underline #ededed` | active underline (`border-underline`, white) |
+| Type | `--text-micro 0.6875rem` | same | 11px pills/meta (`text-micro`) |
+| | `--text-compact 0.8125rem` | same | 13px menu titles (`text-compact`) |
+| Blur | `--blur-subtle 1px` | same | dialog scrim (`backdrop-blur-subtle`) |
 | Header | `--header-bg #24292f` | `#010409` | vestigial (mobile dark header removed) |
+
+> **Rule: no arbitrary values.** Never use `[...]` design values in class
+> strings — no `bg-[#...]`, `text-[#...]`, `border-[#...]`,
+> `text-[var(--...)]`, `text-[11px]`, `max-w-[...]`, `ring-[3px]`, or
+> palette shortcuts (`bg-red-50`, `text-amber-800`). Register the token in
+> `src/styles.css` (`:root` + `.dark` + `@theme inline`) and use it
+> (`bg-danger-bg`, `text-accent-fg`, `border-underline`, `text-micro`,
+> `max-w-320`, `ring-3`). Viewport/runtime shapes with no spacing-token
+> equivalent (`70dvh` dialogs, `minmax(0,1fr)` grids, Base UI anchor vars,
+> hidden scrollbars) live as plain classes in `styles.css`
+> (`.dialog-body`, `.doc-split`, `.select-popup`, `.scrollbar-none`).
+> Functional state variants (`data-[popup-open]:`, `has-[>svg]:`,
+> `[&>svg]:`) carry token values only — they are selectors, not definitions.
+> Exceptions (documented at use): third-party brand fills (Google G logo
+> `fill="#4285F4"…`) and user-data-driven color (`subagents` dot
+> `style={{ backgroundColor }}` — validated `#RRGGBB`, always paired with
+> text).
 
 ## Fonts
 
@@ -94,14 +127,14 @@ Files: `src/components/layout/AppShell.tsx`, `src/components/layout/AppSidebar.t
 - Both are self-hosted variable fonts (`--font-sans` / `--font-mono` wired
   through `@theme inline`). No Google Fonts, no network fetch.
 
-Body `text-[14px] leading-[1.5]`.
+Body `text-sm` (14px) `leading-[1.5]`.
 
 ## Typography Scale
 
 - **H1 (page title):** `text-2xl font-semibold tracking-tight` (24px)
 - **H2 (section):** `text-sm font-semibold` (14px) or `text-base` for Cards
 - **Body:** `text-sm` (14px) leading 1.5; **muted:** `text-muted-foreground`
-- **Small / meta:** `text-xs` / `text-[11px]` for pills
+- **Small / meta:** `text-xs` / `text-micro` (11px token) for pills
 - **Code:** `font-mono text-xs`
 
 Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
@@ -109,8 +142,8 @@ Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
 ## Components
 
 ### Button (`src/components/ui/button.tsx`)
-- **Variants:** `primary` (green `#1f883d`, creation actions only: *New project/document/signal/task*), `default` (gray `#f6f8fa` border), `outline` (white + border, most actions), `ghost` (text), `destructive` (red), `link` (blue underline), `secondary` (alias to default)
-- **Sizes:** `default h-8 px-4 text-[14px]`, `sm h-7 gap-1.5 px-3 text-xs`, `icon size-8`, `icon-sm size-7` (+ undocumented `lg`, `icon-lg size-9` in `button-variants.ts`)
+- **Variants:** `primary` (white `#ededed` bg + black text, creation actions only: *New project/document/signal/task*), `default` (gray `#1a1a1a` border), `outline` (black + border, most actions), `ghost` (text), `destructive` (red — errors only), `link` (foreground underline, not blue), `secondary` (alias to default)
+- **Sizes:** `default h-8 px-4 text-sm`, `sm h-7 gap-1.5 px-3 text-xs`, `icon size-8`, `icon-sm size-7` (+ undocumented `lg`, `icon-lg size-9` in `button-variants.ts`)
 - **Rules:** green only for *New …*; bulk actions use `outline` gray.
 
 ```tsx
@@ -121,12 +154,12 @@ Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
 
 ### Badge / Label / StateLabel (`src/components/ui/badge.tsx`, `src/components/badges.ts`)
 - **Label** (free-form tags): `variant="outline"` pill `rounded-full px-2.5 py-0.5 text-xs` with subtle border.
-- **StateLabel** (issue-like): open green subtle `#dafbe1 / #1a7f37`, closed purple `#fbefff / #8250df` via `stateBadgeClass()`; warning amber, danger red, done purple, info muted, success green.
+- **StateLabel** (issue-like): open green `#0e1f14 / #46a758`, closed neutral gray via `stateBadgeClass()`; warning amber, danger red. `done`/`info` variants are neutral gray — no purple, no blue. Running tasks are gray, not blue.
 - **Helpers:** `stateBadgeClass(state)`, `severityBadgeClass(severity)`, `taskBadgeClass(status)` in `src/components/badges.ts` return class strings — apply via `className` on `<Badge variant="outline">`.
 
 ```tsx
 <Badge className={stateBadgeClass(doc.state)} variant="outline">{doc.state}</Badge>
-<Badge variant="outline" className="text-[11px] px-1.5 py-0">{label}</Badge>
+<Badge variant="outline" className="text-micro px-1.5 py-0">{label}</Badge>
 <Badge variant="success">active</Badge>
 ```
 
@@ -140,14 +173,14 @@ Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
 - Always wrapped with Box header showing counts (`{n} documents · filter`).
 
 ### Inputs (`input.tsx`, `select.tsx`, `textarea.tsx`, `label.tsx`)
-- `h-8 rounded-md border border-input bg-background px-3 py-1 text-sm focus:border-ring focus:ring-ring/30 focus:ring-[3px]`
+- `h-8 rounded-md border border-input bg-background px-3 py-1 text-sm focus:border-ring focus:ring-ring/30 focus:ring-3`
 - Label `text-xs font-semibold`, help `text-xs text-muted-foreground`.
 
 ### Dialog (`dialog.tsx`)
-- Overlay `bg-[#24292f]/50`; container `max-w-lg px-4`; content `rounded-md border bg-card`; header `border-b bg-muted/50 px-4 py-3 rounded-t-md` (title `text-sm font-semibold`, description `text-xs muted`).
+- Overlay `bg-overlay/50 backdrop-blur-subtle`; container `max-w-lg px-4`; content `rounded-md border bg-card`; header `border-b bg-muted/50 px-4 py-3 rounded-t-md` (title `text-sm font-semibold`, description `text-xs muted`).
 
 ### Alert (`alert.tsx`)
-- `rounded-md border px-4 py-3 text-sm grid`; `destructive` is light red `#ffebe9` / dark `#260f12` with red text/border.
+- `rounded-md border px-4 py-3 text-sm grid`; `destructive` is dark red wash `#251314` with red text/border.
 
 ## Icons
 
@@ -155,24 +188,23 @@ Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/cor
 
 ## Deviations (code wins — fix code or accept)
 
-- Forced dark: `src/routes/__root.tsx` renders `<body className="dark">`, overriding the `light dark` meta. Guide norm is no forced dark.
+- Dark-only is intentional: `src/routes/__root.tsx` renders `<body className="dark">` with `color-scheme: dark` and identical `:root`/`.dark` tokens. Do not add light-mode branches.
 - Sidebar: no brand P-mark, no chat actions, and no avatar/user footer.
-- Shadows: `src/components/ui/dialog.tsx` (`shadow-sm`), `src/components/documents/Editor.tsx` (`shadow-md`), `src/components/ui/toaster.tsx` (`shadow-lg + rounded-lg`) violate the no-shadow / `rounded-md` rule.
 - Badge: `src/components/documents/DocumentHeader.tsx` uses `<Badge variant="secondary">`, not the guide's `variant="outline"` + `className` helper pattern.
 
 ## Do / Don’t
 
 - **Do** use `variant="primary"` only for *New …* creators.
 - **Do** put filters in `CardContent bg-muted/50`.
-- **Do** use `UnderlineNav` (`border-b-2 border-[#fd8c73]`) for kind/state tabs.
-- **Don’t** use `shadow-sm`, `rounded-xl`, `bg-primary` black, zinc tokens (zinc ban holds — no `zinc-` hits), or add new forced-`dark` (existing forced dark above is the one exception to remove, not copy).
+- **Do** use `UnderlineNav` (`border-b-2 border-underline`) for kind/state tabs.
+- **Don’t** use `shadow-sm`, `rounded-xl`, `bg-primary` black, zinc tokens (zinc ban holds — no `zinc-` hits), blue/purple accents, or add light-mode branches (`dark:` variants, `light` color-scheme).
 - **Don’t** create per-page `severityBadgeClass` clones — use `badges.ts`.
 - **Don’t** add a second sidebar or a second top nav: `AppShell` renders exactly one shell per viewport — `AppSidebar` (desktop) and the mobile selector bar + `UnderlineNav` (mobile) are the only shells, swapped at `md:`, never shown together.
 
 ## Checklist (new page)
 
 1. Page header: `h1 text-2xl font-semibold` + `p text-sm text-muted-foreground` + `Button variant="primary"` if creation.
-2. Tabs (if any): nav `border-b` with active `border-[#fd8c73] font-semibold`.
+2. Tabs (if any): nav `border-b` with active `border-underline font-semibold`.
 3. Filters: `Card > CardContent bg-muted/50 flex gap-3` with `Label text-xs font-semibold`.
 4. Content: `Card overflow-hidden p-0` with header `border-b bg-muted/50 px-4 py-2 text-xs` counts + body table/list rows `border-b px-4 py-3 hover:bg-muted/50`.
 5. Empty: `Card py-10 text-center` with `variant="primary"` CTA; Error: `Alert variant="destructive"` + `Button variant="outline" size="sm" Retry`.

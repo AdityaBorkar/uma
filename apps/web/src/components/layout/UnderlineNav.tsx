@@ -29,7 +29,7 @@ export function UnderlineNav({
 			aria-label="Primary"
 			className="sticky top-14 z-30 w-full border-b bg-background"
 		>
-			<div className="mx-auto flex max-w-[1280px] items-center gap-1 overflow-x-auto px-2 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
+			<div className="mx-auto flex max-w-320 items-center gap-1 overflow-x-auto px-2 scrollbar-none sm:px-6">
 				{items.map((item) => {
 					if (isNavDivider(item)) {
 						return (
@@ -44,10 +44,11 @@ export function UnderlineNav({
 					return (
 						<Link
 							activeProps={{
+								"aria-current": "page",
 								className:
-									"text-foreground border-b-[2px] border-[#fd8c73] font-semibold",
+									"text-foreground border-b-2 border-underline font-semibold",
 							}}
-							className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-transparent border-b-2 px-3 py-3 text-muted-foreground text-sm hover:text-foreground"
+							className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-transparent border-b-2 px-3 py-3 text-muted-foreground text-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
 							key={item.to}
 							to={item.to}
 							{...(isScoped && currentScope

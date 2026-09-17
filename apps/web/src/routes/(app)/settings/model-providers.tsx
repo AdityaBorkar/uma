@@ -83,7 +83,7 @@ function InputModalitiesCell({ model }: { model: DetectedModel }) {
 	return (
 		<span className="flex items-center gap-1 whitespace-nowrap">
 			<span
-				className="flex size-6 items-center justify-center rounded border bg-muted/50 font-semibold text-[11px]"
+				className="flex size-6 items-center justify-center rounded border bg-muted/50 font-semibold text-micro"
 				title="Text input supported"
 			>
 				T
@@ -119,11 +119,11 @@ function ReasoningCell({ variants }: { variants: string[] }) {
 	const [first, ...rest] = variants;
 	return (
 		<span
-			className="inline-flex max-w-[160px] items-center gap-1 overflow-hidden whitespace-nowrap"
+			className="inline-flex max-w-40 items-center gap-1 overflow-hidden whitespace-nowrap"
 			title={variants.join(", ")}
 		>
 			<Badge
-				className="max-w-[110px] truncate font-mono text-[11px]"
+				className="max-w-27.5 truncate font-mono text-micro"
 				variant="outline"
 			>
 				{first}
@@ -229,13 +229,13 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 		<Table>
 			<TableHeader>
 				<TableRow>
-					<TableHead className="max-w-[180px]">Model</TableHead>
-					<TableHead className="max-w-[200px]">Model ID</TableHead>
+					<TableHead className="max-w-45">Model</TableHead>
+					<TableHead className="max-w-50">Model ID</TableHead>
 					<TableHead>Input</TableHead>
 					<TableHead className="w-24 text-right">Max output</TableHead>
 					<TableHead className="w-24 text-right">Max input</TableHead>
-					<TableHead className="max-w-[160px]">Reasoning</TableHead>
-					<TableHead className="max-w-[120px]">Provider</TableHead>
+					<TableHead className="max-w-40">Reasoning</TableHead>
+					<TableHead className="max-w-30">Provider</TableHead>
 					<TableHead className="w-12 text-right">
 						<span className="sr-only">More actions</span>
 					</TableHead>
@@ -254,7 +254,7 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 				) : null}
 				{rows.map((row) => (
 					<TableRow className="h-12" key={row.key}>
-						<TableCell className="max-w-[180px]">
+						<TableCell className="max-w-45">
 							<span
 								className="block truncate font-medium"
 								title={row.model.name || row.model.id}
@@ -262,7 +262,7 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 								{row.model.name || row.model.id}
 							</span>
 						</TableCell>
-						<TableCell className="max-w-[200px]">
+						<TableCell className="max-w-50">
 							<span
 								className="block truncate font-mono text-xs"
 								title={row.model.id}
@@ -279,10 +279,10 @@ function ModelTable({ rows }: { rows: ModelRow[] }) {
 						<TableCell className="w-24 text-right whitespace-nowrap">
 							<TokensCell value={row.model.maxInputTokens} />
 						</TableCell>
-						<TableCell className="max-w-[160px] whitespace-nowrap">
+						<TableCell className="max-w-40 whitespace-nowrap">
 							<ReasoningCell variants={row.model.reasoningVariants} />
 						</TableCell>
-						<TableCell className="max-w-[120px]">
+						<TableCell className="max-w-30">
 							<span
 								className="block truncate text-muted-foreground text-xs"
 								title={row.provider}
@@ -393,7 +393,7 @@ function AddProviderDialog({
 						GET $BASE_URL/models, then save.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-1.5">
 							<Label className="text-xs font-semibold" htmlFor="provider-name">
@@ -627,7 +627,7 @@ function AddModelDialog({
 						Manually register a model on one of your providers.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					{providerNames.length === 0 ? (
 						<Alert>
 							<AlertTitle>No providers yet</AlertTitle>
@@ -817,7 +817,7 @@ function AddAccountDialog({
 						they are never sent to the server.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					{providerNames.length === 0 ? (
 						<Alert>
 							<AlertTitle>No providers yet</AlertTitle>
@@ -980,7 +980,7 @@ function EditProviderDialog({
 						models via GET $BASE_URL/models, then save.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-1.5">
 							<Label
@@ -1131,7 +1131,7 @@ function EditAccountDialog({
 						only.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					<div className="space-y-1.5">
 						<Label
 							className="text-xs font-semibold"
@@ -1273,7 +1273,7 @@ function EditModelDialog({
 						Update the model details, then save.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
+				<div className="dialog-body space-y-4 overflow-y-auto px-4 py-4">
 					{allowProviderChange ? (
 						<div className="space-y-1.5">
 							<Label
@@ -1543,8 +1543,8 @@ function ModelProvidersPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead className="max-w-[220px]">Provider</TableHead>
-									<TableHead className="max-w-[260px]">Base URL</TableHead>
+									<TableHead className="max-w-55">Provider</TableHead>
+									<TableHead className="max-w-65">Base URL</TableHead>
 									<TableHead className="w-24">Models</TableHead>
 									<TableHead className="w-12 text-right">
 										<span className="sr-only">More actions</span>
@@ -1554,7 +1554,7 @@ function ModelProvidersPage() {
 							<TableBody>
 								{store.providers.map((p) => (
 									<TableRow className="h-12" key={p.id}>
-										<TableCell className="max-w-[220px]">
+										<TableCell className="max-w-55">
 											<span className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
 												<span
 													aria-hidden={true}
@@ -1567,7 +1567,7 @@ function ModelProvidersPage() {
 												</span>
 											</span>
 										</TableCell>
-										<TableCell className="max-w-[260px]">
+										<TableCell className="max-w-65">
 											<span
 												className="block truncate font-mono text-muted-foreground text-xs"
 												title={p.baseUrl}
@@ -1615,9 +1615,9 @@ function ModelProvidersPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead className="max-w-[200px]">Account</TableHead>
-									<TableHead className="max-w-[160px]">Provider</TableHead>
-									<TableHead className="max-w-[160px]">API key</TableHead>
+									<TableHead className="max-w-50">Account</TableHead>
+									<TableHead className="max-w-40">Provider</TableHead>
+									<TableHead className="max-w-40">API key</TableHead>
 									<TableHead className="w-28">Status</TableHead>
 									<TableHead className="w-12 text-right">
 										<span className="sr-only">More actions</span>
@@ -1627,7 +1627,7 @@ function ModelProvidersPage() {
 							<TableBody>
 								{store.accounts.map((a) => (
 									<TableRow className="h-12" key={a.id}>
-										<TableCell className="max-w-[200px]">
+										<TableCell className="max-w-50">
 											<span
 												className="block truncate font-medium"
 												title={a.label}
@@ -1635,7 +1635,7 @@ function ModelProvidersPage() {
 												{a.label}
 											</span>
 										</TableCell>
-										<TableCell className="max-w-[160px]">
+										<TableCell className="max-w-40">
 											<span
 												className="block truncate text-muted-foreground text-xs"
 												title={a.provider}
@@ -1643,7 +1643,7 @@ function ModelProvidersPage() {
 												{a.provider}
 											</span>
 										</TableCell>
-										<TableCell className="max-w-[160px]">
+										<TableCell className="max-w-40">
 											<span className="block truncate font-mono text-muted-foreground text-xs">
 												{maskKey(a.apiKey)}
 											</span>

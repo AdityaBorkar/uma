@@ -125,7 +125,7 @@ function DocumentDetailPage() {
 
 	if (pageQuery.isPending) {
 		return (
-			<div className="mx-auto max-w-[1280px]">
+			<div className="mx-auto max-w-320">
 				<ListLoadingCard label="Loading document…" />
 			</div>
 		);
@@ -171,7 +171,7 @@ function DocumentDetailPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-[1280px] space-y-6">
+		<div className="mx-auto max-w-320 space-y-6">
 			<DocumentHeader
 				canEdit={canEdit}
 				doc={doc}
@@ -189,7 +189,7 @@ function DocumentDetailPage() {
 				projectSlug={projectSlug}
 			/>
 
-			<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+			<div className="doc-split">
 				<div className="min-w-0">
 					<DocumentEditorSection
 						canEdit={canEdit}
@@ -200,7 +200,7 @@ function DocumentDetailPage() {
 					/>
 				</div>
 
-				<aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+				<aside className="space-y-4 doc-aside">
 					<DocumentFieldsSidebar
 						canEdit={canEdit}
 						createdAt={doc.createdAt}

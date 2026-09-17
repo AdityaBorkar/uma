@@ -22,9 +22,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 				{toasts.map((t) => (
 					<div
 						className={cn(
-							"rounded-lg border px-4 py-3 shadow-lg bg-card text-card-foreground min-w-[280px]",
+							"rounded-md border px-4 py-3 bg-card text-card-foreground min-w-70",
 							t.variant === "destructive" &&
-								"border-destructive bg-destructive text-destructive-foreground",
+								"border-danger-edge/30 bg-danger-bg text-danger-fg",
 						)}
 						key={t.id}
 					>

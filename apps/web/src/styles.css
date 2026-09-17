@@ -6,99 +6,125 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Primer-inspired light tokens — GitHub-like */
+/* Vercel-like dark-only tokens — black/white base, color reserved for status. */
 :root {
-	--background: #ffffff;
-	--foreground: #1f2328;
-	--card: #ffffff;
-	--card-foreground: #1f2328;
-	--popover: #ffffff;
-	--popover-foreground: #1f2328;
-	--primary: #1f883d;
-	--primary-foreground: #ffffff;
-	--secondary: #f6f8fa;
-	--secondary-foreground: #24292f;
-	--muted: #f6f8fa;
-	--muted-foreground: #656d76;
-	--accent: #f6f8fa;
-	--accent-foreground: #1f2328;
-	--destructive: #cf222e;
+	--background: #000000;
+	--foreground: #ededed;
+	--card: #0a0a0a;
+	--card-foreground: #ededed;
+	--popover: #0a0a0a;
+	--popover-foreground: #ededed;
+	--primary: #ededed;
+	--primary-foreground: #000000;
+	--secondary: #1a1a1a;
+	--secondary-foreground: #ededed;
+	--muted: #111111;
+	--muted-foreground: #a1a1a1;
+	--accent: #1a1a1a;
+	--accent-foreground: #ededed;
+	--destructive: #e5484d;
 	--destructive-foreground: #ffffff;
-	--border: #d0d7de;
-	--input: #d0d7de;
-	--ring: #0969da;
-	--chart-1: #0969da;
-	--chart-2: #1a7f37;
-	--chart-3: #8250df;
-	--chart-4: #bf8700;
-	--chart-5: #cf222e;
+	--border: #262626;
+	--input: #262626;
+	--ring: #737373;
+	--chart-1: #ededed;
+	--chart-2: #a1a1a1;
+	--chart-3: #737373;
+	--chart-4: #525252;
+	--chart-5: #404040;
 	--radius: 0.375rem;
-	--sidebar: #f6f8fa;
-	--sidebar-foreground: #1f2328;
-	--sidebar-primary: #1f883d;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #f6f8fa;
-	--sidebar-accent-foreground: #1f2328;
-	--sidebar-border: #d0d7de;
-	--sidebar-ring: #0969da;
+	--sidebar: #000000;
+	--sidebar-foreground: #ededed;
+	--sidebar-primary: #ededed;
+	--sidebar-primary-foreground: #000000;
+	--sidebar-accent: #1a1a1a;
+	--sidebar-accent-foreground: #ededed;
+	--sidebar-border: #1f1f1f;
+	--sidebar-ring: #737373;
 
-	/* Primer semantic aliases */
-	--color-accent-fg: #0969da;
-	--color-success-fg: #1a7f37;
-	--color-danger-fg: #cf222e;
-	--color-attention-fg: #9a6700;
-	--color-done-fg: #8250df;
-	--color-open-fg: #1a7f37;
-	--color-closed-fg: #656d76;
-	--header-bg: #24292f;
-	--header-fg: #ffffff;
-	--header-border: #343941;
+	/* Semantic aliases — neutral by default; green/red/amber only for status. */
+	--color-accent-fg: #ededed;
+	--color-success-fg: #46a758;
+	--color-danger-fg: #e5484d;
+	--color-attention-fg: #f5a524;
+	--color-done-fg: #a1a1a1;
+	--color-open-fg: #46a758;
+	--color-closed-fg: #a1a1a1;
+	--header-bg: #000000;
+	--header-fg: #ededed;
+	--header-border: #1f1f1f;
+
+	/* Subtle status surfaces — badge/alert backgrounds (theme-aware). */
+	--color-success-bg: #0e1f14;
+	--color-attention-bg: #201503;
+	--color-danger-bg: #251314;
+	--color-done-bg: #1a1a1a;
+	--color-info-bg: #1a1a1a;
+	/* Success border differs from text in dark mode — dedicated token. */
+	--color-success-border: #2e5a3e;
+	/* Alert destructive edge. */
+	--color-danger-edge: #e5484d;
+	/* Dialog scrim — black in dark-only theme (50% opacity at use). */
+	--color-overlay: #000000;
+	/* Active underline accent (UnderlineNav / UnderlineTabs) — white. */
+	--color-underline: #ededed;
+	color-scheme: dark;
 }
 
 .dark {
-	--background: #0d1117;
-	--foreground: #e6edf3;
-	--card: #161b22;
-	--card-foreground: #e6edf3;
-	--popover: #161b22;
-	--popover-foreground: #e6edf3;
-	--primary: #238636;
-	--primary-foreground: #ffffff;
-	--secondary: #21262d;
-	--secondary-foreground: #e6edf3;
-	--muted: #21262d;
-	--muted-foreground: #7d8590;
-	--accent: #21262d;
-	--accent-foreground: #e6edf3;
-	--destructive: #da3633;
+	--background: #000000;
+	--foreground: #ededed;
+	--card: #0a0a0a;
+	--card-foreground: #ededed;
+	--popover: #0a0a0a;
+	--popover-foreground: #ededed;
+	--primary: #ededed;
+	--primary-foreground: #000000;
+	--secondary: #1a1a1a;
+	--secondary-foreground: #ededed;
+	--muted: #111111;
+	--muted-foreground: #a1a1a1;
+	--accent: #1a1a1a;
+	--accent-foreground: #ededed;
+	--destructive: #e5484d;
 	--destructive-foreground: #ffffff;
-	--border: #30363d;
-	--input: #30363d;
-	--ring: #1f6feb;
-	--chart-1: #1f6feb;
-	--chart-2: #238636;
-	--chart-3: #8957e5;
-	--chart-4: #d29922;
-	--chart-5: #f85149;
-	--sidebar: #010409;
-	--sidebar-foreground: #e6edf3;
-	--sidebar-primary: #238636;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #21262d;
-	--sidebar-accent-foreground: #e6edf3;
-	--sidebar-border: #30363d;
-	--sidebar-ring: #1f6feb;
+	--border: #262626;
+	--input: #262626;
+	--ring: #737373;
+	--chart-1: #ededed;
+	--chart-2: #a1a1a1;
+	--chart-3: #737373;
+	--chart-4: #525252;
+	--chart-5: #404040;
+	--sidebar: #000000;
+	--sidebar-foreground: #ededed;
+	--sidebar-primary: #ededed;
+	--sidebar-primary-foreground: #000000;
+	--sidebar-accent: #1a1a1a;
+	--sidebar-accent-foreground: #ededed;
+	--sidebar-border: #1f1f1f;
+	--sidebar-ring: #737373;
 
-	--color-accent-fg: #58a6ff;
-	--color-success-fg: #3fb950;
-	--color-danger-fg: #f85149;
-	--color-attention-fg: #d29922;
-	--color-done-fg: #bc8cff;
-	--color-open-fg: #3fb950;
-	--color-closed-fg: #7d8590;
-	--header-bg: #010409;
-	--header-fg: #e6edf3;
-	--header-border: #21262d;
+	--color-accent-fg: #ededed;
+	--color-success-fg: #46a758;
+	--color-danger-fg: #e5484d;
+	--color-attention-fg: #f5a524;
+	--color-done-fg: #a1a1a1;
+	--color-open-fg: #46a758;
+	--color-closed-fg: #a1a1a1;
+	--header-bg: #000000;
+	--header-fg: #ededed;
+	--header-border: #1f1f1f;
+
+	--color-success-bg: #0e1f14;
+	--color-attention-bg: #201503;
+	--color-danger-bg: #251314;
+	--color-done-bg: #1a1a1a;
+	--color-info-bg: #1a1a1a;
+	--color-success-border: #2e5a3e;
+	--color-danger-edge: #e5484d;
+	--color-overlay: #000000;
+	--color-underline: #ededed;
 	color-scheme: dark;
 }
 
@@ -110,6 +136,14 @@
 	--font-mono:
 		"JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
 		Consolas, "Liberation Mono", monospace;
+	/* Caption (11px) and compact (13px) meta sizes — prefer text-xs/text-sm
+	   for body copy; these two cover pills, table meta, and menu hints. */
+	--text-micro: 0.6875rem;
+	--text-micro--line-height: 1rem;
+	--text-compact: 0.8125rem;
+	--text-compact--line-height: 1.25rem;
+	/* Subtle 1px scrim blur for dialog overlays. */
+	--blur-subtle: 1px;
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -146,6 +180,25 @@
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
+	/* Semantic text tokens — replaces text-[var(--color-*-fg)] arbitraries. */
+	--color-accent-fg: var(--color-accent-fg);
+	--color-success-fg: var(--color-success-fg);
+	--color-danger-fg: var(--color-danger-fg);
+	--color-attention-fg: var(--color-attention-fg);
+	--color-done-fg: var(--color-done-fg);
+	--color-open-fg: var(--color-open-fg);
+	--color-closed-fg: var(--color-closed-fg);
+	/* Subtle status surfaces for badges/alerts. */
+	--color-success-bg: var(--color-success-bg);
+	--color-attention-bg: var(--color-attention-bg);
+	--color-danger-bg: var(--color-danger-bg);
+	--color-done-bg: var(--color-done-bg);
+	--color-info-bg: var(--color-info-bg);
+	--color-success-border: var(--color-success-border);
+	--color-danger-edge: var(--color-danger-edge);
+	/* Dialog scrim + active underline accent. */
+	--color-overlay: var(--color-overlay);
+	--color-underline: var(--color-underline);
 }
 
 html.dark {
@@ -154,15 +207,55 @@ html.dark {
 
 @layer base {
 	* {
-		@apply border-border outline-ring/50 cursor-default;
+		@apply border-border outline-ring/50;
 	}
 
 	html {
-		color-scheme: light;
+		color-scheme: dark;
 	}
 
 	body {
 		@apply bg-background text-foreground font-sans text-sm antialiased min-h-full;
+	}
+
+	/* Universal Design: restore native affordance cursors that a global
+	   cursor-default would suppress. Interactive elements must signal
+	   clickability; disabled elements signal non-interactivity. */
+	button:not(:disabled),
+	[role="button"]:not([aria-disabled="true"]),
+	a[href],
+	select,
+	summary {
+		cursor: pointer;
+	}
+	button:disabled,
+	[aria-disabled="true"] {
+		cursor: not-allowed;
+	}
+
+	/* Universal Design: visible keyboard focus everywhere. Components add
+	   their own focus-visible rings; this is the safety net. */
+	:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 2px;
+	}
+
+	/* Universal Design: honor reduced-motion for vestibular safety.
+	   !important is intentional — the override must win over component
+	   transitions/animations regardless of specificity. */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			/* biome-ignore lint/complexity/noImportantStyles: reduced-motion override must win */
+			animation-duration: 0.01ms !important;
+			/* biome-ignore lint/complexity/noImportantStyles: reduced-motion override must win */
+			animation-iteration-count: 1 !important;
+			/* biome-ignore lint/complexity/noImportantStyles: reduced-motion override must win */
+			transition-duration: 0.01ms !important;
+			/* biome-ignore lint/complexity/noImportantStyles: reduced-motion override must win */
+			scroll-behavior: auto !important;
+		}
 	}
 
 	h1 {
@@ -174,6 +267,115 @@ html.dark {
 	pre,
 	samp {
 		font-family: var(--font-mono);
+	}
+}
+
+/* Layout helpers for values with no spacing/radius token equivalent.
+   Viewport-relative heights, runtime-popover anchoring (Base UI CSS vars),
+   and exact grid templates live here instead of Tailwind arbitraries. */
+@layer components {
+	/* Dialog scroll body: 70dvh with vh fallback. */
+	.dialog-body {
+		max-height: 70vh;
+		/* biome-ignore lint/suspicious/noDuplicateProperties: dvh override with vh fallback */
+		max-height: 70dvh;
+	}
+	/* Dialog frame: 90dvh with vh fallback. */
+	.dialog-frame {
+		max-height: 90vh;
+		/* biome-ignore lint/suspicious/noDuplicateProperties: dvh override with vh fallback */
+		max-height: 90dvh;
+	}
+	/* Toast viewport minimum width (280px sidebar rhythm). */
+	.toast-card {
+		min-width: 17.5rem;
+	}
+	/* Login shell: full viewport minus the 49px top offset. */
+	.auth-shell {
+		min-height: calc(100vh - 49px);
+		/* biome-ignore lint/suspicious/noDuplicateProperties: dvh override with vh fallback */
+		min-height: calc(100dvh - 3.0625rem);
+	}
+	/* Document detail split: single column → main + 320px aside. */
+	.doc-split {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+		align-items: start;
+	}
+	@media (min-width: 1024px) {
+		.doc-split {
+			grid-template-columns: minmax(0, 1fr) 20rem;
+		}
+	}
+	/* Document aside: sticky scroll column on desktop only. */
+	@media (min-width: 1024px) {
+		.doc-aside {
+			position: sticky;
+			top: 1.5rem;
+			max-height: calc(100vh - 3rem);
+			/* biome-ignore lint/suspicious/noDuplicateProperties: dvh override with vh fallback */
+			max-height: calc(100dvh - 3rem);
+			overflow-y: auto;
+		}
+	}
+	/* Base UI Select popup anchored to its trigger width. */
+	.select-popup {
+		min-width: var(--anchor-width);
+		max-width: var(--available-width);
+		transform-origin: var(--transform-origin);
+	}
+	.select-list {
+		max-height: min(20rem, var(--available-height));
+	}
+	/* Select item: check column + label column. */
+	.select-item-grid {
+		display: grid;
+		grid-template-columns: 1rem minmax(0, 1fr);
+	}
+	/* Card header with optional action slot. */
+	.card-header-grid {
+		grid-template-rows: auto auto;
+	}
+	.card-header-grid:has([data-slot="card-action"]) {
+		grid-template-columns: 1fr auto;
+	}
+	/* Alert icon layout: text-only single column, icon + text when svg. */
+	.alert-grid {
+		display: grid;
+		grid-template-columns: 0 1fr;
+	}
+	.alert-grid:has(> svg) {
+		grid-template-columns: calc(var(--spacing) * 4) 1fr;
+	}
+	/* Hidden scrollbars for horizontal nav/tab rails — content remains
+	   keyboard-scrollable; never use on vertically scrolling pages. */
+	.scrollbar-none {
+		scrollbar-width: none;
+	}
+	.scrollbar-none::-webkit-scrollbar {
+		display: none;
+	}
+	.scrollbar-thin {
+		scrollbar-width: thin;
+	}
+	/* Skip link: first-tab stop for keyboard users (Universal Design). */
+	.skip-link {
+		position: absolute;
+		top: -100%;
+		left: 1rem;
+		z-index: 100;
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--primary-foreground);
+		background: var(--primary);
+		border-radius: var(--radius);
+		transition: top 0.15s ease;
+	}
+	.skip-link:focus-visible {
+		top: 1rem;
+		outline-offset: 2px;
 	}
 }
 

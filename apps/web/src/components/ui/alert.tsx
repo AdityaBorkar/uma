@@ -4,7 +4,7 @@ import type * as React from "react";
 import { cn } from "#/lib/utils.ts";
 
 const alertVariants = cva(
-	"relative w-full rounded-md border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
+	"relative w-full rounded-md border px-4 py-3 text-sm grid alert-grid has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
 	{
 		defaultVariants: {
 			variant: "default",
@@ -13,7 +13,7 @@ const alertVariants = cva(
 			variant: {
 				default: "bg-card text-card-foreground border-border",
 				destructive:
-					"bg-[#ffebe9] border-[#ff8182]/50 text-[#cf222e] dark:bg-[#260f12] dark:border-[#da3633]/30 dark:text-[#f85149] [&>svg]:text-current *:data-[slot=alert-description]:text-current/90",
+					"bg-danger-bg border-danger-edge/30 text-danger-fg [&>svg]:text-current *:data-[slot=alert-description]:text-current/90",
 			},
 		},
 	},

@@ -148,6 +148,9 @@ export function AppShell({
 
 	return (
 		<div className="flex min-h-screen bg-background">
+			<a className="skip-link" href="#main-content">
+				Skip to content
+			</a>
 			<AppSidebar
 				currentScope={currentScope}
 				isSettingsRoute={isSettings}
@@ -161,7 +164,7 @@ export function AppShell({
 					{/* Mobile Project Selector */}
 					<div className="border-b bg-muted/50 px-4 py-2">
 						<label
-							className="mb-1 block font-medium text-[11px] text-muted-foreground uppercase tracking-widest"
+							className="mb-1 block font-medium text-micro text-muted-foreground uppercase tracking-widest"
 							htmlFor="project-selector-mobile"
 						>
 							Project
@@ -176,7 +179,7 @@ export function AppShell({
 							</div>
 							<select
 								aria-label="Project selector"
-								className="flex h-8 w-full appearance-none rounded-md border border-input bg-background py-1 pr-8 pl-8 text-sm shadow-none focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+								className="flex h-8 w-full appearance-none rounded-md border border-input bg-background py-1 pr-8 pl-8 text-sm shadow-none focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
 								id="project-selector-mobile"
 								onChange={(e) => handleScopeSelect(e.target.value)}
 								value={
@@ -204,13 +207,17 @@ export function AppShell({
 								<ChevronDown className="size-4" />
 							</div>
 						</div>
-						<p className="mt-1 truncate text-[11px] text-muted-foreground">
+						<p className="mt-1 truncate text-micro text-muted-foreground">
 							{scopeHint}
 						</p>
 					</div>
 					<UnderlineNav currentScope={currentScope} items={items} />
 				</div>
-				<main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6">
+				<main
+					className="mx-auto w-full max-w-320 flex-1 px-4 py-6 sm:px-6"
+					id="main-content"
+					tabIndex={-1}
+				>
 					{children}
 				</main>
 			</div>

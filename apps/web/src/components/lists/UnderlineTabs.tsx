@@ -7,7 +7,7 @@ export interface UnderlineTab {
 
 /**
  * Button-based underline tabs sharing UnderlineNav's active styling
- * (`border-[#fd8c73] font-semibold`). Extracted from
+ * (`border-underline font-semibold`). Extracted from
  * documents/index.tsx kind tabs so future tab rows reuse one style.
  */
 export function UnderlineTabs({
@@ -20,7 +20,7 @@ export function UnderlineTabs({
 	tabs: UnderlineTab[];
 }) {
 	return (
-		<nav className="flex items-center gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+		<nav className="flex items-center gap-1 overflow-x-auto border-b scrollbar-none">
 			{tabs.map((t) => {
 				const active =
 					t.value === undefined
@@ -28,10 +28,11 @@ export function UnderlineTabs({
 						: activeValue === t.value;
 				return (
 					<button
+						aria-pressed={active}
 						className={cn(
-							"shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm",
+							"shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
 							active
-								? "border-[#fd8c73] font-semibold text-foreground"
+								? "border-underline font-semibold text-foreground"
 								: "border-transparent text-muted-foreground hover:text-foreground",
 						)}
 						key={t.value ?? "__all"}

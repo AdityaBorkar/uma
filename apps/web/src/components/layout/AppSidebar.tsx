@@ -55,10 +55,10 @@ export function AppSidebar({
 	// Pseudo-values (multi/settings/create) are dispatched by AppShell's
 	// single `handleScopeSelect` — this component only forwards.
 	const itemClass =
-		"grid cursor-default grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded-[4px] py-1.5 pr-2 pl-1 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground";
+		"grid cursor-default select-item-grid items-center gap-2 rounded-sm py-1.5 pr-2 pl-1 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground";
 
 	return (
-		<aside className="sticky top-0 hidden h-screen w-[280px] shrink-0 flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground md:flex">
+		<aside className="sticky top-0 hidden h-screen w-70 shrink-0 flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground md:flex">
 			{/* Project Selector */}
 			<div className="shrink-0 p-3">
 				<Select.Root
@@ -72,7 +72,7 @@ export function AppSidebar({
 				>
 					<Select.Trigger
 						aria-label="Project selector"
-						className="relative flex h-8 w-full select-none items-center rounded-md border border-sidebar-border bg-sidebar-accent py-1 pr-8 pl-8 text-sidebar-foreground text-sm shadow-none outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 data-[popup-open]:border-ring"
+						className="relative flex h-8 w-full select-none items-center rounded-md border border-sidebar-border bg-sidebar-accent py-1 pr-8 pl-8 text-sidebar-foreground text-sm shadow-none outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 data-[popup-open]:border-ring"
 						id="project-selector"
 					>
 						<span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
@@ -93,8 +93,8 @@ export function AppSidebar({
 							side="bottom"
 							sideOffset={4}
 						>
-							<Select.Popup className="min-w-[var(--anchor-width)] max-w-[var(--available-width)] origin-[var(--transform-origin)] rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-hidden">
-								<Select.List className="max-h-[min(20rem,var(--available-height))] overflow-y-auto outline-hidden [scrollbar-width:thin]">
+							<Select.Popup className="select-popup rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-hidden">
+								<Select.List className="select-list overflow-y-auto outline-hidden scrollbar-thin">
 									<Select.Item className={itemClass} value={SCOPE_VALUE.multi}>
 										<Select.ItemIndicator className="col-start-1 flex items-center justify-center">
 											<Check className="size-4.25" />
@@ -137,7 +137,7 @@ export function AppSidebar({
 										</Select.Item>
 									</div>
 									<Select.Group className="mt-1 border-popover border-t pt-1">
-										<Select.GroupLabel className="px-2 py-1 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+										<Select.GroupLabel className="px-2 py-1 font-semibold text-micro text-muted-foreground uppercase tracking-wider">
 											Projects
 										</Select.GroupLabel>
 										{projects.length > 0 ? (
@@ -171,7 +171,7 @@ export function AppSidebar({
 			{/* Navigation */}
 			<nav
 				aria-label="Primary"
-				className="flex-1 overflow-y-auto px-3 py-2 [scrollbar-width:thin]"
+				className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin"
 			>
 				<ul className="flex flex-col gap-0.5">
 					{items.map((item) => {
@@ -187,10 +187,11 @@ export function AppSidebar({
 							<li key={item.to}>
 								<Link
 									activeProps={{
+										"aria-current": "page",
 										className:
 											"bg-sidebar-accent text-sidebar-accent-foreground font-medium",
 									}}
-									className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-muted-foreground text-sm hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+									className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-muted-foreground text-sm hover:bg-sidebar-accent/70 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
 									to={item.to}
 									{...(isScoped
 										? { params: { projectSlug: currentScope } }

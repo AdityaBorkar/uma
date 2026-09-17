@@ -113,7 +113,7 @@ function ProjectsPage() {
 							>
 								<div className="min-w-0 flex-1">
 									<Link
-										className="font-semibold text-sm hover:text-[var(--color-accent-fg)] hover:underline"
+										className="font-semibold text-sm hover:text-accent-fg hover:underline"
 										params={{ projectSlug: p.slug }}
 										to="/$projectSlug/dashboard"
 									>

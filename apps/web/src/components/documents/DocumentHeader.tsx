@@ -52,7 +52,7 @@ export function DocumentHeader({
 		<>
 			<div className="flex items-center gap-2 text-sm">
 				<Link
-					className="text-muted-foreground hover:text-[var(--color-accent-fg)] hover:underline"
+					className="text-muted-foreground hover:text-accent-fg hover:underline"
 					params={{ projectSlug }}
 					to="/$projectSlug/documents"
 				>
@@ -61,7 +61,7 @@ export function DocumentHeader({
 				<span className="text-muted-foreground/40">/</span>
 				<span className="text-foreground">#{doc.number}</span>
 				{dirty ? (
-					<span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800 text-xs dark:bg-amber-900/30 dark:text-amber-300">
+					<span className="ml-2 rounded bg-attention-bg px-1.5 py-0.5 font-medium text-attention-fg text-xs">
 						Unsaved
 					</span>
 				) : null}
@@ -149,9 +149,7 @@ export function DocumentHeader({
 				{saveError ? (
 					<p className="text-destructive text-sm">{saveError}</p>
 				) : null}
-				{notice ? (
-					<p className="text-amber-600 text-xs dark:text-amber-400">{notice}</p>
-				) : null}
+				{notice ? <p className="text-attention-fg text-xs">{notice}</p> : null}
 				{doc.error ? (
 					<div className="rounded-md border border-destructive bg-destructive/5 p-3 text-sm">
 						<p className="font-medium text-destructive">

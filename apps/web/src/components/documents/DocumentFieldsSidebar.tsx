@@ -81,7 +81,7 @@ export function DocumentFieldsSidebar({
 						placeholder="api, urgent"
 						value={labelsText}
 					/>
-					<p className="text-[11px] text-muted-foreground">
+					<p className="text-micro text-muted-foreground">
 						Comma-separated, ≤20
 					</p>
 				</div>

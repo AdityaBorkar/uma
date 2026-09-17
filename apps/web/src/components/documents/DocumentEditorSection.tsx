@@ -14,7 +14,7 @@ function SanitizedHtml({ html }: { html: string | null }) {
 	// (#/components/mdx.server.ts) — trusted sink sanitized server-side.
 	return (
 		<div
-			className="prose prose-sm dark:prose-invert max-w-none"
+			className="prose prose-sm prose-invert max-w-none"
 			// react-doctor-disable-next-line react-doctor/dangerous-html-sink -- html is static output of mdx.server.ts allowlist
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: Exception
 			dangerouslySetInnerHTML={{ __html: html ?? "" }}
@@ -98,7 +98,7 @@ export function DocumentEditorSection({
 					</Label>
 					<textarea
 						aria-label="Document body (MDX source)"
-						className="h-[520px] w-full resize-y rounded-md border bg-background p-3 font-mono text-sm"
+						className="h-130 w-full resize-y rounded-md border bg-background p-3 font-mono text-sm"
 						id="doc-body"
 						onChange={(e) => setDraftBody(draftStore, e.target.value)}
 						spellCheck={false}

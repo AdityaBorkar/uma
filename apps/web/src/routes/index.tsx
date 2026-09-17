@@ -92,7 +92,7 @@ function LoginPage() {
 	};
 
 	return (
-		<div className="mx-auto flex min-h-[calc(100vh-49px)] max-w-md flex-col justify-center px-4 py-10">
+		<div className="mx-auto flex auth-shell max-w-md flex-col justify-center px-4 py-10">
 			<div className="mb-6 flex flex-col items-center text-center">
 				<span className="flex h-10 w-10 items-center justify-center rounded-full border bg-muted font-semibold text-sm">
 					P

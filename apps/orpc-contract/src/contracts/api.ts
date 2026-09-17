@@ -511,7 +511,8 @@ export const apiContract = {
 		create: oc
 			.meta(
 				openapi({
-					description: "Create a project from a GitHub repository. A unique slug is assigned; description is synced from GitHub.",
+					description:
+						"Create a project from a GitHub repository. A unique slug is assigned; description is synced from GitHub.",
 					method: "POST",
 					path: "/projects",
 					successStatus: 201,
@@ -563,7 +564,8 @@ export const apiContract = {
 		update: oc
 			.meta(
 				openapi({
-					description: "Patch a project's name, GitHub repository, or slug. Description is re-synced from GitHub.",
+					description:
+						"Patch a project's name, GitHub repository, or slug. Description is re-synced from GitHub.",
 					method: "PATCH",
 					path: "/projects/{id}",
 					summary: "Update project",
