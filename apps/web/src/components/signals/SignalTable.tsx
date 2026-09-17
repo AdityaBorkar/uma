@@ -1,16 +1,18 @@
-import { severityBadgeClass } from "#/components/badges.ts";
+import {
+	DataTable,
+	DataTableAction,
+	DataTableActionsCell,
+	DataTableAgoCell,
+	DataTableBody,
+	DataTableHead,
+	DataTableHeader,
+	DataTableMetaCell,
+	fallbackText,
+} from "#/components/data/DataTable.tsx";
+import { SeverityBadge } from "#/components/data/StatusBadge.tsx";
 import { ExternalLink } from "#/components/icons.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
-import { Button } from "#/components/ui/button.tsx";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "#/components/ui/table.tsx";
-import { formatAgo } from "#/lib/age.ts";
+import { TableCell, TableRow } from "#/components/ui/table.tsx";
 
 interface SignalRow {
 	body: string | null;
@@ -43,29 +45,22 @@ export function SignalTable({
 	isUpdatePending,
 }: Props) {
 	return (
-		<Table>
-			<TableHeader>
-				<TableRow className="bg-muted/50 hover:bg-muted/50">
-					<TableHead className="w-24 text-xs">Severity</TableHead>
-					<TableHead className="text-xs">Signal</TableHead>
-					<TableHead className="w-36 text-xs">Project</TableHead>
-					<TableHead className="w-24 text-xs">Status</TableHead>
-					<TableHead className="w-20 text-xs">Age</TableHead>
-					<TableHead className="w-56 text-right text-xs">Actions</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
+		<DataTable>
+			<DataTableHeader>
+				<DataTableHead className="w-24 text-xs">Severity</DataTableHead>
+				<DataTableHead className="text-xs">Signal</DataTableHead>
+				<DataTableHead className="w-36 text-xs">Project</DataTableHead>
+				<DataTableHead className="w-24 text-xs">Status</DataTableHead>
+				<DataTableHead className="w-20 text-xs">Age</DataTableHead>
+				<DataTableHead className="w-56 text-xs" right={true}>
+					Actions
+				</DataTableHead>
+			</DataTableHeader>
+			<DataTableBody>
 				{items.map((s) => (
 					<TableRow key={s.id}>
 						<TableCell>
-							<Badge
-								className={severityBadgeClass(s.severity)}
-								variant={
-									s.severity === "critical" ? "destructive" : "secondary"
-								}
-							>
-								{s.severity}
-							</Badge>
+							<SeverityBadge severity={s.severity} />
 						</TableCell>
 						<TableCell>
 							<div className="flex items-center gap-2 font-medium text-sm">
@@ -88,55 +83,44 @@ export function SignalTable({
 								</p>
 							) : null}
 						</TableCell>
-						<TableCell className="text-muted-foreground text-sm">
-							{s.projectName ?? "—"}
-						</TableCell>
+						<DataTableMetaCell>{fallbackText(s.projectName)}</DataTableMetaCell>
 						<TableCell>
 							<Badge variant={s.status === "new" ? "default" : "secondary"}>
 								{s.status}
 							</Badge>
 						</TableCell>
-						<TableCell className="text-muted-foreground text-sm">
-							{formatAgo(s.createdAt)}
-						</TableCell>
-						<TableCell className="text-right">
-							<div className="flex justify-end gap-1">
-								{s.status === "dismissed" ? null : (
-									<Button
-										disabled={isTaskPending}
-										onClick={() => onCreateTask(s)}
-										size="sm"
-										variant="outline"
+						<DataTableAgoCell value={s.createdAt} />
+						<DataTableActionsCell>
+							{s.status === "dismissed" ? null : (
+								<DataTableAction
+									disabled={isTaskPending}
+									onClick={() => onCreateTask(s)}
+								>
+									Task
+								</DataTableAction>
+							)}
+							{s.status === "new" ? (
+								<>
+									<DataTableAction
+										disabled={isUpdatePending}
+										onClick={() => onTriage(s)}
 									>
-										Task
-									</Button>
-								)}
-								{s.status === "new" ? (
-									<>
-										<Button
-											disabled={isUpdatePending}
-											onClick={() => onTriage(s)}
-											size="sm"
-											variant="outline"
-										>
-											Triage
-										</Button>
-										<Button
-											disabled={isUpdatePending}
-											onClick={() => onDismiss(s)}
-											size="sm"
-											variant="ghost"
-										>
-											Dismiss
-										</Button>
-									</>
-								) : null}
-							</div>
-						</TableCell>
+										Triage
+									</DataTableAction>
+									<DataTableAction
+										disabled={isUpdatePending}
+										onClick={() => onDismiss(s)}
+										variant="ghost"
+									>
+										Dismiss
+									</DataTableAction>
+								</>
+							) : null}
+						</DataTableActionsCell>
 					</TableRow>
 				))}
-			</TableBody>
-		</Table>
+			</DataTableBody>
+		</DataTable>
 	);
 }
 

@@ -8,6 +8,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import posthog from "posthog-js";
 import { useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
 import {
 	LIST_LIMIT,
 	ListEmptyCard,
@@ -23,16 +25,7 @@ import {
 import { TaskForm } from "#/components/tasks/TaskForm.tsx";
 import { TaskTable } from "#/components/tasks/TaskTable.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import { Card, CardContent } from "#/components/ui/card.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
-import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
-import { Select } from "#/components/ui/select.tsx";
+import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
 import { type TaskStatus, TaskStatusEnum } from "#/schemas/schema.ts";
 import { useUrlSearchInput } from "#/stores/filters.ts";
@@ -143,7 +136,7 @@ function TasksPage() {
 		}),
 	);
 
-	const items = tasksQuery.data?.pages.flatMap((page) => page.items);
+	const items = flattenPages(tasksQuery.data);
 	const signalOptions = (signalsQuery.data?.items ?? []).map((s) => ({
 		id: s.id,
 		title: s.title,
@@ -166,41 +159,32 @@ function TasksPage() {
 				title="Tasks"
 			/>
 
-			<Card>
-				<CardContent className="flex flex-col gap-3 bg-muted/50 sm:flex-row sm:items-end">
-					<div className="flex-1 space-y-1.5">
-						<Label className="font-semibold text-xs" htmlFor="q">
-							Search
-						</Label>
-						<Input
-							id="q"
-							onChange={(e) => setQInput(e.target.value)}
-							placeholder="Filter by title"
-							value={qInput}
-						/>
-					</div>
-					<div className="w-full space-y-1.5 sm:w-40">
-						<Label className="font-semibold text-xs" htmlFor="statusFilter">
-							Status
-						</Label>
-						<Select
-							id="statusFilter"
-							onChange={(e) => {
-								const status = TaskStatusEnum.safeParse(e.target.value);
-								setSearch({ status: status.success ? status.data : undefined });
-							}}
-							value={search.status ?? ""}
-						>
-							<option value="">All</option>
-							<option value="queued">queued</option>
-							<option value="running">running</option>
-							<option value="completed">completed</option>
-							<option value="failed">failed</option>
-							<option value="cancelled">cancelled</option>
-						</Select>
-					</div>
-				</CardContent>
-			</Card>
+			<FilterBar
+				filters={[
+					{
+						id: "statusFilter",
+						label: "Status",
+						onChange: (value) => {
+							const status = TaskStatusEnum.safeParse(value);
+							setSearch({ status: status.success ? status.data : undefined });
+						},
+						options: [
+							{ label: "All", value: "" },
+							{ label: "queued", value: "queued" },
+							{ label: "running", value: "running" },
+							{ label: "completed", value: "completed" },
+							{ label: "failed", value: "failed" },
+							{ label: "cancelled", value: "cancelled" },
+						],
+						value: search.status ?? "",
+					},
+				]}
+				search={{
+					onChange: setQInput,
+					placeholder: "Filter by title",
+					value: qInput,
+				}}
+			/>
 
 			{tasksQuery.isPending ? (
 				<ListLoadingCard label="Loading tasks…" />
@@ -248,29 +232,29 @@ function TasksPage() {
 				</ListResultCard>
 			)}
 
-			<Dialog onOpenChange={setOpen} open={open}>
-				<DialogContent onClose={() => setOpen(false)}>
-					<DialogHeader>
-						<DialogTitle>New Task</DialogTitle>
-					</DialogHeader>
-					<TaskForm
-						agents={agentOptions}
-						loading={createMut.isPending}
-						onCancel={() => setOpen(false)}
-						onSubmit={async (values) => {
-							await createMut.mutateAsync({
-								agent: values.agent,
-								projectId: values.projectId,
-								prompt: values.prompt || undefined,
-								signalId: values.signalId,
-								title: values.title,
-							});
-						}}
-						projects={projectOptions}
-						signals={signalOptions}
-					/>
-				</DialogContent>
-			</Dialog>
+			<FormDialog
+				onClose={() => setOpen(false)}
+				onOpenChange={setOpen}
+				open={open}
+				title="New Task"
+			>
+				<TaskForm
+					agents={agentOptions}
+					loading={createMut.isPending}
+					onCancel={() => setOpen(false)}
+					onSubmit={async (values) => {
+						await createMut.mutateAsync({
+							agent: values.agent,
+							projectId: values.projectId,
+							prompt: values.prompt || undefined,
+							signalId: values.signalId,
+							title: values.title,
+						});
+					}}
+					projects={projectOptions}
+					signals={signalOptions}
+				/>
+			</FormDialog>
 		</div>
 	);
 }

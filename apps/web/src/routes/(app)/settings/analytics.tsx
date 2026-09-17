@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { PlaceholderCard } from "#/components/lists/PlaceholderCard.tsx";
+import { PageHeader } from "#/components/lists/shared.tsx";
+
 export const Route = createFileRoute("/(app)/settings/analytics")({
 	component: AnalyticsPage,
 	head: () => ({
@@ -16,15 +19,13 @@ export const Route = createFileRoute("/(app)/settings/analytics")({
 function AnalyticsPage() {
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-semibold text-2xl tracking-tight">Analytics</h1>
-				<p className="text-muted-foreground text-sm">
-					Placeholder — analytics will live here.
-				</p>
-			</div>
-			<div className="rounded-md border bg-muted/30 px-4 py-6 text-center text-muted-foreground text-sm">
+			<PageHeader
+				description="Placeholder — analytics will live here."
+				title="Analytics"
+			/>
+			<PlaceholderCard>
 				No analytics yet — analytics will live here.
-			</div>
+			</PlaceholderCard>
 		</div>
 	);
 }

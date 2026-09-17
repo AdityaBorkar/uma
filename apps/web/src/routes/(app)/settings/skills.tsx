@@ -1,6 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
+import { DialogFooter } from "#/components/forms/FormFooter.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
+import {
+	ListRow,
+	ListRowActions,
+	ListRowMain,
+	ListRowSubtitle,
+	ListRowTitle,
+} from "#/components/lists/ListRow.tsx";
 import {
 	ListEmptyCard,
 	ListResultCard,
@@ -9,16 +20,10 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
+import { VERSION_PIN_ERROR } from "#/lib/forms.ts";
+import { useFilteredByQuery } from "#/lib/lists.ts";
 import {
 	buildInstallCommand,
 	buildRemoveCommand,
@@ -115,9 +120,7 @@ function InstallDialog({
 		source !== "" &&
 		existingSources.some((s) => s.toLowerCase() === source.toLowerCase());
 	const versionError =
-		version && !isSafeSkillVersion(version)
-			? "Letters, digits, . _ - / : @ + ^ ~ only, max 128."
-			: null;
+		version && !isSafeSkillVersion(version) ? VERSION_PIN_ERROR : null;
 	const valid = source !== "" && !sourceError && !duplicate && !versionError;
 
 	async function handleVerify() {
@@ -149,145 +152,137 @@ function InstallDialog({
 	}
 
 	return (
-		<Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-			<DialogContent className="max-w-2xl p-0" onClose={onClose}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>Install skill</DialogTitle>
-					<DialogDescription>
-						Paste a GitHub link, verify it with{" "}
-						<code className="font-mono">bunx skills add</code>, optionally pin a
-						version, then save.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold" htmlFor="skill-source">
-							GitHub link
-						</Label>
-						<Input
-							id="skill-source"
-							onChange={(e) => {
-								setSourceInput(e.target.value);
-								setVerify({ status: "idle" });
-							}}
-							placeholder="vercel-labs/agent-skills or https://github.com/vercel-labs/agent-skills"
-							value={sourceInput}
-						/>
-						{sourceError ? (
-							<p className="text-destructive text-xs">{sourceError}</p>
-						) : null}
-						{duplicate ? (
-							<p className="text-destructive text-xs">
-								This source is already installed.
-							</p>
-						) : null}
-						{normalized?.githubUrl ? (
-							<p className="text-muted-foreground text-xs">
-								Repo:{" "}
-								<a
-									className="underline"
-									href={normalized.githubUrl}
-									rel="noreferrer"
-									target="_blank"
-								>
-									{normalized.githubUrl}
-								</a>
-							</p>
-						) : null}
-					</div>
-
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold" htmlFor="skill-version">
-							Version pin (optional)
-						</Label>
-						<Input
-							id="skill-version"
-							onChange={(e) => setVersionInput(e.target.value)}
-							placeholder="v1.2.0 or commit SHA — empty means floating latest"
-							value={versionInput}
-						/>
-						{versionError ? (
-							<p className="text-destructive text-xs">{versionError}</p>
-						) : null}
-						<p className="text-muted-foreground text-xs">
-							The CLI has no version flag, so the pin is stored as metadata.
-							Upgrading pulls latest via{" "}
-							<code className="font-mono">bunx skills update</code>.
-						</p>
-					</div>
-
-					<div className="flex items-center gap-2">
-						<Button
-							disabled={!valid || verify.status === "verifying"}
-							onClick={() => void handleVerify()}
-							size="sm"
-							type="button"
-							variant="outline"
+		<FormDialog
+			description={
+				<>
+					Paste a GitHub link, verify it with{" "}
+					<code className="font-mono">bunx skills add</code>, optionally pin a
+					version, then save.
+				</>
+			}
+			maxWidth="lg"
+			onClose={onClose}
+			onOpenChange={(next) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			open={open}
+			title="Install skill"
+		>
+			<FormField error={sourceError} id="skill-source" label="GitHub link">
+				<Input
+					id="skill-source"
+					onChange={(e) => {
+						setSourceInput(e.target.value);
+						setVerify({ status: "idle" });
+					}}
+					placeholder="vercel-labs/agent-skills or https://github.com/vercel-labs/agent-skills"
+					value={sourceInput}
+				/>
+				{duplicate ? (
+					<p className="text-destructive text-xs">
+						This source is already installed.
+					</p>
+				) : null}
+				{normalized?.githubUrl ? (
+					<p className="text-muted-foreground text-xs">
+						Repo:{" "}
+						<a
+							className="underline"
+							href={normalized.githubUrl}
+							rel="noreferrer"
+							target="_blank"
 						>
-							{verify.status === "verifying" ? "Verifying…" : "Verify"}
-						</Button>
-						{source && !sourceError ? (
-							<code className="truncate font-mono text-muted-foreground text-xs">
-								{buildVerifyCommand(source)}
-							</code>
-						) : null}
-					</div>
+							{normalized.githubUrl}
+						</a>
+					</p>
+				) : null}
+			</FormField>
 
-					{verify.status === "error" ? (
-						<Alert variant="destructive">
-							<AlertTitle>Verification failed</AlertTitle>
-							<AlertDescription>{verify.message}</AlertDescription>
-						</Alert>
-					) : null}
+			<FormField
+				error={versionError}
+				hint={
+					<>
+						The CLI has no version flag, so the pin is stored as metadata.
+						Upgrading pulls latest via{" "}
+						<code className="font-mono">bunx skills update</code>.
+					</>
+				}
+				id="skill-version"
+				label="Version pin (optional)"
+			>
+				<Input
+					id="skill-version"
+					onChange={(e) => setVersionInput(e.target.value)}
+					placeholder="v1.2.0 or commit SHA — empty means floating latest"
+					value={versionInput}
+				/>
+			</FormField>
 
-					{verify.status === "ok" ? (
-						<Alert>
-							<AlertTitle>
-								{verify.count} skill{verify.count === 1 ? "" : "s"} found
-							</AlertTitle>
-							<AlertDescription>
-								{verify.skills.length > 0 ? (
-									<ul className="mt-1 list-disc space-y-1 pl-4">
-										{verify.skills.slice(0, 10).map((s) => (
-											<li key={s.name}>
-												<span className="font-mono">{s.name}</span>
-												{s.description ? ` — ${s.description}` : ""}
-											</li>
-										))}
-									</ul>
-								) : (
-									"Source resolves."
-								)}
-							</AlertDescription>
-						</Alert>
-					) : null}
+			<div className="flex items-center gap-2">
+				<Button
+					disabled={!valid || verify.status === "verifying"}
+					onClick={() => void handleVerify()}
+					size="sm"
+					type="button"
+					variant="outline"
+				>
+					{verify.status === "verifying" ? "Verifying…" : "Verify"}
+				</Button>
+				{source && !sourceError ? (
+					<code className="truncate font-mono text-muted-foreground text-xs">
+						{buildVerifyCommand(source)}
+					</code>
+				) : null}
+			</div>
 
-					{source && !sourceError ? (
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold">Install command</Label>
-							<code className="block rounded-md border bg-muted/50 px-3 py-2 font-mono text-xs break-all">
-								{buildInstallCommand(source)}
-							</code>
-						</div>
-					) : null}
+			{verify.status === "error" ? (
+				<Alert variant="destructive">
+					<AlertTitle>Verification failed</AlertTitle>
+					<AlertDescription>{verify.message}</AlertDescription>
+				</Alert>
+			) : null}
 
-					<div className="flex items-center justify-end gap-2">
-						<Button onClick={onClose} size="sm" type="button" variant="ghost">
-							Cancel
-						</Button>
-						<Button
-							disabled={!valid}
-							onClick={handleSave}
-							size="sm"
-							type="button"
-							variant="primary"
-						>
-							{verify.status === "ok" ? "Save verified skill" : "Save skill"}
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+			{verify.status === "ok" ? (
+				<Alert>
+					<AlertTitle>
+						{verify.count} skill{verify.count === 1 ? "" : "s"} found
+					</AlertTitle>
+					<AlertDescription>
+						{verify.skills.length > 0 ? (
+							<ul className="mt-1 list-disc space-y-1 pl-4">
+								{verify.skills.slice(0, 10).map((s) => (
+									<li key={s.name}>
+										<span className="font-mono">{s.name}</span>
+										{s.description ? ` — ${s.description}` : ""}
+									</li>
+								))}
+							</ul>
+						) : (
+							"Source resolves."
+						)}
+					</AlertDescription>
+				</Alert>
+			) : null}
+
+			{source && !sourceError ? (
+				<FormField id="skill-install-command" label="Install command">
+					<code className="block rounded-md border bg-muted/50 px-3 py-2 font-mono text-xs break-all">
+						{buildInstallCommand(source)}
+					</code>
+				</FormField>
+			) : null}
+
+			<DialogFooter
+				disabled={!valid}
+				onCancel={onClose}
+				onSave={handleSave}
+				saveLabel={
+					verify.status === "ok" ? "Save verified skill" : "Save skill"
+				}
+			/>
+		</FormDialog>
 	);
 }
 
@@ -310,50 +305,35 @@ function PinDialog({
 
 	const version = versionInput.trim();
 	const error =
-		version && !isSafeSkillVersion(version)
-			? "Letters, digits, . _ - / : @ + ^ ~ only, max 128."
-			: null;
+		version && !isSafeSkillVersion(version) ? VERSION_PIN_ERROR : null;
 
 	return (
-		<Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-			<DialogContent className="p-0" onClose={onClose}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>Pin version — {item.name}</DialogTitle>
-					<DialogDescription>
-						Empty clears the pin and tracks latest. Stored as metadata; the CLI
-						always installs latest.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="space-y-4 px-4 py-4">
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold" htmlFor="pin-version">
-							Version pin (optional)
-						</Label>
-						<Input
-							id="pin-version"
-							onChange={(e) => setVersionInput(e.target.value)}
-							placeholder="v1.2.0 or commit SHA"
-							value={versionInput}
-						/>
-						{error ? <p className="text-destructive text-xs">{error}</p> : null}
-					</div>
-					<div className="flex items-center justify-end gap-2">
-						<Button onClick={onClose} size="sm" type="button" variant="ghost">
-							Cancel
-						</Button>
-						<Button
-							disabled={!!error}
-							onClick={() => onSave(version === "" ? null : version)}
-							size="sm"
-							type="button"
-							variant="primary"
-						>
-							Save pin
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+		<FormDialog
+			description="Empty clears the pin and tracks latest. Stored as metadata; the CLI always installs latest."
+			onClose={onClose}
+			onOpenChange={(next) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			open={open}
+			title={`Pin version — ${item.name}`}
+		>
+			<FormField error={error} id="pin-version" label="Version pin (optional)">
+				<Input
+					id="pin-version"
+					onChange={(e) => setVersionInput(e.target.value)}
+					placeholder="v1.2.0 or commit SHA"
+					value={versionInput}
+				/>
+			</FormField>
+			<DialogFooter
+				disabled={Boolean(error)}
+				onCancel={onClose}
+				onSave={() => onSave(version === "" ? null : version)}
+				saveLabel="Save pin"
+			/>
+		</FormDialog>
 	);
 }
 
@@ -373,24 +353,11 @@ function SkillsPage() {
 		hydrateSkillsStore();
 	}, []);
 
-	const items = useMemo(() => {
-		const needle = (q ?? "").trim().toLowerCase();
-		const list = store.items;
-		if (!needle) return list;
-		return list.filter(
-			(i) =>
-				i.name.toLowerCase().includes(needle) ||
-				i.source.toLowerCase().includes(needle),
-		);
-	}, [store.items, q]);
+	const items = useFilteredByQuery(store.items, q, (i) => [i.name, i.source]);
 	const existingSources = useMemo(
 		() => store.items.map((i) => i.source),
 		[store.items],
 	);
-
-	function handleCopy(text: string, title: string) {
-		copyText(text, title);
-	}
 
 	async function handleUpgrade(item: InstalledSkillEntry) {
 		setChecking(item.id);
@@ -406,7 +373,7 @@ function SkillsPage() {
 					description: `${result.count} skill${result.count === 1 ? "" : "s"} at latest. Run the update command to upgrade.`,
 					title: "Upgrade check complete",
 				});
-				handleCopy(
+				copyText(
 					buildUpdateCommand(item.availableSkills[0]?.name ?? item.name),
 					"Update command copied",
 				);
@@ -440,19 +407,15 @@ function SkillsPage() {
 				title="Skills"
 			/>
 
-			<div className="flex gap-3">
-				<div className="w-full max-w-sm space-y-1.5">
-					<Label className="text-xs font-semibold" htmlFor="skill-search">
-						Search
-					</Label>
-					<Input
-						id="skill-search"
-						onChange={(e) => setQInput(e.target.value)}
-						placeholder="Filter by name or source…"
-						value={qInput}
-					/>
-				</div>
-			</div>
+			<FilterBar
+				search={{
+					id: "skill-search",
+					onChange: setQInput,
+					placeholder: "Filter by name or source…",
+					value: qInput,
+				}}
+				variant="bare"
+			/>
 
 			{items.length === 0 ? (
 				<ListEmptyCard
@@ -480,16 +443,13 @@ function SkillsPage() {
 				>
 					<div>
 						{items.map((item) => (
-							<div
-								className="flex flex-col gap-2 border-b px-4 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-								key={item.id}
-							>
-								<div className="min-w-0">
-									<p className="font-mono font-semibold text-sm">{item.name}</p>
-									<p className="truncate font-mono text-muted-foreground text-xs">
+							<ListRow key={item.id}>
+								<ListRowMain>
+									<ListRowTitle mono={true}>{item.name}</ListRowTitle>
+									<ListRowSubtitle>
 										{item.source}
 										{item.version ? ` · pinned ${item.version}` : ""}
-									</p>
+									</ListRowSubtitle>
 									{item.availableSkills.length > 0 ? (
 										<p className="truncate text-muted-foreground text-xs">
 											{item.availableSkills
@@ -501,8 +461,8 @@ function SkillsPage() {
 												: ""}
 										</p>
 									) : null}
-								</div>
-								<div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+								</ListRowMain>
+								<ListRowActions>
 									{item.version ? (
 										<Badge variant="outline">pinned {item.version}</Badge>
 									) : (
@@ -522,7 +482,7 @@ function SkillsPage() {
 									) : null}
 									<Button
 										onClick={() =>
-											handleCopy(
+											copyText(
 												buildInstallCommand(item.source),
 												"Install command copied",
 											)
@@ -552,7 +512,7 @@ function SkillsPage() {
 									</Button>
 									<Button
 										onClick={() => {
-											handleCopy(
+											copyText(
 												buildRemoveCommand(
 													item.availableSkills[0]?.name ?? item.name,
 												),
@@ -567,8 +527,8 @@ function SkillsPage() {
 									>
 										Remove
 									</Button>
-								</div>
-							</div>
+								</ListRowActions>
+							</ListRow>
 						))}
 					</div>
 				</ListResultCard>

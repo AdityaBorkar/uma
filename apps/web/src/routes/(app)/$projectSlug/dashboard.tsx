@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import {
+	PageHeader,
+	useWorkspaceProjectId,
+} from "#/components/lists/shared.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import {
 	Card,
@@ -12,6 +16,7 @@ import {
 import { Skeleton } from "#/components/ui/skeleton.tsx";
 import { useWorkspace } from "#/components/workspace.tsx";
 import { formatAgo } from "#/lib/age.ts";
+import { useScopeSubtitle } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
 import type { TaskStatus } from "#/schemas/schema.ts";
 
@@ -136,7 +141,10 @@ function TaskListCard({
 
 function DashboardPage() {
 	const ws = useWorkspace();
-	const projectId = ws.isMulti ? undefined : ws.projectId;
+	const projectId = useWorkspaceProjectId();
+	const subtitle = useScopeSubtitle(
+		"work in flight and waiting · refreshes every 15s.",
+	);
 
 	const runningQuery = useQuery({
 		...rpc.tasks.list.queryOptions({
@@ -179,14 +187,7 @@ function DashboardPage() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-semibold text-2xl">Dashboard</h1>
-				<p className="text-muted-foreground text-sm">
-					{ws.isMulti
-						? "All projects — work in flight and waiting · refreshes every 15s."
-						: `${ws.project.name} — work in flight and waiting · refreshes every 15s.`}
-				</p>
-			</div>
+			<PageHeader description={subtitle} title="Dashboard" />
 
 			<Card className="rounded-md border">
 				<CardContent className="flex items-center justify-between py-3">

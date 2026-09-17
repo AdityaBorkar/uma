@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 
-import { stateBadgeClass } from "#/components/badges.ts";
+import { DocStateBadge } from "#/components/data/StatusBadge.tsx";
 import type { RenderedDocument } from "#/components/documents.fns.ts";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
@@ -71,9 +71,7 @@ export function DocumentHeader({
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div className="min-w-0 flex-1 space-y-2">
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge className={stateBadgeClass(doc.state)} variant="secondary">
-								{doc.state}
-							</Badge>
+							<DocStateBadge state={doc.state} />
 							<Badge variant="outline">{kindLabel(doc.kind)}</Badge>
 							{doc.labels.map((label) => (
 								<Badge key={label} variant="outline">

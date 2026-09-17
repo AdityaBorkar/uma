@@ -1,15 +1,18 @@
-import { taskBadgeClass } from "#/components/badges.ts";
-import { Badge } from "#/components/ui/badge.tsx";
-import { Button } from "#/components/ui/button.tsx";
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "#/components/ui/table.tsx";
-import { formatAgo, formatDuration } from "#/lib/age.ts";
+	DataTable,
+	DataTableAction,
+	DataTableActionsCell,
+	DataTableAgoCell,
+	DataTableBody,
+	DataTableHead,
+	DataTableHeader,
+	DataTableMetaCell,
+	DataTableTitleCell,
+	fallbackText,
+} from "#/components/data/DataTable.tsx";
+import { TaskStatusBadge } from "#/components/data/StatusBadge.tsx";
+import { TableCell, TableRow } from "#/components/ui/table.tsx";
+import { formatDuration } from "#/lib/age.ts";
 
 interface TaskRow {
 	agent: string;
@@ -46,34 +49,29 @@ interface Props {
 
 export function TaskTable({ items, onStatusChange, isPending }: Props) {
 	return (
-		<Table>
-			<TableHeader>
-				<TableRow className="bg-muted/50 hover:bg-muted/50">
-					<TableHead className="w-24 text-xs">Status</TableHead>
-					<TableHead className="text-xs">Task</TableHead>
-					<TableHead className="w-28 text-xs">Origin</TableHead>
-					<TableHead className="w-32 text-xs">Project</TableHead>
-					<TableHead className="w-24 text-xs">Queued</TableHead>
-					<TableHead className="w-24 text-xs">Duration</TableHead>
-					<TableHead className="w-40 text-right text-xs">Actions</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
+		<DataTable>
+			<DataTableHeader>
+				<DataTableHead className="w-24 text-xs">Status</DataTableHead>
+				<DataTableHead className="text-xs">Task</DataTableHead>
+				<DataTableHead className="w-28 text-xs">Origin</DataTableHead>
+				<DataTableHead className="w-32 text-xs">Project</DataTableHead>
+				<DataTableHead className="w-24 text-xs">Queued</DataTableHead>
+				<DataTableHead className="w-24 text-xs">Duration</DataTableHead>
+				<DataTableHead className="w-40 text-xs" right={true}>
+					Actions
+				</DataTableHead>
+			</DataTableHeader>
+			<DataTableBody>
 				{items.map((t) => (
 					<TableRow key={t.id}>
 						<TableCell>
-							<Badge
-								className={taskBadgeClass(t.status)}
-								variant={t.status === "failed" ? "destructive" : "secondary"}
-							>
-								{t.status}
-							</Badge>
+							<TaskStatusBadge status={t.status} />
 						</TableCell>
-						<TableCell>
-							<div className="font-medium text-sm">{t.title}</div>
-							<p className="text-muted-foreground text-xs">agent: {t.agent}</p>
-						</TableCell>
-						<TableCell className="text-muted-foreground text-sm">
+						<DataTableTitleCell
+							subtitle={`agent: ${t.agent}`}
+							title={t.title}
+						/>
+						<DataTableMetaCell>
 							{t.signalId ? (
 								<span className="truncate" title={t.signalTitle ?? ""}>
 									signal
@@ -81,64 +79,50 @@ export function TaskTable({ items, onStatusChange, isPending }: Props) {
 							) : (
 								"direct"
 							)}
-						</TableCell>
-						<TableCell className="text-muted-foreground text-sm">
-							{t.projectName ?? "—"}
-						</TableCell>
-						<TableCell className="text-muted-foreground text-sm">
-							{formatAgo(t.queuedAt)}
-						</TableCell>
-						<TableCell className="text-muted-foreground text-sm">
-							{durationLabel(t)}
-						</TableCell>
-						<TableCell className="text-right">
-							<div className="flex justify-end gap-1">
-								{t.status === "queued" ? (
-									<>
-										<Button
-											disabled={isPending}
-											onClick={() => onStatusChange(t.id, "running")}
-											size="sm"
-											variant="outline"
-										>
-											Start
-										</Button>
-										<Button
-											disabled={isPending}
-											onClick={() => onStatusChange(t.id, "cancelled")}
-											size="sm"
-											variant="ghost"
-										>
-											Cancel
-										</Button>
-									</>
-								) : null}
-								{t.status === "running" ? (
-									<Button
+						</DataTableMetaCell>
+						<DataTableMetaCell>{fallbackText(t.projectName)}</DataTableMetaCell>
+						<DataTableAgoCell value={t.queuedAt} />
+						<DataTableMetaCell>{durationLabel(t)}</DataTableMetaCell>
+						<DataTableActionsCell>
+							{t.status === "queued" ? (
+								<>
+									<DataTableAction
+										disabled={isPending}
+										onClick={() => onStatusChange(t.id, "running")}
+									>
+										Start
+									</DataTableAction>
+									<DataTableAction
 										disabled={isPending}
 										onClick={() => onStatusChange(t.id, "cancelled")}
-										size="sm"
 										variant="ghost"
 									>
 										Cancel
-									</Button>
-								) : null}
-								{t.status === "failed" ? (
-									<Button
-										disabled={isPending}
-										onClick={() => onStatusChange(t.id, "queued")}
-										size="sm"
-										variant="outline"
-									>
-										Retry
-									</Button>
-								) : null}
-							</div>
-						</TableCell>
+									</DataTableAction>
+								</>
+							) : null}
+							{t.status === "running" ? (
+								<DataTableAction
+									disabled={isPending}
+									onClick={() => onStatusChange(t.id, "cancelled")}
+									variant="ghost"
+								>
+									Cancel
+								</DataTableAction>
+							) : null}
+							{t.status === "failed" ? (
+								<DataTableAction
+									disabled={isPending}
+									onClick={() => onStatusChange(t.id, "queued")}
+								>
+									Retry
+								</DataTableAction>
+							) : null}
+						</DataTableActionsCell>
 					</TableRow>
 				))}
-			</TableBody>
-		</Table>
+			</DataTableBody>
+		</DataTable>
 	);
 }
 

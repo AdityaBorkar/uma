@@ -2,6 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
+import { DialogFooter } from "#/components/forms/FormFooter.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
+import {
+	ListRow,
+	ListRowActions,
+	ListRowMain,
+	ListRowSubtitle,
+	ListRowTitle,
+} from "#/components/lists/ListRow.tsx";
 import {
 	ListEmptyCard,
 	ListErrorAlert,
@@ -11,17 +22,11 @@ import {
 } from "#/components/lists/shared.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
-import { useToast } from "#/components/ui/toaster.tsx";
+import { isDuplicateName, slugNameError } from "#/lib/forms.ts";
+import { editingNames, useRegistryDialogState } from "#/lib/lists.ts";
+import { useCrudToasts } from "#/lib/mutations.ts";
 import { rpc } from "#/lib/rpc.ts";
 import { copyText } from "#/stores/clipboard.ts";
 import { useLocalSearchInput } from "#/stores/filters.ts";
@@ -69,8 +74,6 @@ const EMPTY_FORM: PromptTemplateForm = {
 	template: "",
 };
 
-const NAME_RE = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
-
 function toForm(row: PromptTemplateRow): PromptTemplateForm {
 	return {
 		agent: row.agent ?? "",
@@ -84,11 +87,9 @@ function toForm(row: PromptTemplateRow): PromptTemplateForm {
 
 function validateForm(form: PromptTemplateForm): Record<string, string> {
 	const errors: Record<string, string> = {};
-	if (
-		!NAME_RE.test(form.name.trim().toLowerCase()) ||
-		form.name.trim().length > 64
-	) {
-		errors.name = "Lowercase slug (letters, digits, dashes), max 64.";
+	const nameError = slugNameError(form.name);
+	if (nameError) {
+		errors.name = nameError;
 	}
 	if (form.description.trim().length > 500)
 		errors.description = "Max 500 characters.";
@@ -154,11 +155,7 @@ function PromptTemplateDialog({
 	}, [open]);
 
 	const errors = validateForm(form);
-	const duplicate =
-		form.name.trim() !== "" &&
-		existingNames.some(
-			(n) => n.toLowerCase() === form.name.trim().toLowerCase(),
-		);
+	const duplicate = isDuplicateName(form.name, existingNames);
 	const valid = Object.keys(errors).length === 0 && !duplicate;
 
 	function set<K extends keyof PromptTemplateForm>(
@@ -183,165 +180,147 @@ function PromptTemplateDialog({
 	}
 
 	return (
-		<Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-			<DialogContent className="max-w-3xl p-0" onClose={onClose}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>{title}</DialogTitle>
-					<DialogDescription>
-						Run it with /name in the TUI. The file name becomes the prompt
-						template name.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-1.5">
-							<Label
-								className="text-xs font-semibold"
-								htmlFor="prompt-template-name"
-							>
-								Name
-							</Label>
-							<Input
-								id="prompt-template-name"
-								onChange={(e) => set("name", e.target.value)}
-								placeholder="test"
-								value={form.name}
-							/>
-							{errors.name ? (
-								<p className="text-destructive text-xs">{errors.name}</p>
-							) : null}
-							{duplicate ? (
-								<p className="text-destructive text-xs">
-									A prompt template with this name already exists.
-								</p>
-							) : null}
-						</div>
-						<div className="space-y-1.5">
-							<Label
-								className="text-xs font-semibold"
-								htmlFor="prompt-template-agent"
-							>
-								Agent (optional)
-							</Label>
-							<Input
-								id="prompt-template-agent"
-								onChange={(e) => set("agent", e.target.value)}
-								placeholder="build"
-								value={form.agent}
-							/>
-							{errors.agent ? (
-								<p className="text-destructive text-xs">{errors.agent}</p>
-							) : null}
-						</div>
-					</div>
-
-					<div className="space-y-1.5">
-						<Label
-							className="text-xs font-semibold"
-							htmlFor="prompt-template-description"
-						>
-							Description (shown in the TUI)
-						</Label>
-						<Input
-							id="prompt-template-description"
-							onChange={(e) => set("description", e.target.value)}
-							placeholder="Run tests with coverage"
-							value={form.description}
-						/>
-						{errors.description ? (
-							<p className="text-destructive text-xs">{errors.description}</p>
-						) : null}
-					</div>
-
-					<div className="space-y-1.5">
-						<Label
-							className="text-xs font-semibold"
-							htmlFor="prompt-template-template"
-						>
-							Template
-						</Label>
-						<Textarea
-							id="prompt-template-template"
-							onChange={(e) => set("template", e.target.value)}
-							placeholder={
-								"Run the full test suite with $ARGUMENTS and show any failures.\n\nRecent commits:\n!`git log --oneline -10`\n\nReview @src/components/Button.tsx and suggest fixes."
-							}
-							rows={8}
-							value={form.template}
-						/>
-						{errors.template ? (
-							<p className="text-destructive text-xs">{errors.template}</p>
-						) : null}
-						<p className="text-muted-foreground text-xs">
-							Placeholders: <code className="font-mono">$ARGUMENTS</code>,{" "}
-							<code className="font-mono">$1 $2 …</code>, shell output{" "}
-							<code className="font-mono">!`cmd`</code>, file references{" "}
-							<code className="font-mono">@path</code>.
+		<FormDialog
+			description="Run it with /name in the TUI. The file name becomes the prompt template name."
+			maxWidth="xl"
+			onClose={onClose}
+			onOpenChange={(next) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			open={open}
+			title={title}
+		>
+			<div className="grid gap-4 sm:grid-cols-2">
+				<FormField error={errors.name} id="prompt-template-name" label="Name">
+					<Input
+						id="prompt-template-name"
+						onChange={(e) => set("name", e.target.value)}
+						placeholder="test"
+						value={form.name}
+					/>
+					{duplicate ? (
+						<p className="text-destructive text-xs">
+							A prompt template with this name already exists.
 						</p>
-					</div>
+					) : null}
+				</FormField>
+				<FormField
+					error={errors.agent}
+					id="prompt-template-agent"
+					label="Agent (optional)"
+				>
+					<Input
+						id="prompt-template-agent"
+						onChange={(e) => set("agent", e.target.value)}
+						placeholder="build"
+						value={form.agent}
+					/>
+				</FormField>
+			</div>
 
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-1.5">
-							<Label
-								className="text-xs font-semibold"
-								htmlFor="prompt-template-model"
-							>
-								Model (optional)
-							</Label>
-							<Input
-								id="prompt-template-model"
-								onChange={(e) => set("model", e.target.value)}
-								placeholder="anthropic/claude-sonnet-4-20250514"
-								value={form.model}
-							/>
-							{errors.model ? (
-								<p className="text-destructive text-xs">{errors.model}</p>
-							) : null}
-						</div>
-						<div className="flex items-end pb-1">
-							<label className="flex items-center gap-2 text-sm">
-								<input
-									checked={form.subtask}
-									onChange={(e) => set("subtask", e.target.checked)}
-									type="checkbox"
-								/>
-								Run as subtask (don't pollute primary context)
-							</label>
-						</div>
-					</div>
+			<FormField
+				error={errors.description}
+				id="prompt-template-description"
+				label="Description (shown in the TUI)"
+			>
+				<Input
+					id="prompt-template-description"
+					onChange={(e) => set("description", e.target.value)}
+					placeholder="Run tests with coverage"
+					value={form.description}
+				/>
+			</FormField>
 
-					<div className="flex items-center justify-end gap-2">
-						<Button onClick={onClose} size="sm" type="button" variant="ghost">
-							Cancel
-						</Button>
-						<Button
-							disabled={!valid || pending}
-							onClick={handleSave}
-							size="sm"
-							type="button"
-							variant="primary"
-						>
-							{pending ? "Saving…" : "Save prompt template"}
-						</Button>
-					</div>
+			<FormField
+				error={errors.template}
+				hint={
+					<>
+						Placeholders: <code className="font-mono">$ARGUMENTS</code>,{" "}
+						<code className="font-mono">$1 $2 …</code>, shell output{" "}
+						<code className="font-mono">!`cmd`</code>, file references{" "}
+						<code className="font-mono">@path</code>.
+					</>
+				}
+				id="prompt-template-template"
+				label="Template"
+			>
+				<Textarea
+					id="prompt-template-template"
+					onChange={(e) => set("template", e.target.value)}
+					placeholder={
+						"Run the full test suite with $ARGUMENTS and show any failures.\n\nRecent commits:\n!`git log --oneline -10`\n\nReview @src/components/Button.tsx and suggest fixes."
+					}
+					rows={8}
+					value={form.template}
+				/>
+			</FormField>
+
+			<div className="grid gap-4 sm:grid-cols-2">
+				<FormField
+					error={errors.model}
+					id="prompt-template-model"
+					label="Model (optional)"
+				>
+					<Input
+						id="prompt-template-model"
+						onChange={(e) => set("model", e.target.value)}
+						placeholder="anthropic/claude-sonnet-4-20250514"
+						value={form.model}
+					/>
+				</FormField>
+				<div className="flex items-end pb-1">
+					<label className="flex items-center gap-2 text-sm">
+						<input
+							checked={form.subtask}
+							onChange={(e) => set("subtask", e.target.checked)}
+							type="checkbox"
+						/>
+						Run as subtask (don't pollute primary context)
+					</label>
 				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+
+			<DialogFooter
+				disabled={!valid || pending}
+				onCancel={onClose}
+				onSave={handleSave}
+				pending={pending}
+				saveLabel="Save prompt template"
+			/>
+		</FormDialog>
 	);
 }
 
 function PromptTemplatesPage() {
-	const { toast } = useToast();
+	const {
+		notifyCreated,
+		notifyDeleted,
+		notifyUpdated,
+		onCreateError,
+		onRemoveError,
+		onUpdateError,
+	} = useCrudToasts("prompt template");
 	const queryClient = useQueryClient();
 	const {
 		input: qInput,
 		query: q,
 		setInput: setQInput,
 	} = useLocalSearchInput("", 250);
-	const [createOpen, setCreateOpen] = useState(false);
-	const [createInitial, setCreateInitial] =
-		useState<PromptTemplateForm>(EMPTY_FORM);
-	const [editing, setEditing] = useState<PromptTemplateRow | null>(null);
+	const {
+		closeCreate,
+		createInitial,
+		createOpen,
+		editing,
+		openCreate,
+		openDuplicate,
+		setEditing,
+	} = useRegistryDialogState<PromptTemplateRow, PromptTemplateForm>(
+		EMPTY_FORM,
+		toForm,
+		(row) => row.name,
+	);
 
 	const listQuery = useQuery(
 		rpc.promptTemplates.list.queryOptions({
@@ -358,71 +337,35 @@ function PromptTemplatesPage() {
 
 	const createMutation = useMutation(
 		rpc.promptTemplates.create.mutationOptions({
-			onError: (e) =>
-				toast({
-					description: e instanceof Error ? e.message : "Create failed",
-					title: "Failed to create prompt template",
-					variant: "destructive",
-				}),
+			onError: onCreateError,
 			onSuccess: (row) => {
 				invalidate();
-				setCreateOpen(false);
-				setCreateInitial(EMPTY_FORM);
-				toast({
-					description: (row as PromptTemplateRow).name,
-					title: "Prompt template created",
-				});
+				closeCreate();
+				notifyCreated((row as PromptTemplateRow).name);
 			},
 		}),
 	);
 
 	const updateMutation = useMutation(
 		rpc.promptTemplates.update.mutationOptions({
-			onError: (e) =>
-				toast({
-					description: e instanceof Error ? e.message : "Update failed",
-					title: "Failed to update prompt template",
-					variant: "destructive",
-				}),
+			onError: onUpdateError,
 			onSuccess: (row) => {
 				invalidate();
 				setEditing(null);
-				toast({
-					description: (row as PromptTemplateRow).name,
-					title: "Prompt template updated",
-				});
+				notifyUpdated((row as PromptTemplateRow).name);
 			},
 		}),
 	);
 
 	const removeMutation = useMutation(
 		rpc.promptTemplates.remove.mutationOptions({
-			onError: (e) =>
-				toast({
-					description: e instanceof Error ? e.message : "Delete failed",
-					title: "Failed to delete prompt template",
-					variant: "destructive",
-				}),
+			onError: onRemoveError,
 			onSuccess: () => {
 				invalidate();
-				toast({ title: "Prompt template deleted" });
+				notifyDeleted();
 			},
 		}),
 	);
-
-	function handleCopy(text: string, title: string) {
-		copyText(text, title);
-	}
-
-	function openCreate() {
-		setCreateInitial(EMPTY_FORM);
-		setCreateOpen(true);
-	}
-
-	function openDuplicate(row: PromptTemplateRow) {
-		setCreateInitial({ ...toForm(row), name: `${row.name}-copy` });
-		setCreateOpen(true);
-	}
 
 	return (
 		<div className="space-y-6">
@@ -436,22 +379,15 @@ function PromptTemplatesPage() {
 				title="Prompt Templates"
 			/>
 
-			<div className="flex gap-3">
-				<div className="w-full max-w-sm space-y-1.5">
-					<Label
-						className="text-xs font-semibold"
-						htmlFor="prompt-template-search"
-					>
-						Search
-					</Label>
-					<Input
-						id="prompt-template-search"
-						onChange={(e) => setQInput(e.target.value)}
-						placeholder="Filter by name…"
-						value={qInput}
-					/>
-				</div>
-			</div>
+			<FilterBar
+				search={{
+					id: "prompt-template-search",
+					onChange: setQInput,
+					placeholder: "Filter by name…",
+					value: qInput,
+				}}
+				variant="bare"
+			/>
 
 			{listQuery.isPending ? (
 				<ListLoadingCard label="Loading prompt templates…" />
@@ -481,25 +417,22 @@ function PromptTemplatesPage() {
 				>
 					<div>
 						{items.map((c) => (
-							<div
-								className="flex flex-col gap-2 border-b px-4 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-								key={c.id}
-							>
-								<div className="min-w-0">
-									<p className="font-mono font-semibold text-sm">/{c.name}</p>
-									<p className="truncate text-muted-foreground text-sm">
+							<ListRow key={c.id}>
+								<ListRowMain>
+									<ListRowTitle mono={true}>/{c.name}</ListRowTitle>
+									<ListRowSubtitle>
 										{c.description || "No description."}
-									</p>
+									</ListRowSubtitle>
 									<p className="truncate font-mono text-muted-foreground text-xs">
 										{c.agent ? `agent ${c.agent}` : "current agent"}
 										{c.model ? ` · ${c.model}` : ""}
 										{c.subtask ? " · subtask" : ""}
 									</p>
-								</div>
-								<div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+								</ListRowMain>
+								<ListRowActions>
 									{c.subtask ? <Badge variant="outline">subtask</Badge> : null}
 									<Button
-										onClick={() => handleCopy(toMarkdown(c), "Markdown copied")}
+										onClick={() => copyText(toMarkdown(c), "Markdown copied")}
 										size="sm"
 										type="button"
 										variant="outline"
@@ -507,7 +440,7 @@ function PromptTemplatesPage() {
 										Copy md
 									</Button>
 									<Button
-										onClick={() => handleCopy(toJson(c), "JSON copied")}
+										onClick={() => copyText(toJson(c), "JSON copied")}
 										size="sm"
 										type="button"
 										variant="outline"
@@ -539,8 +472,8 @@ function PromptTemplatesPage() {
 									>
 										Delete
 									</Button>
-								</div>
-							</div>
+								</ListRowActions>
+							</ListRow>
 						))}
 					</div>
 				</ListResultCard>
@@ -549,10 +482,7 @@ function PromptTemplatesPage() {
 			<PromptTemplateDialog
 				existingNames={existingNames}
 				initial={createInitial}
-				onClose={() => {
-					setCreateOpen(false);
-					setCreateInitial(EMPTY_FORM);
-				}}
+				onClose={closeCreate}
 				onSave={(input) => createMutation.mutate(input)}
 				open={createOpen}
 				pending={createMutation.isPending}
@@ -560,7 +490,7 @@ function PromptTemplatesPage() {
 			/>
 			{editing ? (
 				<PromptTemplateDialog
-					existingNames={existingNames.filter((n) => n !== editing.name)}
+					existingNames={editingNames(existingNames, editing.name)}
 					initial={toForm(editing)}
 					onClose={() => setEditing(null)}
 					onSave={(input) =>

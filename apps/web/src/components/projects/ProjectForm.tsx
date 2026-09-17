@@ -1,12 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
+import { FormField } from "#/components/forms/FormField.tsx";
+import { FormFooter } from "#/components/forms/FormFooter.tsx";
+import { ListErrorAlert, ListLoadingCard } from "#/components/lists/shared.tsx";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
-import { Skeleton } from "#/components/ui/skeleton.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
 import { fieldErrors } from "#/lib/forms.ts";
 import { rpc } from "#/lib/rpc.ts";
@@ -87,22 +88,23 @@ export function ProjectForm({
 	// GitHub list (renamed, deleted, or revoked access) so edit never blanks.
 	const repos: GithubRepoOption[] = useMemo(() => {
 		const existing = defaultValues?.githubRepoFullName;
-		if (
-			existing &&
-			!fetchedRepos.some((r) => r.fullName === existing)
-		) {
+		if (existing && !fetchedRepos.some((r) => r.fullName === existing)) {
 			return [
 				{
 					description: defaultValues?.description ?? null,
 					fullName: existing,
-					name: existing.split('/')[1] ?? existing,
+					name: existing.split("/")[1] ?? existing,
 					private: false,
 				},
 				...fetchedRepos,
 			];
 		}
 		return fetchedRepos;
-	}, [fetchedRepos, defaultValues?.githubRepoFullName, defaultValues?.description]);
+	}, [
+		fetchedRepos,
+		defaultValues?.githubRepoFullName,
+		defaultValues?.description,
+	]);
 
 	const selectedRepo = useMemo(
 		() => repos.find((r) => r.fullName === repoFullName) ?? null,
@@ -161,8 +163,6 @@ export function ProjectForm({
 		return true;
 	}
 
-	const submitText = loading ? "Saving…" : submitLabel;
-
 	async function handleSubmit(event: React.FormEvent) {
 		event.preventDefault();
 		if (!validate()) {
@@ -177,13 +177,7 @@ export function ProjectForm({
 	}
 
 	if (connectionQuery.isPending) {
-		return (
-			<div className="space-y-4">
-				<Skeleton className="h-8 w-full" />
-				<Skeleton className="h-8 w-full" />
-				<Skeleton className="h-20 w-full" />
-			</div>
-		);
+		return <ListLoadingCard label="Checking GitHub connection…" />;
 	}
 
 	if (connectionMissing || reposMissingConnection) {
@@ -224,76 +218,49 @@ export function ProjectForm({
 
 	if (connectionQuery.isError) {
 		return (
-			<Alert variant="destructive">
-				<AlertTitle>Failed to check GitHub connection</AlertTitle>
-				<AlertDescription>
-					{connectionQuery.error instanceof Error
-						? connectionQuery.error.message
-						: "Unknown error"}{" "}
-					<button
-						className="underline underline-offset-2"
-						onClick={() => void connectionQuery.refetch()}
-						type="button"
-					>
-						Retry
-					</button>
-				</AlertDescription>
-			</Alert>
+			<ListErrorAlert
+				error={connectionQuery.error}
+				onRetry={() => void connectionQuery.refetch()}
+				title="Failed to check GitHub connection"
+			/>
 		);
 	}
 
 	if (reposQuery.isPending) {
-		return (
-			<div className="space-y-4">
-				<Skeleton className="h-8 w-full" />
-				<Skeleton className="h-8 w-full" />
-				<Skeleton className="h-20 w-full" />
-			</div>
-		);
+		return <ListLoadingCard label="Loading GitHub repositories…" />;
 	}
 
 	if (reposQuery.isError) {
 		return (
-			<div className="space-y-4">
-				<Alert variant="destructive">
-					<AlertTitle>Failed to load GitHub repositories</AlertTitle>
-					<AlertDescription>
-						{reposQuery.error instanceof Error
-							? reposQuery.error.message
-							: "Unknown error"}{" "}
-						<button
-							className="underline underline-offset-2"
-							onClick={() => void reposQuery.refetch()}
-							type="button"
-						>
-							Retry
-						</button>
-					</AlertDescription>
-				</Alert>
-				<div className="flex justify-end gap-2">
-					{onCancel ? (
-						<Button onClick={onCancel} type="button" variant="outline">
-							Cancel
-						</Button>
-					) : null}
-				</div>
-			</div>
+			<ListErrorAlert
+				error={reposQuery.error}
+				onRetry={() => void reposQuery.refetch()}
+				title="Failed to load GitHub repositories"
+			/>
 		);
 	}
 
 	return (
 		<form className="space-y-4" onSubmit={handleSubmit}>
-			<div className="space-y-2">
-				<Label htmlFor="github-repo-filter">Filter repositories</Label>
+			<FormField id="github-repo-filter" label="Filter repositories">
 				<Input
 					id="github-repo-filter"
 					onChange={(e) => setRepoFilter(e.target.value)}
 					placeholder="Filter by owner/repo"
 					value={repoFilter}
 				/>
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="github-repo">GitHub repository *</Label>
+			</FormField>
+			<FormField
+				error={errors.githubRepoFullName}
+				hint={
+					repos.length === 0
+						? "No repositories found for the connected GitHub account."
+						: undefined
+				}
+				id="github-repo"
+				label="GitHub repository"
+				required={true}
+			>
 				<Select
 					id="github-repo"
 					onChange={(e) => {
@@ -314,31 +281,21 @@ export function ProjectForm({
 						</option>
 					))}
 				</Select>
-				{errors.githubRepoFullName ? (
-					<p className="text-destructive text-xs">
-						{errors.githubRepoFullName}
-					</p>
-				) : null}
-				{repos.length === 0 ? (
-					<p className="text-muted-foreground text-xs">
-						No repositories found for the connected GitHub account.
-					</p>
-				) : null}
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="name">Name *</Label>
+			</FormField>
+			<FormField error={errors.name} id="name" label="Name" required={true}>
 				<Input
 					id="name"
 					onChange={(e) => setName(e.target.value)}
 					placeholder="Acme Portal"
 					value={name}
 				/>
-				{errors.name ? (
-					<p className="text-destructive text-xs">{errors.name}</p>
-				) : null}
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="description">Description</Label>
+			</FormField>
+			<FormField
+				hint="Synced from the GitHub repository description always."
+				hintId="description-sync-hint"
+				id="description"
+				label="Description"
+			>
 				<Textarea
 					aria-describedby="description-sync-hint"
 					disabled={true}
@@ -347,20 +304,12 @@ export function ProjectForm({
 					rows={3}
 					value={selectedRepo?.description ?? ""}
 				/>
-				<p className="text-muted-foreground text-xs" id="description-sync-hint">
-					Synced from the GitHub repository description always.
-				</p>
-			</div>
-			<div className="flex justify-end gap-2 pt-2">
-				{onCancel ? (
-					<Button onClick={onCancel} type="button" variant="outline">
-						Cancel
-					</Button>
-				) : null}
-				<Button disabled={Boolean(loading)} type="submit">
-					{submitText}
-				</Button>
-			</div>
+			</FormField>
+			<FormFooter
+				loading={loading}
+				onCancel={onCancel}
+				submitLabel={submitLabel}
+			/>
 		</form>
 	);
 }

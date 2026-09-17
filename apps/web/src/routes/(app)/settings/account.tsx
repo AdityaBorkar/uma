@@ -3,6 +3,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Check, LogOut, Plus, X } from "#/components/icons.tsx";
 import {
+	ListErrorAlert,
+	ListLoadingCard,
+	PageHeader,
+} from "#/components/lists/shared.tsx";
+import {
 	Avatar,
 	AvatarFallback,
 	AvatarImage,
@@ -16,7 +21,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "#/components/ui/card.tsx";
-import { Skeleton } from "#/components/ui/skeleton.tsx";
 import { authClient } from "#/lib/auth/client.ts";
 
 export const Route = createFileRoute("/(app)/settings/account")({
@@ -54,12 +58,10 @@ function AccountPage() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="font-semibold text-2xl">Account</h1>
-				<p className="text-muted-foreground text-sm">
-					Manage your account and profile.
-				</p>
-			</div>
+			<PageHeader
+				description="Manage your account and profile."
+				title="Account"
+			/>
 
 			<Card className="overflow-hidden rounded-md border">
 				<CardHeader className="border-b bg-muted/50">
@@ -200,9 +202,8 @@ function SignedInAccounts({
 			</CardHeader>
 			<CardContent className="p-0">
 				{accounts === null ? (
-					<div className="flex flex-col gap-3 px-4 py-3">
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="h-10 w-full" />
+					<div className="px-4 py-3">
+						<ListLoadingCard label="Loading signed-in accounts…" />
 					</div>
 				) : accounts.length === 0 ? (
 					<p className="px-4 py-6 text-center text-muted-foreground text-sm">
@@ -272,16 +273,13 @@ function SignedInAccounts({
 					</ul>
 				)}
 				{error ? (
-					<p className="border-t px-4 py-3 text-sm text-[var(--color-danger-fg)]">
-						{error}{" "}
-						<button
-							className="underline underline-offset-2"
-							onClick={() => void load()}
-							type="button"
-						>
-							Retry
-						</button>
-					</p>
+					<div className="border-t px-4 py-3">
+						<ListErrorAlert
+							error={new Error(error)}
+							onRetry={() => void load()}
+							title="Accounts error"
+						/>
+					</div>
 				) : null}
 			</CardContent>
 			<CardFooter className="justify-between">

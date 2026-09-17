@@ -1,6 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
+import { DialogFooter } from "#/components/forms/FormFooter.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
+import {
+	ListRow,
+	ListRowActions,
+	ListRowMain,
+	ListRowSubtitle,
+	ListRowTitle,
+} from "#/components/lists/ListRow.tsx";
 import {
 	ListEmptyCard,
 	ListResultCard,
@@ -10,17 +21,11 @@ import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
+import { VERSION_PIN_ERROR } from "#/lib/forms.ts";
+import { useFilteredByQuery } from "#/lib/lists.ts";
 import {
 	buildMcpJson,
 	buildRunCommand,
@@ -124,9 +129,7 @@ function InstallDialog({
 			? "http(s) URL, max 2048 characters."
 			: null;
 	const versionError =
-		version !== "" && !isSafeMcpVersion(version)
-			? "Letters, digits, . _ - / : @ + ^ ~ only, max 128."
-			: null;
+		version !== "" && !isSafeMcpVersion(version) ? VERSION_PIN_ERROR : null;
 
 	const valid =
 		name !== "" &&
@@ -190,178 +193,150 @@ function InstallDialog({
 	};
 
 	return (
-		<Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-			<DialogContent className="max-w-2xl p-0" onClose={onClose}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>Install MCP server</DialogTitle>
-					<DialogDescription>
-						Local servers run via{" "}
-						<code className="font-mono">npx -y pkg[@version]</code>; remote
-						servers connect over HTTPS. Saved to this browser in v1 — paste the
-						JSON into <code className="font-mono">opencode.json</code>.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="mcp-kind">
-								Type
-							</Label>
-							<Select
-								id="mcp-kind"
-								onChange={(e) =>
-									setKind(e.target.value === "remote" ? "remote" : "local")
-								}
-								value={kind}
-							>
-								<option value="local">Local (npm package)</option>
-								<option value="remote">Remote (URL)</option>
-							</Select>
-						</div>
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="mcp-name">
-								Name (opencode mcp key)
-							</Label>
-							<Input
-								id="mcp-name"
-								onChange={(e) => setNameInput(e.target.value)}
-								placeholder="mcp_everything"
-								value={nameInput}
-							/>
-							{nameError ? (
-								<p className="text-destructive text-xs">{nameError}</p>
-							) : null}
-							{duplicate ? (
-								<p className="text-destructive text-xs">
-									This name is already installed.
-								</p>
-							) : null}
-						</div>
-					</div>
-
-					{kind === "local" ? (
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold" htmlFor="mcp-package">
-									npm package
-								</Label>
-								<Input
-									id="mcp-package"
-									onChange={(e) => handleNameFromPackage(e.target.value)}
-									placeholder="@modelcontextprotocol/server-everything"
-									value={packageInput}
-								/>
-								{packageError ? (
-									<p className="text-destructive text-xs">{packageError}</p>
-								) : null}
-							</div>
-							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold" htmlFor="mcp-runtime">
-									Launcher
-								</Label>
-								<Select
-									id="mcp-runtime"
-									onChange={(e) =>
-										setRuntime(
-											isValidMcpRuntime(e.target.value)
-												? e.target.value
-												: "npx",
-										)
-									}
-									value={runtime}
-								>
-									<option value="npx">npx</option>
-									<option value="bunx">bunx</option>
-									<option value="uvx">uvx</option>
-								</Select>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="mcp-url">
-								Server URL
-							</Label>
-							<Input
-								id="mcp-url"
-								onChange={(e) => setUrlInput(e.target.value)}
-								placeholder="https://mcp.context7.com/mcp"
-								value={urlInput}
-							/>
-							{urlError ? (
-								<p className="text-destructive text-xs">{urlError}</p>
-							) : null}
-						</div>
-					)}
-
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold" htmlFor="mcp-version">
-							Version pin (optional)
-						</Label>
-						<Input
-							id="mcp-version"
-							onChange={(e) => setVersionInput(e.target.value)}
-							placeholder={
-								kind === "local"
-									? "1.2.3 or ^1.0.0 — empty means floating latest"
-									: "2024-01-01 or v2 — stored as metadata"
-							}
-							value={versionInput}
-						/>
-						{versionError ? (
-							<p className="text-destructive text-xs">{versionError}</p>
-						) : null}
-						<p className="text-muted-foreground text-xs">
-							{kind === "local"
-								? "Pinned as pkg@version in the command array. Upgrade resolves latest from npm."
-								: "Remote servers have no registry — the pin is metadata. Upgrade edits it by hand."}
+		<FormDialog
+			description={
+				<>
+					Local servers run via{" "}
+					<code className="font-mono">npx -y pkg[@version]</code>; remote
+					servers connect over HTTPS. Saved to this browser in v1 — paste the
+					JSON into <code className="font-mono">opencode.json</code>.
+				</>
+			}
+			maxWidth="lg"
+			onClose={onClose}
+			onOpenChange={(next) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			open={open}
+			title="Install MCP server"
+		>
+			<div className="grid gap-4 sm:grid-cols-2">
+				<FormField id="mcp-kind" label="Type">
+					<Select
+						id="mcp-kind"
+						onChange={(e) =>
+							setKind(e.target.value === "remote" ? "remote" : "local")
+						}
+						value={kind}
+					>
+						<option value="local">Local (npm package)</option>
+						<option value="remote">Remote (URL)</option>
+					</Select>
+				</FormField>
+				<FormField
+					error={nameError}
+					id="mcp-name"
+					label="Name (opencode mcp key)"
+				>
+					<Input
+						id="mcp-name"
+						onChange={(e) => setNameInput(e.target.value)}
+						placeholder="mcp_everything"
+						value={nameInput}
+					/>
+					{duplicate ? (
+						<p className="text-destructive text-xs">
+							This name is already installed.
 						</p>
-					</div>
+					) : null}
+				</FormField>
+			</div>
 
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							checked={enabled}
-							onChange={(e) => setEnabled(e.target.checked)}
-							type="checkbox"
+			{kind === "local" ? (
+				<div className="grid gap-4 sm:grid-cols-2">
+					<FormField error={packageError} id="mcp-package" label="npm package">
+						<Input
+							id="mcp-package"
+							onChange={(e) => handleNameFromPackage(e.target.value)}
+							placeholder="@modelcontextprotocol/server-everything"
+							value={packageInput}
 						/>
-						Enabled on startup
-					</label>
-
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold">opencode.json</Label>
-						<code className="block overflow-x-auto rounded-md border bg-muted/50 px-3 py-2 font-mono text-xs whitespace-pre">
-							{buildMcpJson(previewEntry)}
-						</code>
-						{kind === "local" ? (
-							<p className="text-muted-foreground text-xs">
-								Run preview:{" "}
-								<code className="font-mono">
-									{buildRunCommand(
-										previewEntry.package,
-										previewEntry.version,
-										previewEntry.runtime,
-									)}
-								</code>
-							</p>
-						) : null}
-					</div>
-
-					<div className="flex items-center justify-end gap-2">
-						<Button onClick={onClose} size="sm" type="button" variant="ghost">
-							Cancel
-						</Button>
-						<Button
-							disabled={!valid}
-							onClick={handleSave}
-							size="sm"
-							type="button"
-							variant="primary"
+					</FormField>
+					<FormField id="mcp-runtime" label="Launcher">
+						<Select
+							id="mcp-runtime"
+							onChange={(e) =>
+								setRuntime(
+									isValidMcpRuntime(e.target.value) ? e.target.value : "npx",
+								)
+							}
+							value={runtime}
 						>
-							Install server
-						</Button>
-					</div>
+							<option value="npx">npx</option>
+							<option value="bunx">bunx</option>
+							<option value="uvx">uvx</option>
+						</Select>
+					</FormField>
 				</div>
-			</DialogContent>
-		</Dialog>
+			) : (
+				<FormField error={urlError} id="mcp-url" label="Server URL">
+					<Input
+						id="mcp-url"
+						onChange={(e) => setUrlInput(e.target.value)}
+						placeholder="https://mcp.context7.com/mcp"
+						value={urlInput}
+					/>
+				</FormField>
+			)}
+
+			<FormField
+				error={versionError}
+				hint={
+					kind === "local"
+						? "Pinned as pkg@version in the command array. Upgrade resolves latest from npm."
+						: "Remote servers have no registry — the pin is metadata. Upgrade edits it by hand."
+				}
+				id="mcp-version"
+				label="Version pin (optional)"
+			>
+				<Input
+					id="mcp-version"
+					onChange={(e) => setVersionInput(e.target.value)}
+					placeholder={
+						kind === "local"
+							? "1.2.3 or ^1.0.0 — empty means floating latest"
+							: "2024-01-01 or v2 — stored as metadata"
+					}
+					value={versionInput}
+				/>
+			</FormField>
+
+			<label className="flex items-center gap-2 text-sm">
+				<input
+					checked={enabled}
+					onChange={(e) => setEnabled(e.target.checked)}
+					type="checkbox"
+				/>
+				Enabled on startup
+			</label>
+
+			<FormField id="mcp-preview" label="opencode.json">
+				<code className="block overflow-x-auto rounded-md border bg-muted/50 px-3 py-2 font-mono text-xs whitespace-pre">
+					{buildMcpJson(previewEntry)}
+				</code>
+				{kind === "local" ? (
+					<p className="text-muted-foreground text-xs">
+						Run preview:{" "}
+						<code className="font-mono">
+							{buildRunCommand(
+								previewEntry.package,
+								previewEntry.version,
+								previewEntry.runtime,
+							)}
+						</code>
+					</p>
+				) : null}
+			</FormField>
+
+			<DialogFooter
+				disabled={!valid}
+				onCancel={onClose}
+				onSave={handleSave}
+				saveLabel="Install server"
+			/>
+		</FormDialog>
 	);
 }
 
@@ -384,69 +359,59 @@ function PinDialog({
 
 	const version = versionInput.trim();
 	const error =
-		version && !isSafeMcpVersion(version)
-			? "Letters, digits, . _ - / : @ + ^ ~ only, max 128."
-			: null;
+		version && !isSafeMcpVersion(version) ? VERSION_PIN_ERROR : null;
 
 	return (
-		<Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-			<DialogContent className="p-0" onClose={onClose}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>Pin version — {item.name}</DialogTitle>
-					<DialogDescription>
-						{item.kind === "local"
-							? "Empty clears the pin and tracks latest (pkg without @version)."
-							: "Remote pins are metadata only — empty tracks latest."}
-						{item.latestVersion ? ` Latest known: ${item.latestVersion}.` : ""}
-					</DialogDescription>
-				</DialogHeader>
-				<div className="space-y-4 px-4 py-4">
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold" htmlFor="pin-version">
-							Version pin (optional)
-						</Label>
-						<Input
-							id="pin-version"
-							onChange={(e) => setVersionInput(e.target.value)}
-							placeholder={
-								item.kind === "local" ? "1.2.3 or ^1.0.0" : "2024-01-01 or v2"
-							}
-							value={versionInput}
-						/>
-						{error ? <p className="text-destructive text-xs">{error}</p> : null}
-					</div>
-					{item.latestVersion ? (
-						<Alert>
-							<AlertTitle>Latest known: {item.latestVersion}</AlertTitle>
-							<AlertDescription>
-								<Button
-									onClick={() => setVersionInput(item.latestVersion ?? "")}
-									size="sm"
-									type="button"
-									variant="outline"
-								>
-									Use {item.latestVersion}
-								</Button>
-							</AlertDescription>
-						</Alert>
-					) : null}
-					<div className="flex items-center justify-end gap-2">
-						<Button onClick={onClose} size="sm" type="button" variant="ghost">
-							Cancel
-						</Button>
+		<FormDialog
+			description={
+				<>
+					{item.kind === "local"
+						? "Empty clears the pin and tracks latest (pkg without @version)."
+						: "Remote pins are metadata only — empty tracks latest."}
+					{item.latestVersion ? ` Latest known: ${item.latestVersion}.` : ""}
+				</>
+			}
+			onClose={onClose}
+			onOpenChange={(next) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			open={open}
+			title={`Pin version — ${item.name}`}
+		>
+			<FormField error={error} id="pin-version" label="Version pin (optional)">
+				<Input
+					id="pin-version"
+					onChange={(e) => setVersionInput(e.target.value)}
+					placeholder={
+						item.kind === "local" ? "1.2.3 or ^1.0.0" : "2024-01-01 or v2"
+					}
+					value={versionInput}
+				/>
+			</FormField>
+			{item.latestVersion ? (
+				<Alert>
+					<AlertTitle>Latest known: {item.latestVersion}</AlertTitle>
+					<AlertDescription>
 						<Button
-							disabled={!!error}
-							onClick={() => onSave(version === "" ? null : version)}
+							onClick={() => setVersionInput(item.latestVersion ?? "")}
 							size="sm"
 							type="button"
-							variant="primary"
+							variant="outline"
 						>
-							Save pin
+							Use {item.latestVersion}
 						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+					</AlertDescription>
+				</Alert>
+			) : null}
+			<DialogFooter
+				disabled={Boolean(error)}
+				onCancel={onClose}
+				onSave={() => onSave(version === "" ? null : version)}
+				saveLabel="Save pin"
+			/>
+		</FormDialog>
 	);
 }
 
@@ -467,26 +432,22 @@ function McpServersPage() {
 		hydrateMcpStore();
 	}, []);
 
-	const items = useMemo(() => {
-		const needle = (q ?? "").trim().toLowerCase();
-		return store.items.filter((i) => {
-			if (kindFilter !== "all" && i.kind !== kindFilter) return false;
-			if (!needle) return true;
-			return (
-				i.name.toLowerCase().includes(needle) ||
-				i.package.toLowerCase().includes(needle) ||
-				i.url.toLowerCase().includes(needle)
-			);
-		});
-	}, [store.items, q, kindFilter]);
+	const kindItems = useMemo(
+		() =>
+			kindFilter === "all"
+				? store.items
+				: store.items.filter((i) => i.kind === kindFilter),
+		[store.items, kindFilter],
+	);
+	const items = useFilteredByQuery(kindItems, q, (i) => [
+		i.name,
+		i.package,
+		i.url,
+	]);
 	const existingNames = useMemo(
 		() => store.items.map((i) => i.name),
 		[store.items],
 	);
-
-	function handleCopy(text: string, title: string) {
-		copyText(text, title);
-	}
 
 	async function handleUpgrade(item: InstalledMcpEntry) {
 		if (item.kind === "remote") {
@@ -556,39 +517,30 @@ function McpServersPage() {
 				title="MCP Servers"
 			/>
 
-			<div className="flex flex-wrap gap-3">
-				<div className="w-full max-w-sm space-y-1.5">
-					<Label className="text-xs font-semibold" htmlFor="mcp-search">
-						Search
-					</Label>
-					<Input
-						id="mcp-search"
-						onChange={(e) => setQInput(e.target.value)}
-						placeholder="Filter by name, package, or URL…"
-						value={qInput}
-					/>
-				</div>
-				<div className="w-44 space-y-1.5">
-					<Label className="text-xs font-semibold" htmlFor="mcp-kind-filter">
-						Type
-					</Label>
-					<Select
-						id="mcp-kind-filter"
-						onChange={(e) =>
+			<FilterBar
+				filters={[
+					{
+						id: "mcp-kind-filter",
+						label: "Type",
+						onChange: (value) =>
 							setKindFilter(
-								e.target.value === "remote" || e.target.value === "local"
-									? e.target.value
-									: "all",
-							)
-						}
-						value={kindFilter}
-					>
-						<option value="all">All</option>
-						<option value="local">Local</option>
-						<option value="remote">Remote</option>
-					</Select>
-				</div>
-			</div>
+								value === "remote" || value === "local" ? value : "all",
+							),
+						options: [
+							{ label: "All", value: "all" },
+							{ label: "Local", value: "local" },
+							{ label: "Remote", value: "remote" },
+						],
+						value: kindFilter,
+					},
+				]}
+				search={{
+					id: "mcp-search",
+					onChange: setQInput,
+					placeholder: "Filter by name, package, or URL…",
+					value: qInput,
+				}}
+			/>
 
 			{items.length === 0 ? (
 				<ListEmptyCard
@@ -622,15 +574,10 @@ function McpServersPage() {
 								item.version !== null &&
 								item.version !== item.latestVersion;
 							return (
-								<div
-									className="flex flex-col gap-2 border-b px-4 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-									key={item.id}
-								>
-									<div className="min-w-0">
-										<p className="font-mono font-semibold text-sm">
-											{item.name}
-										</p>
-										<p className="truncate font-mono text-muted-foreground text-xs">
+								<ListRow key={item.id}>
+									<ListRowMain>
+										<ListRowTitle mono={true}>{item.name}</ListRowTitle>
+										<ListRowSubtitle>
 											{item.kind === "local"
 												? buildRunCommand(
 														item.package,
@@ -642,12 +589,12 @@ function McpServersPage() {
 											{item.kind === "local" && item.latestVersion
 												? ` · latest ${item.latestVersion}`
 												: ""}
-										</p>
+										</ListRowSubtitle>
 										<code className="mt-1 block max-h-24 overflow-auto rounded-md border bg-muted/50 px-2 py-1 font-mono text-[11px] whitespace-pre">
 											{buildMcpJson(item)}
 										</code>
-									</div>
-									<div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+									</ListRowMain>
+									<ListRowActions>
 										<Badge variant="outline">{item.kind}</Badge>
 										{item.version ? (
 											<Badge variant="outline">pinned {item.version}</Badge>
@@ -697,7 +644,7 @@ function McpServersPage() {
 										</Button>
 										<Button
 											onClick={() =>
-												handleCopy(buildMcpJson(item), "Config JSON copied")
+												copyText(buildMcpJson(item), "Config JSON copied")
 											}
 											size="sm"
 											type="button"
@@ -716,8 +663,8 @@ function McpServersPage() {
 										>
 											Remove
 										</Button>
-									</div>
-								</div>
+									</ListRowActions>
+								</ListRow>
 							);
 						})}
 					</div>

@@ -7,9 +7,8 @@ import { DocumentFieldsSidebar } from "#/components/documents/DocumentFieldsSide
 import { DocumentHeader } from "#/components/documents/DocumentHeader.tsx";
 import { DocumentTimeline } from "#/components/documents/DocumentTimeline.tsx";
 import { loadDocument } from "#/components/documents.fns.ts";
+import { ListEmptyCard, ListLoadingCard } from "#/components/lists/shared.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import { Card, CardContent } from "#/components/ui/card.tsx";
-import { Skeleton } from "#/components/ui/skeleton.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
 import { rpc } from "#/lib/rpc.ts";
 import {
@@ -73,7 +72,7 @@ function DocumentDetailPage() {
 		rpc.documents.close.mutationOptions({
 			onError: (e: unknown) =>
 				toast({
-					description: String(e),
+					description: e instanceof Error ? e.message : String(e),
 					title: "Error",
 					variant: "destructive",
 				}),
@@ -84,7 +83,7 @@ function DocumentDetailPage() {
 		rpc.documents.reopen.mutationOptions({
 			onError: (e: unknown) =>
 				toast({
-					description: String(e),
+					description: e instanceof Error ? e.message : String(e),
 					title: "Error",
 					variant: "destructive",
 				}),
@@ -95,7 +94,7 @@ function DocumentDetailPage() {
 		rpc.documents.remove.mutationOptions({
 			onError: (e: unknown) =>
 				toast({
-					description: String(e),
+					description: e instanceof Error ? e.message : String(e),
 					title: "Error",
 					variant: "destructive",
 				}),
@@ -126,28 +125,28 @@ function DocumentDetailPage() {
 
 	if (pageQuery.isPending) {
 		return (
-			<div className="mx-auto max-w-[1280px] space-y-4">
-				<Skeleton className="h-8 w-2/3" />
-				<Skeleton className="h-[520px] w-full" />
+			<div className="mx-auto max-w-[1280px]">
+				<ListLoadingCard label="Loading document…" />
 			</div>
 		);
 	}
 	if (pageQuery.isError || !doc) {
 		return (
-			<Card className="py-10">
-				<CardContent className="text-center">
-					<p className="text-destructive text-sm">
-						{pageQuery.error instanceof Error
-							? pageQuery.error.message
-							: "Failed to load document"}
-					</p>
+			<ListEmptyCard
+				action={
 					<Button asChild={true} className="mt-4" variant="outline">
 						<Link params={{ projectSlug }} to="/$projectSlug/documents">
 							Back to documents
 						</Link>
 					</Button>
-				</CardContent>
-			</Card>
+				}
+				description={
+					pageQuery.error instanceof Error
+						? pageQuery.error.message
+						: "Failed to load document"
+				}
+				title="Document not found"
+			/>
 		);
 	}
 

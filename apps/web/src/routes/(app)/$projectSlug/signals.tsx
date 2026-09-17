@@ -7,6 +7,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import posthog from "posthog-js";
 import { useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
 import {
 	LIST_LIMIT,
 	ListEmptyCard,
@@ -25,16 +27,7 @@ import {
 	SignalTable,
 } from "#/components/signals/SignalTable.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import { Card, CardContent } from "#/components/ui/card.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
-import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
-import { Select } from "#/components/ui/select.tsx";
+import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
 import {
 	type SignalSeverity,
@@ -179,8 +172,8 @@ function SignalsPage() {
 		posthog.capture("signal_dismissed");
 	}
 
-	const items = signalsQuery.data?.pages.flatMap((page) => page.items);
-	const count = items?.length ?? 0;
+	const items = flattenPages(signalsQuery.data);
+	const count = items.length;
 
 	return (
 		<div className="space-y-4">
@@ -194,59 +187,47 @@ function SignalsPage() {
 				title="Signals"
 			/>
 
-			<Card>
-				<CardContent className="flex flex-col gap-3 bg-muted/50 sm:flex-row sm:items-end">
-					<div className="flex-1 space-y-1.5">
-						<Label className="font-semibold text-xs" htmlFor="q">
-							Search
-						</Label>
-						<Input
-							id="q"
-							onChange={(e) => setQInput(e.target.value)}
-							placeholder="Filter by title"
-							value={qInput}
-						/>
-					</div>
-					<div className="w-full space-y-1.5 sm:w-40">
-						<Label className="font-semibold text-xs" htmlFor="statusFilter">
-							Status
-						</Label>
-						<Select
-							id="statusFilter"
-							onChange={(e) => {
-								const status = SignalStatusEnum.safeParse(e.target.value);
-								setSearch({ status: status.success ? status.data : undefined });
-							}}
-							value={search.status ?? ""}
-						>
-							<option value="">All</option>
-							<option value="new">new</option>
-							<option value="triaged">triaged</option>
-							<option value="dismissed">dismissed</option>
-						</Select>
-					</div>
-					<div className="w-full space-y-1.5 sm:w-40">
-						<Label className="font-semibold text-xs" htmlFor="severityFilter">
-							Severity
-						</Label>
-						<Select
-							id="severityFilter"
-							onChange={(e) => {
-								const severity = SignalSeverityEnum.safeParse(e.target.value);
-								setSearch({
-									severity: severity.success ? severity.data : undefined,
-								});
-							}}
-							value={search.severity ?? ""}
-						>
-							<option value="">All</option>
-							<option value="info">info</option>
-							<option value="warning">warning</option>
-							<option value="critical">critical</option>
-						</Select>
-					</div>
-				</CardContent>
-			</Card>
+			<FilterBar
+				filters={[
+					{
+						id: "statusFilter",
+						label: "Status",
+						onChange: (value) => {
+							const status = SignalStatusEnum.safeParse(value);
+							setSearch({ status: status.success ? status.data : undefined });
+						},
+						options: [
+							{ label: "All", value: "" },
+							{ label: "new", value: "new" },
+							{ label: "triaged", value: "triaged" },
+							{ label: "dismissed", value: "dismissed" },
+						],
+						value: search.status ?? "",
+					},
+					{
+						id: "severityFilter",
+						label: "Severity",
+						onChange: (value) => {
+							const severity = SignalSeverityEnum.safeParse(value);
+							setSearch({
+								severity: severity.success ? severity.data : undefined,
+							});
+						},
+						options: [
+							{ label: "All", value: "" },
+							{ label: "info", value: "info" },
+							{ label: "warning", value: "warning" },
+							{ label: "critical", value: "critical" },
+						],
+						value: search.severity ?? "",
+					},
+				]}
+				search={{
+					onChange: setQInput,
+					placeholder: "Filter by title",
+					value: qInput,
+				}}
+			/>
 
 			{signalsQuery.isPending ? (
 				<ListLoadingCard label="Loading signals…" />
@@ -297,28 +278,28 @@ function SignalsPage() {
 				</ListResultCard>
 			)}
 
-			<Dialog onOpenChange={setOpen} open={open}>
-				<DialogContent onClose={() => setOpen(false)}>
-					<DialogHeader>
-						<DialogTitle>New Signal</DialogTitle>
-					</DialogHeader>
-					<SignalForm
-						loading={createMut.isPending}
-						onCancel={() => setOpen(false)}
-						onSubmit={async (values) => {
-							await createMut.mutateAsync({
-								body: values.body || undefined,
-								projectId: values.projectId,
-								severity: values.severity,
-								title: values.title,
-								url: values.url,
-							});
-						}}
-						projects={projectOptions}
-						submitLabel="Capture signal"
-					/>
-				</DialogContent>
-			</Dialog>
+			<FormDialog
+				onClose={() => setOpen(false)}
+				onOpenChange={setOpen}
+				open={open}
+				title="New Signal"
+			>
+				<SignalForm
+					loading={createMut.isPending}
+					onCancel={() => setOpen(false)}
+					onSubmit={async (values) => {
+						await createMut.mutateAsync({
+							body: values.body || undefined,
+							projectId: values.projectId,
+							severity: values.severity,
+							title: values.title,
+							url: values.url,
+						});
+					}}
+					projects={projectOptions}
+					submitLabel="Capture signal"
+				/>
+			</FormDialog>
 		</div>
 	);
 }

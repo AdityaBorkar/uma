@@ -3,16 +3,10 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { type ReactNode, useEffect, useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
 import { ChevronDown, Layers, Settings2 } from "#/components/icons.tsx";
 import { useProjects } from "#/components/lists/shared.tsx";
 import { ProjectForm } from "#/components/projects/ProjectForm.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
 import { useOptionalWorkspace } from "#/components/workspace.tsx";
 import { rpc } from "#/lib/rpc.ts";
@@ -24,10 +18,10 @@ import { type NavItem, UnderlineNav } from "./UnderlineNav.tsx";
 
 interface AppShellProps {
 	children: ReactNode;
-	isSettings?: boolean;
+	isSettings?: boolean | undefined;
 	items: readonly NavItem[];
 	/** Raw slug from the URL while the workspace value is still loading. */
-	scopeOverride?: string;
+	scopeOverride?: string | undefined;
 }
 
 function CreateProjectDialog({
@@ -59,29 +53,25 @@ function CreateProjectDialog({
 	);
 
 	return (
-		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="p-0" onClose={() => onOpenChange(false)}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>Create project</DialogTitle>
-					<DialogDescription>
-						Organize your work into projects.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="max-h-[70vh] overflow-y-auto px-4 py-4">
-					<ProjectForm
-						loading={createMut.isPending}
-						onCancel={() => onOpenChange(false)}
-						onSubmit={async (values) => {
-							await createMut.mutateAsync({
-								githubRepoFullName: values.githubRepoFullName,
-								name: values.name,
-							});
-						}}
-						submitLabel="Create project"
-					/>
-				</div>
-			</DialogContent>
-		</Dialog>
+		<FormDialog
+			description="Organize your work into projects."
+			onClose={() => onOpenChange(false)}
+			onOpenChange={onOpenChange}
+			open={open}
+			title="Create project"
+		>
+			<ProjectForm
+				loading={createMut.isPending}
+				onCancel={() => onOpenChange(false)}
+				onSubmit={async (values) => {
+					await createMut.mutateAsync({
+						githubRepoFullName: values.githubRepoFullName,
+						name: values.name,
+					});
+				}}
+				submitLabel="Create project"
+			/>
+		</FormDialog>
 	);
 }
 

@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
+import { RegistryStatusBadge } from "#/components/data/StatusBadge.tsx";
+import {
+	ListRow,
+	ListRowActions,
+	ListRowMain,
+	ListRowSubtitle,
+	ListRowTitle,
+} from "#/components/lists/ListRow.tsx";
 import {
 	ListEmptyCard,
 	ListErrorAlert,
@@ -8,7 +16,6 @@ import {
 	ListResultCard,
 	PageHeader,
 } from "#/components/lists/shared.tsx";
-import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
 import { rpc } from "#/lib/rpc.ts";
@@ -26,12 +33,6 @@ export const Route = createFileRoute("/(app)/settings/agents")({
 		],
 	}),
 });
-
-function statusVariant(status: string): "success" | "outline" | "destructive" {
-	if (status === "available") return "success";
-	if (status === "deprecated") return "destructive";
-	return "outline";
-}
 
 function AgentsPage() {
 	const queryClient = useQueryClient();
@@ -76,22 +77,23 @@ function AgentsPage() {
 				>
 					<div>
 						{items.map((a) => (
-							<div
-								className="flex flex-col gap-2 border-b px-4 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-								key={a.id}
-							>
-								<div className="min-w-0">
-									<p className="font-mono font-semibold text-sm">{a.name}</p>
-									<p className="text-muted-foreground text-sm">
+							<ListRow key={a.id}>
+								<ListRowMain>
+									<ListRowTitle mono={true}>{a.name}</ListRowTitle>
+									<ListRowSubtitle>
 										{a.description ?? "Custom agent."}
 										{a.binary && a.binary !== a.name
 											? ` · runs ${a.binary}`
 											: ""}
 										{a.version ? ` · ${a.version}` : ""}
-									</p>
-								</div>
-								<div className="flex shrink-0 items-center gap-2 self-start sm:self-center">
-									<Badge variant={statusVariant(a.status)}>{a.status}</Badge>
+									</ListRowSubtitle>
+								</ListRowMain>
+								<ListRowActions>
+									<RegistryStatusBadge
+										danger={["deprecated"]}
+										status={a.status}
+										success={["available"]}
+									/>
 									{!["opencode", "pi", "omp"].includes(a.name) ? (
 										<Button
 											disabled={removeMutation.isPending}
@@ -103,8 +105,8 @@ function AgentsPage() {
 											Remove
 										</Button>
 									) : null}
-								</div>
-							</div>
+								</ListRowActions>
+							</ListRow>
 						))}
 					</div>
 				</ListResultCard>

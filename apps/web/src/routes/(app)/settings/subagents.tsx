@@ -2,6 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
+import { DialogFooter } from "#/components/forms/FormFooter.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
+import {
+	ListRow,
+	ListRowActions,
+	ListRowMain,
+	ListRowSubtitle,
+	ListRowTitle,
+} from "#/components/lists/ListRow.tsx";
 import {
 	ListEmptyCard,
 	ListErrorAlert,
@@ -11,18 +22,13 @@ import {
 } from "#/components/lists/shared.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
-import { useToast } from "#/components/ui/toaster.tsx";
+import { isDuplicateName, slugNameError } from "#/lib/forms.ts";
+import { editingNames, useRegistryDialogState } from "#/lib/lists.ts";
+import { useCrudToasts } from "#/lib/mutations.ts";
 import { rpc } from "#/lib/rpc.ts";
 import { copyText } from "#/stores/clipboard.ts";
 import { useLocalSearchInput } from "#/stores/filters.ts";
@@ -96,7 +102,6 @@ const EMPTY_FORM: SubagentForm = {
 	topP: "",
 };
 
-const NAME_RE = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
 const COLOR_RE =
 	/^(#[0-9a-fA-F]{6}|primary|secondary|accent|success|warning|error|info)$/;
 
@@ -123,11 +128,9 @@ function toForm(row: SubagentRow): SubagentForm {
 
 function validateForm(form: SubagentForm): Record<string, string> {
 	const errors: Record<string, string> = {};
-	if (
-		!NAME_RE.test(form.name.trim().toLowerCase()) ||
-		form.name.trim().length > 64
-	) {
-		errors.name = "Lowercase slug (letters, digits, dashes), max 64.";
+	const nameError = slugNameError(form.name);
+	if (nameError) {
+		errors.name = nameError;
 	}
 	if (form.description.trim().length < 1)
 		errors.description = "Description is required.";
@@ -240,11 +243,7 @@ function SubagentDialog({
 	}, [open]);
 
 	const errors = validateForm(form);
-	const duplicate =
-		form.name.trim() !== "" &&
-		existingNames.some(
-			(n) => n.toLowerCase() === form.name.trim().toLowerCase(),
-		);
+	const duplicate = isDuplicateName(form.name, existingNames);
 	const valid = Object.keys(errors).length === 0 && !duplicate;
 
 	function set<K extends keyof SubagentForm>(key: K, value: SubagentForm[K]) {
@@ -271,236 +270,207 @@ function SubagentDialog({
 	}
 
 	return (
-		<Dialog onOpenChange={(next) => !next && onClose()} open={open}>
-			<DialogContent className="max-w-3xl p-0" onClose={onClose}>
-				<DialogHeader className="px-4 py-3">
-					<DialogTitle>{title}</DialogTitle>
-					<DialogDescription>
-						Mode is fixed to subagent. The file name becomes the agent name.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-4">
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="subagent-name">
-								Name
-							</Label>
-							<Input
-								id="subagent-name"
-								onChange={(e) => set("name", e.target.value)}
-								placeholder="code-reviewer"
-								value={form.name}
-							/>
-							{errors.name ? (
-								<p className="text-destructive text-xs">{errors.name}</p>
-							) : null}
-							{duplicate ? (
-								<p className="text-destructive text-xs">
-									A subagent with this name already exists.
-								</p>
-							) : null}
-						</div>
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="subagent-model">
-								Model (optional)
-							</Label>
-							<Input
-								id="subagent-model"
-								onChange={(e) => set("model", e.target.value)}
-								placeholder="anthropic/claude-sonnet-4-20250514"
-								value={form.model}
-							/>
-							{errors.model ? (
-								<p className="text-destructive text-xs">{errors.model}</p>
-							) : null}
-						</div>
-					</div>
-
-					<div className="space-y-1.5">
-						<Label
-							className="text-xs font-semibold"
-							htmlFor="subagent-description"
-						>
-							Description (required — when to use this subagent)
-						</Label>
-						<Input
-							id="subagent-description"
-							onChange={(e) => set("description", e.target.value)}
-							placeholder="Reviews code for best practices and potential issues"
-							value={form.description}
-						/>
-						{errors.description ? (
-							<p className="text-destructive text-xs">{errors.description}</p>
-						) : null}
-					</div>
-
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold" htmlFor="subagent-prompt">
-							System prompt
-						</Label>
-						<Textarea
-							id="subagent-prompt"
-							onChange={(e) => set("prompt", e.target.value)}
-							placeholder="You are a code reviewer. Focus on security, performance, and maintainability."
-							rows={6}
-							value={form.prompt}
-						/>
-						{errors.prompt ? (
-							<p className="text-destructive text-xs">{errors.prompt}</p>
-						) : null}
-					</div>
-
-					<div className="grid gap-4 sm:grid-cols-4">
-						<div className="space-y-1.5">
-							<Label
-								className="text-xs font-semibold"
-								htmlFor="subagent-temperature"
-							>
-								Temperature
-							</Label>
-							<Input
-								id="subagent-temperature"
-								inputMode="decimal"
-								onChange={(e) => set("temperature", e.target.value)}
-								placeholder="0.3"
-								value={form.temperature}
-							/>
-							{errors.temperature ? (
-								<p className="text-destructive text-xs">{errors.temperature}</p>
-							) : null}
-						</div>
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="subagent-steps">
-								Max steps
-							</Label>
-							<Input
-								id="subagent-steps"
-								inputMode="numeric"
-								onChange={(e) => set("steps", e.target.value)}
-								placeholder="20"
-								value={form.steps}
-							/>
-							{errors.steps ? (
-								<p className="text-destructive text-xs">{errors.steps}</p>
-							) : null}
-						</div>
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="subagent-topp">
-								Top P
-							</Label>
-							<Input
-								id="subagent-topp"
-								inputMode="decimal"
-								onChange={(e) => set("topP", e.target.value)}
-								placeholder="0.9"
-								value={form.topP}
-							/>
-							{errors.topP ? (
-								<p className="text-destructive text-xs">{errors.topP}</p>
-							) : null}
-						</div>
-						<div className="space-y-1.5">
-							<Label className="text-xs font-semibold" htmlFor="subagent-color">
-								Color
-							</Label>
-							<Input
-								id="subagent-color"
-								onChange={(e) => set("color", e.target.value)}
-								placeholder="#ff6b6b or accent"
-								value={form.color}
-							/>
-							{errors.color ? (
-								<p className="text-destructive text-xs">{errors.color}</p>
-							) : null}
-						</div>
-					</div>
-
-					<div className="space-y-1.5">
-						<Label className="text-xs font-semibold">Permissions</Label>
-						<div className="grid gap-3 sm:grid-cols-3">
-							{PERMISSION_KEYS.map((key) => (
-								<div className="space-y-1" key={key}>
-									<Label
-										className="text-muted-foreground text-xs"
-										htmlFor={`perm-${key}`}
-									>
-										{key}
-									</Label>
-									<Select
-										id={`perm-${key}`}
-										onChange={(e) =>
-											set("permissions", {
-												...form.permissions,
-												[key]: e.target.value as PermissionValue | "",
-											})
-										}
-										value={form.permissions[key]}
-									>
-										<option value="">Inherit</option>
-										<option value="allow">Allow</option>
-										<option value="ask">Ask</option>
-										<option value="deny">Deny</option>
-									</Select>
-								</div>
-							))}
-						</div>
-						<p className="text-muted-foreground text-xs">
-							Unset inherits the caller default. Edit gates
-							write/edit/apply_patch; bash gates shell commands; task gates
-							invoking other subagents.
+		<FormDialog
+			description="Mode is fixed to subagent. The file name becomes the agent name."
+			maxWidth="xl"
+			onClose={onClose}
+			onOpenChange={(next) => {
+				if (!next) {
+					onClose();
+				}
+			}}
+			open={open}
+			title={title}
+		>
+			<div className="grid gap-4 sm:grid-cols-2">
+				<FormField error={errors.name} id="subagent-name" label="Name">
+					<Input
+						id="subagent-name"
+						onChange={(e) => set("name", e.target.value)}
+						placeholder="code-reviewer"
+						value={form.name}
+					/>
+					{duplicate ? (
+						<p className="text-destructive text-xs">
+							A subagent with this name already exists.
 						</p>
-					</div>
+					) : null}
+				</FormField>
+				<FormField
+					error={errors.model}
+					id="subagent-model"
+					label="Model (optional)"
+				>
+					<Input
+						id="subagent-model"
+						onChange={(e) => set("model", e.target.value)}
+						placeholder="anthropic/claude-sonnet-4-20250514"
+						value={form.model}
+					/>
+				</FormField>
+			</div>
 
-					<div className="flex flex-wrap items-center gap-4">
-						<label className="flex items-center gap-2 text-sm">
-							<input
-								checked={form.hidden}
-								onChange={(e) => set("hidden", e.target.checked)}
-								type="checkbox"
-							/>
-							Hide from @ autocomplete
-						</label>
-						<label className="flex items-center gap-2 text-sm">
-							<input
-								checked={form.disabled}
-								onChange={(e) => set("disabled", e.target.checked)}
-								type="checkbox"
-							/>
-							Disabled
-						</label>
-					</div>
+			<FormField
+				error={errors.description}
+				id="subagent-description"
+				label="Description (required — when to use this subagent)"
+			>
+				<Input
+					id="subagent-description"
+					onChange={(e) => set("description", e.target.value)}
+					placeholder="Reviews code for best practices and potential issues"
+					value={form.description}
+				/>
+			</FormField>
 
-					<div className="flex items-center justify-end gap-2">
-						<Button onClick={onClose} size="sm" type="button" variant="ghost">
-							Cancel
-						</Button>
-						<Button
-							disabled={!valid || pending}
-							onClick={handleSave}
-							size="sm"
-							type="button"
-							variant="primary"
-						>
-							{pending ? "Saving…" : "Save subagent"}
-						</Button>
-					</div>
+			<FormField
+				error={errors.prompt}
+				id="subagent-prompt"
+				label="System prompt"
+			>
+				<Textarea
+					id="subagent-prompt"
+					onChange={(e) => set("prompt", e.target.value)}
+					placeholder="You are a code reviewer. Focus on security, performance, and maintainability."
+					rows={6}
+					value={form.prompt}
+				/>
+			</FormField>
+
+			<div className="grid gap-4 sm:grid-cols-4">
+				<FormField
+					error={errors.temperature}
+					id="subagent-temperature"
+					label="Temperature"
+				>
+					<Input
+						id="subagent-temperature"
+						inputMode="decimal"
+						onChange={(e) => set("temperature", e.target.value)}
+						placeholder="0.3"
+						value={form.temperature}
+					/>
+				</FormField>
+				<FormField error={errors.steps} id="subagent-steps" label="Max steps">
+					<Input
+						id="subagent-steps"
+						inputMode="numeric"
+						onChange={(e) => set("steps", e.target.value)}
+						placeholder="20"
+						value={form.steps}
+					/>
+				</FormField>
+				<FormField error={errors.topP} id="subagent-topp" label="Top P">
+					<Input
+						id="subagent-topp"
+						inputMode="decimal"
+						onChange={(e) => set("topP", e.target.value)}
+						placeholder="0.9"
+						value={form.topP}
+					/>
+				</FormField>
+				<FormField error={errors.color} id="subagent-color" label="Color">
+					<Input
+						id="subagent-color"
+						onChange={(e) => set("color", e.target.value)}
+						placeholder="#ff6b6b or accent"
+						value={form.color}
+					/>
+				</FormField>
+			</div>
+
+			<FormField
+				hint="Unset inherits the caller default. Edit gates write/edit/apply_patch; bash gates shell commands; task gates invoking other subagents."
+				id="subagent-permissions"
+				label="Permissions"
+			>
+				<div className="grid gap-3 sm:grid-cols-3">
+					{PERMISSION_KEYS.map((key) => (
+						<div className="space-y-1" key={key}>
+							<Label
+								className="text-muted-foreground text-xs"
+								htmlFor={`perm-${key}`}
+							>
+								{key}
+							</Label>
+							<Select
+								id={`perm-${key}`}
+								onChange={(e) =>
+									set("permissions", {
+										...form.permissions,
+										[key]: e.target.value as PermissionValue | "",
+									})
+								}
+								value={form.permissions[key]}
+							>
+								<option value="">Inherit</option>
+								<option value="allow">Allow</option>
+								<option value="ask">Ask</option>
+								<option value="deny">Deny</option>
+							</Select>
+						</div>
+					))}
 				</div>
-			</DialogContent>
-		</Dialog>
+			</FormField>
+
+			<div className="flex flex-wrap items-center gap-4">
+				<label className="flex items-center gap-2 text-sm">
+					<input
+						checked={form.hidden}
+						onChange={(e) => set("hidden", e.target.checked)}
+						type="checkbox"
+					/>
+					Hide from @ autocomplete
+				</label>
+				<label className="flex items-center gap-2 text-sm">
+					<input
+						checked={form.disabled}
+						onChange={(e) => set("disabled", e.target.checked)}
+						type="checkbox"
+					/>
+					Disabled
+				</label>
+			</div>
+
+			<DialogFooter
+				disabled={!valid || pending}
+				onCancel={onClose}
+				onSave={handleSave}
+				pending={pending}
+				saveLabel="Save subagent"
+			/>
+		</FormDialog>
 	);
 }
 
 function SubagentsPage() {
-	const { toast } = useToast();
+	const {
+		notifyCreated,
+		notifyDeleted,
+		notifyUpdated,
+		onCreateError,
+		onRemoveError,
+		onUpdateError,
+	} = useCrudToasts("subagent");
 	const queryClient = useQueryClient();
 	const {
 		input: qInput,
 		query: q,
 		setInput: setQInput,
 	} = useLocalSearchInput("", 250);
-	const [createOpen, setCreateOpen] = useState(false);
-	const [createInitial, setCreateInitial] = useState<SubagentForm>(EMPTY_FORM);
-	const [editing, setEditing] = useState<SubagentRow | null>(null);
+	const {
+		closeCreate,
+		createInitial,
+		createOpen,
+		editing,
+		openCreate,
+		openDuplicate,
+		setEditing,
+	} = useRegistryDialogState<SubagentRow, SubagentForm>(
+		EMPTY_FORM,
+		toForm,
+		(row) => row.name,
+	);
 
 	const listQuery = useQuery(
 		rpc.subagents.list.queryOptions({
@@ -517,71 +487,35 @@ function SubagentsPage() {
 
 	const createMutation = useMutation(
 		rpc.subagents.create.mutationOptions({
-			onError: (e) =>
-				toast({
-					description: e instanceof Error ? e.message : "Create failed",
-					title: "Failed to create subagent",
-					variant: "destructive",
-				}),
+			onError: onCreateError,
 			onSuccess: (row) => {
 				invalidate();
-				setCreateOpen(false);
-				setCreateInitial(EMPTY_FORM);
-				toast({
-					description: (row as SubagentRow).name,
-					title: "Subagent created",
-				});
+				closeCreate();
+				notifyCreated((row as SubagentRow).name);
 			},
 		}),
 	);
 
 	const updateMutation = useMutation(
 		rpc.subagents.update.mutationOptions({
-			onError: (e) =>
-				toast({
-					description: e instanceof Error ? e.message : "Update failed",
-					title: "Failed to update subagent",
-					variant: "destructive",
-				}),
+			onError: onUpdateError,
 			onSuccess: (row) => {
 				invalidate();
 				setEditing(null);
-				toast({
-					description: (row as SubagentRow).name,
-					title: "Subagent updated",
-				});
+				notifyUpdated((row as SubagentRow).name);
 			},
 		}),
 	);
 
 	const removeMutation = useMutation(
 		rpc.subagents.remove.mutationOptions({
-			onError: (e) =>
-				toast({
-					description: e instanceof Error ? e.message : "Delete failed",
-					title: "Failed to delete subagent",
-					variant: "destructive",
-				}),
+			onError: onRemoveError,
 			onSuccess: () => {
 				invalidate();
-				toast({ title: "Subagent deleted" });
+				notifyDeleted();
 			},
 		}),
 	);
-
-	function openCreate() {
-		setCreateInitial(EMPTY_FORM);
-		setCreateOpen(true);
-	}
-
-	function openDuplicate(row: SubagentRow) {
-		setCreateInitial({ ...toForm(row), name: `${row.name}-copy` });
-		setCreateOpen(true);
-	}
-
-	function handleCopy(text: string, title: string) {
-		copyText(text, title);
-	}
 
 	return (
 		<div className="space-y-6">
@@ -595,19 +529,15 @@ function SubagentsPage() {
 				title="Subagents"
 			/>
 
-			<div className="flex gap-3">
-				<div className="w-full max-w-sm space-y-1.5">
-					<Label className="text-xs font-semibold" htmlFor="subagent-search">
-						Search
-					</Label>
-					<Input
-						id="subagent-search"
-						onChange={(e) => setQInput(e.target.value)}
-						placeholder="Filter by name…"
-						value={qInput}
-					/>
-				</div>
-			</div>
+			<FilterBar
+				search={{
+					id: "subagent-search",
+					onChange: setQInput,
+					placeholder: "Filter by name…",
+					value: qInput,
+				}}
+				variant="bare"
+			/>
 
 			{listQuery.isPending ? (
 				<ListLoadingCard label="Loading subagents…" />
@@ -637,41 +567,38 @@ function SubagentsPage() {
 				>
 					<div>
 						{items.map((s) => (
-							<div
-								className="flex flex-col gap-2 border-b px-4 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-								key={s.id}
-							>
-								<div className="min-w-0">
-									<p className="flex items-center gap-2 font-mono font-semibold text-sm">
-										{s.color ? (
-											<span
-												aria-hidden={true}
-												className="inline-block size-2.5 rounded-full border"
-												style={{
-													backgroundColor: s.color.startsWith("#")
-														? s.color
-														: undefined,
-												}}
-											/>
-										) : null}
-										{s.name}
-									</p>
-									<p className="truncate text-muted-foreground text-sm">
-										{s.description}
-									</p>
+							<ListRow key={s.id}>
+								<ListRowMain>
+									<ListRowTitle mono={true}>
+										<span className="flex items-center gap-2">
+											{s.color ? (
+												<span
+													aria-hidden={true}
+													className="inline-block size-2.5 rounded-full border"
+													style={{
+														backgroundColor: s.color.startsWith("#")
+															? s.color
+															: undefined,
+													}}
+												/>
+											) : null}
+											{s.name}
+										</span>
+									</ListRowTitle>
+									<ListRowSubtitle>{s.description}</ListRowSubtitle>
 									<p className="truncate font-mono text-muted-foreground text-xs">
 										{s.model ?? "inherits model"}
 										{s.temperature !== null ? ` · temp ${s.temperature}` : ""}
 										{s.steps !== null ? ` · ${s.steps} steps` : ""}
 									</p>
-								</div>
-								<div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+								</ListRowMain>
+								<ListRowActions>
 									{s.hidden ? <Badge variant="outline">hidden</Badge> : null}
 									{s.disabled ? (
 										<Badge variant="destructive">disabled</Badge>
 									) : null}
 									<Button
-										onClick={() => handleCopy(toMarkdown(s), "Markdown copied")}
+										onClick={() => copyText(toMarkdown(s), "Markdown copied")}
 										size="sm"
 										type="button"
 										variant="outline"
@@ -679,7 +606,7 @@ function SubagentsPage() {
 										Copy md
 									</Button>
 									<Button
-										onClick={() => handleCopy(toJson(s), "JSON copied")}
+										onClick={() => copyText(toJson(s), "JSON copied")}
 										size="sm"
 										type="button"
 										variant="outline"
@@ -711,8 +638,8 @@ function SubagentsPage() {
 									>
 										Delete
 									</Button>
-								</div>
-							</div>
+								</ListRowActions>
+							</ListRow>
 						))}
 					</div>
 				</ListResultCard>
@@ -721,10 +648,7 @@ function SubagentsPage() {
 			<SubagentDialog
 				existingNames={existingNames}
 				initial={createInitial}
-				onClose={() => {
-					setCreateOpen(false);
-					setCreateInitial(EMPTY_FORM);
-				}}
+				onClose={closeCreate}
 				onSave={(input) => createMutation.mutate(input)}
 				open={createOpen}
 				pending={createMutation.isPending}
@@ -732,7 +656,7 @@ function SubagentsPage() {
 			/>
 			{editing ? (
 				<SubagentDialog
-					existingNames={existingNames.filter((n) => n !== editing.name)}
+					existingNames={editingNames(existingNames, editing.name)}
 					initial={toForm(editing)}
 					onClose={() => setEditing(null)}
 					onSave={(input) =>

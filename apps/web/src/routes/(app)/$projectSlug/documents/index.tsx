@@ -2,8 +2,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { stateBadgeClass } from "#/components/badges.ts";
+import { DocStateBadge } from "#/components/data/StatusBadge.tsx";
 import { NewDocumentDialog } from "#/components/documents/NewDocumentDialog.tsx";
+import { FilterBar } from "#/components/lists/FilterBar.tsx";
 import {
 	LIST_LIMIT,
 	ListEmptyCard,
@@ -11,14 +12,13 @@ import {
 	ListLoadingCard,
 	ListMore,
 	ListResultCard,
+	PageHeader,
 	useWorkspaceProjectId,
 } from "#/components/lists/shared.tsx";
+import { UnderlineTabs } from "#/components/lists/UnderlineTabs.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
-import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
-import { Select } from "#/components/ui/select.tsx";
 import {
 	Table,
 	TableBody,
@@ -29,6 +29,7 @@ import {
 } from "#/components/ui/table.tsx";
 import { useWorkspace } from "#/components/workspace.tsx";
 import { formatAgo } from "#/lib/age.ts";
+import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
 import {
 	DOCUMENT_KINDS,
@@ -104,75 +105,31 @@ function DocumentsPage() {
 		}),
 	);
 
-	const items = docsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+	const items = flattenPages(docsQuery.data);
 
 	return (
 		<div className="space-y-4">
-			<div className="flex justify-end">
-				<Button onClick={() => setCreateOpen(true)} variant="primary">
-					New document
-				</Button>
-			</div>
+			<PageHeader
+				action={
+					<Button onClick={() => setCreateOpen(true)} variant="primary">
+						New document
+					</Button>
+				}
+				description="Wiki pages, specs, bug reports and changelogs."
+				title="Documents"
+			/>
 
-			{/* UnderlineNav — kind tabs */}
-			<nav className="flex items-center gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-				<button
-					className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
-						search.kind
-							? "border-transparent text-muted-foreground hover:text-foreground"
-							: "border-[#fd8c73] font-semibold text-foreground"
-					}`}
-					onClick={() => setSearch({ kind: undefined })}
-					type="button"
-				>
-					All
-				</button>
-				{DOCUMENT_KINDS.map((k) => (
-					<button
-						className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
-							search.kind === k.value
-								? "border-[#fd8c73] font-semibold text-foreground"
-								: "border-transparent text-muted-foreground hover:text-foreground"
-						}`}
-						key={k.value}
-						onClick={() => setSearch({ kind: k.value })}
-						type="button"
-					>
-						{k.label}
-					</button>
-				))}
-			</nav>
+			<UnderlineTabs
+				activeValue={search.kind}
+				onSelect={(kind) => setSearch({ kind })}
+				tabs={[
+					{ label: "All", value: undefined },
+					...DOCUMENT_KINDS.map((k) => ({ label: k.label, value: k.value })),
+				]}
+			/>
 
-			<Card>
-				<CardContent className="flex flex-col gap-3 bg-muted/50 sm:flex-row sm:items-end">
-					<div className="flex-1 space-y-1.5">
-						<Label className="font-semibold text-xs" htmlFor="q">
-							Search
-						</Label>
-						<Input
-							id="q"
-							onChange={(e) => setQInput(e.target.value)}
-							placeholder="Filter by title or body"
-							value={qInput}
-						/>
-					</div>
-					<div className="w-full space-y-1.5 sm:w-36">
-						<Label className="font-semibold text-xs" htmlFor="stateFilter">
-							State
-						</Label>
-						<Select
-							id="stateFilter"
-							onChange={(e) => {
-								const state = DocumentStateEnum.safeParse(e.target.value);
-								setSearch({ state: state.success ? state.data : undefined });
-							}}
-							value={search.state ?? ""}
-						>
-							<option value="">All</option>
-							<option value="open">open</option>
-							<option value="closed">closed</option>
-						</Select>
-					</div>
+			<FilterBar
+				actions={
 					<Button
 						onClick={() => setShowFilters((v) => !v)}
 						size="sm"
@@ -180,9 +137,33 @@ function DocumentsPage() {
 					>
 						{search.label ? `Label: ${search.label}` : "Label"}
 					</Button>
-				</CardContent>
-				{showFilters ? (
-					<CardContent className="border-t">
+				}
+				filters={[
+					{
+						id: "stateFilter",
+						label: "State",
+						onChange: (value) => {
+							const state = DocumentStateEnum.safeParse(value);
+							setSearch({ state: state.success ? state.data : undefined });
+						},
+						options: [
+							{ label: "All", value: "" },
+							{ label: "open", value: "open" },
+							{ label: "closed", value: "closed" },
+						],
+						value: search.state ?? "",
+						width: "sm",
+					},
+				]}
+				search={{
+					onChange: setQInput,
+					placeholder: "Filter by title or body",
+					value: qInput,
+				}}
+			/>
+			{showFilters ? (
+				<Card>
+					<CardContent>
 						<div className="flex flex-wrap gap-2">
 							{["wiki", "spec", "urgent", "api", "bug"].map((label) => (
 								<Badge
@@ -207,8 +188,8 @@ function DocumentsPage() {
 							</p>
 						</div>
 					</CardContent>
-				) : null}
-			</Card>
+				</Card>
+			) : null}
 
 			{docsQuery.isPending ? (
 				<ListLoadingCard label="Loading documents…" />
@@ -280,12 +261,7 @@ function DocumentsPage() {
 										{kindLabel(doc.kind)}
 									</TableCell>
 									<TableCell>
-										<Badge
-											className={stateBadgeClass(doc.state)}
-											variant="outline"
-										>
-											{doc.state}
-										</Badge>
+										<DocStateBadge state={doc.state} />
 									</TableCell>
 									<TableCell>
 										<div className="flex flex-wrap gap-1">

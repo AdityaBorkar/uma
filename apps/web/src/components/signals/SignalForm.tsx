@@ -1,11 +1,9 @@
-import { useState } from "react";
-
-import { Button } from "#/components/ui/button.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
+import { FormFooter } from "#/components/forms/FormFooter.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
-import { fieldErrors, type ProjectOption } from "#/lib/forms.ts";
+import { type ProjectOption, useZodForm } from "#/lib/forms.ts";
 import { SIGNAL_SEVERITY_VALUES, SignalCreateInput } from "#/schemas/schema.ts";
 
 interface Values {
@@ -37,87 +35,61 @@ export function SignalForm({
 	submitLabel = "Save",
 	loading,
 }: Props) {
-	const [values, setValues] = useState<Values>({
+	const { errors, set, submitWith, values } = useZodForm<Values>({
 		body: "",
 		projectId: "",
 		severity: "info",
 		title: "",
 		url: "",
 	});
-	const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>(
-		{},
-	);
 
-	/** Validation is the canonical Zod schema — no duplicated rules here. */
-	function validate(): boolean {
-		const result = SignalCreateInput.safeParse({
-			body: values.body || undefined,
-			projectId: values.projectId || undefined,
-			severity: values.severity,
-			title: values.title,
-			url: values.url || undefined,
-		});
-		if (!result.success) {
-			setErrors(fieldErrors(result.error));
-			return false;
-		}
-		setErrors({});
-		return true;
+	function toInput(v: Values) {
+		return {
+			body: v.body || undefined,
+			projectId: v.projectId || undefined,
+			severity: v.severity,
+			title: v.title,
+			url: v.url || undefined,
+		};
 	}
 
-	const submitText = loading ? "Saving…" : submitLabel;
-
 	async function handleSubmit(event: React.FormEvent) {
-		event.preventDefault();
-		if (!validate()) {
-			return;
-		}
-		await onSubmit({
-			body: values.body || undefined,
-			projectId: values.projectId || undefined,
-			severity: values.severity,
-			title: values.title,
-			url: values.url || undefined,
+		await submitWith(event, SignalCreateInput, toInput, async (v) => {
+			await onSubmit({
+				body: v.body || undefined,
+				projectId: v.projectId || undefined,
+				severity: v.severity,
+				title: v.title,
+				url: v.url || undefined,
+			});
 		});
 	}
 
 	return (
 		<form className="space-y-4" onSubmit={handleSubmit}>
-			<div className="space-y-2">
-				<Label htmlFor="title">Title *</Label>
+			<FormField error={errors.title} id="title" label="Title" required={true}>
 				<Input
 					id="title"
-					onChange={(e) => setValues((s) => ({ ...s, title: e.target.value }))}
+					onChange={(e) => set("title", e.target.value)}
 					placeholder="Checkout returns 500 on empty cart"
 					value={values.title}
 				/>
-				{errors.title ? (
-					<p className="text-destructive text-xs">{errors.title}</p>
-				) : null}
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="body">Details</Label>
+			</FormField>
+			<FormField error={errors.body} id="body" label="Details">
 				<Textarea
 					id="body"
-					onChange={(e) => setValues((s) => ({ ...s, body: e.target.value }))}
+					onChange={(e) => set("body", e.target.value)}
 					placeholder="What was observed, where, and why it matters"
 					rows={3}
 					value={values.body}
 				/>
-				{errors.body ? (
-					<p className="text-destructive text-xs">{errors.body}</p>
-				) : null}
-			</div>
+			</FormField>
 			<div className="grid grid-cols-2 gap-4">
-				<div className="space-y-2">
-					<Label htmlFor="severity">Severity</Label>
+				<FormField id="severity" label="Severity">
 					<Select
 						id="severity"
 						onChange={(e) =>
-							setValues((s) => ({
-								...s,
-								severity: e.target.value as Values["severity"],
-							}))
+							set("severity", e.target.value as Values["severity"])
 						}
 						value={values.severity}
 					>
@@ -127,14 +99,11 @@ export function SignalForm({
 							</option>
 						))}
 					</Select>
-				</div>
-				<div className="space-y-2">
-					<Label htmlFor="projectId">Project</Label>
+				</FormField>
+				<FormField id="projectId" label="Project">
 					<Select
 						id="projectId"
-						onChange={(e) =>
-							setValues((s) => ({ ...s, projectId: e.target.value }))
-						}
+						onChange={(e) => set("projectId", e.target.value)}
 						value={values.projectId}
 					>
 						<option value="">None</option>
@@ -144,30 +113,21 @@ export function SignalForm({
 							</option>
 						))}
 					</Select>
-				</div>
+				</FormField>
 			</div>
-			<div className="space-y-2">
-				<Label htmlFor="url">Link</Label>
+			<FormField error={errors.url} id="url" label="Link">
 				<Input
 					id="url"
-					onChange={(e) => setValues((s) => ({ ...s, url: e.target.value }))}
+					onChange={(e) => set("url", e.target.value)}
 					placeholder="https://github.com/owner/repo/issues/123"
 					value={values.url}
 				/>
-				{errors.url ? (
-					<p className="text-destructive text-xs">{errors.url}</p>
-				) : null}
-			</div>
-			<div className="flex justify-end gap-2 pt-2">
-				{onCancel ? (
-					<Button onClick={onCancel} type="button" variant="outline">
-						Cancel
-					</Button>
-				) : null}
-				<Button disabled={Boolean(loading)} type="submit">
-					{submitText}
-				</Button>
-			</div>
+			</FormField>
+			<FormFooter
+				loading={loading}
+				onCancel={onCancel}
+				submitLabel={submitLabel}
+			/>
 		</form>
 	);
 }

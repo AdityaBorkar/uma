@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { RegistryStatusBadge } from "#/components/data/StatusBadge.tsx";
 import { MonitorSmartphone } from "#/components/icons.tsx";
+import {
+	ListRow,
+	ListRowActions,
+	ListRowMain,
+} from "#/components/lists/ListRow.tsx";
 import {
 	ListEmptyCard,
 	ListErrorAlert,
@@ -9,7 +15,6 @@ import {
 	ListResultCard,
 	PageHeader,
 } from "#/components/lists/shared.tsx";
-import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
 import { rpc } from "#/lib/rpc.ts";
@@ -27,12 +32,6 @@ export const Route = createFileRoute("/(app)/settings/machines")({
 		],
 	}),
 });
-
-function statusVariant(status: string): "success" | "outline" | "destructive" {
-	if (status === "connected") return "success";
-	if (status === "revoked") return "destructive";
-	return "outline";
-}
 
 function MachinesPage() {
 	const queryClient = useQueryClient();
@@ -86,11 +85,8 @@ function MachinesPage() {
 				>
 					<div>
 						{items.map((m) => (
-							<div
-								className="flex flex-col gap-3 border-b px-4 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
-								key={m.id}
-							>
-								<div className="flex min-w-0 flex-1 items-center gap-2">
+							<ListRow className="gap-3" key={m.id}>
+								<ListRowMain className="flex min-w-0 flex-1 items-center gap-2">
 									<MonitorSmartphone className="h-4 w-4 shrink-0 text-muted-foreground" />
 									<div className="min-w-0">
 										<p className="truncate font-semibold text-sm">{m.name}</p>
@@ -101,9 +97,13 @@ function MachinesPage() {
 												: "never seen"}
 										</p>
 									</div>
-								</div>
-								<div className="flex shrink-0 items-center gap-2">
-									<Badge variant={statusVariant(m.status)}>{m.status}</Badge>
+								</ListRowMain>
+								<ListRowActions>
+									<RegistryStatusBadge
+										danger={["revoked"]}
+										status={m.status}
+										success={["connected"]}
+									/>
 									{m.status !== "revoked" ? (
 										<Button
 											disabled={revokeMutation.isPending}
@@ -115,8 +115,8 @@ function MachinesPage() {
 											Revoke
 										</Button>
 									) : null}
-								</div>
-							</div>
+								</ListRowActions>
+							</ListRow>
 						))}
 					</div>
 				</ListResultCard>

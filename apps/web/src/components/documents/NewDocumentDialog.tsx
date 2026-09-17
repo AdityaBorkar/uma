@@ -3,16 +3,10 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 
+import { FormDialog } from "#/components/forms/FormDialog.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
 import { useProjectOptions } from "#/components/lists/shared.tsx";
 import { Button } from "#/components/ui/button.tsx";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "#/components/ui/dialog.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
 import { useWorkspace } from "#/components/workspace.tsx";
@@ -109,50 +103,36 @@ export function NewDocumentDialog({
 	}
 
 	return (
-		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent onClose={() => onOpenChange(false)}>
-				<DialogHeader>
-					<DialogTitle>New document</DialogTitle>
-					<DialogDescription>
-						Type and Project are locked after creation. Title, body, labels and
-						everything else can be filled in after.
-					</DialogDescription>
-				</DialogHeader>
-				<form className="space-y-4 px-4 py-4" onSubmit={handleCreate}>
-					<div className="space-y-2">
-						<Label htmlFor="doc-kind">Type</Label>
-						<Select
-							id="doc-kind"
-							onChange={(e) => setKind(e.target.value as DocumentKind)}
-							value={kind}
-						>
-							{DOCUMENT_KINDS.map((k) => (
-								<option key={k.value} value={k.value}>
-									{k.label}
-								</option>
-							))}
-						</Select>
-						<p className="text-muted-foreground text-xs">
-							Locked after creation — determines validation and view.
-						</p>
-					</div>
+		<FormDialog
+			description="Type and Project are locked after creation. Title, body, labels and everything else can be filled in after."
+			onClose={() => onOpenChange(false)}
+			onOpenChange={onOpenChange}
+			open={open}
+			title="New document"
+		>
+			<form className="space-y-4" onSubmit={handleCreate}>
+				<FormField
+					hint="Locked after creation — determines validation and view."
+					id="doc-kind"
+					label="Type"
+				>
+					<Select
+						id="doc-kind"
+						onChange={(e) => setKind(e.target.value as DocumentKind)}
+						value={kind}
+					>
+						{DOCUMENT_KINDS.map((k) => (
+							<option key={k.value} value={k.value}>
+								{k.label}
+							</option>
+						))}
+					</Select>
+				</FormField>
 
-					{ws.isMulti ? (
-						<div className="space-y-2">
-							<Label htmlFor="doc-project">Project *</Label>
-							<Select
-								id="doc-project"
-								onChange={(e) => setProjectId(e.target.value)}
-								value={projectId}
-							>
-								<option value="">Select a project</option>
-								{projects.map((p) => (
-									<option key={p.id} value={p.id}>
-										{p.name}
-									</option>
-								))}
-							</Select>
-							<p className="text-muted-foreground text-xs">
+				{ws.isMulti ? (
+					<FormField
+						hint={
+							<>
 								Locked after creation.{" "}
 								{projectsQuery.isPending
 									? "Loading projects…"
@@ -164,36 +144,52 @@ export function NewDocumentDialog({
 										create a project first
 									</Link>
 								) : null}
-							</p>
-						</div>
-					) : (
-						<p className="text-muted-foreground text-xs">
-							Creating in {ws.project.name} — project is locked after creation.
-						</p>
-					)}
-
-					{error ? <p className="text-destructive text-sm">{error}</p> : null}
-
-					<div className="flex justify-end gap-2 pt-2">
-						<Button
-							onClick={() => onOpenChange(false)}
-							type="button"
-							variant="ghost"
+							</>
+						}
+						id="doc-project"
+						label="Project"
+						required={true}
+					>
+						<Select
+							id="doc-project"
+							onChange={(e) => setProjectId(e.target.value)}
+							value={projectId}
 						>
-							Cancel
-						</Button>
-						<Button
-							disabled={
-								createMut.isPending || (ws.isMulti && projectsQuery.isPending)
-							}
-							type="submit"
-							variant="primary"
-						>
-							{createMut.isPending ? "Creating…" : "Create document"}
-						</Button>
-					</div>
-				</form>
-			</DialogContent>
-		</Dialog>
+							<option value="">Select a project</option>
+							{projects.map((p) => (
+								<option key={p.id} value={p.id}>
+									{p.name}
+								</option>
+							))}
+						</Select>
+					</FormField>
+				) : (
+					<p className="text-muted-foreground text-xs">
+						Creating in {ws.project.name} — project is locked after creation.
+					</p>
+				)}
+
+				{error ? <p className="text-destructive text-sm">{error}</p> : null}
+
+				<div className="flex justify-end gap-2 pt-2">
+					<Button
+						onClick={() => onOpenChange(false)}
+						type="button"
+						variant="outline"
+					>
+						Cancel
+					</Button>
+					<Button
+						disabled={
+							createMut.isPending || (ws.isMulti && projectsQuery.isPending)
+						}
+						type="submit"
+						variant="primary"
+					>
+						{createMut.isPending ? "Creating…" : "Create document"}
+					</Button>
+				</div>
+			</form>
+		</FormDialog>
 	);
 }

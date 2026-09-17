@@ -1,11 +1,9 @@
-import { useState } from "react";
-
-import { Button } from "#/components/ui/button.tsx";
+import { FormField } from "#/components/forms/FormField.tsx";
+import { FormFooter } from "#/components/forms/FormFooter.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
-import { fieldErrors, type ProjectOption } from "#/lib/forms.ts";
+import { type ProjectOption, useZodForm } from "#/lib/forms.ts";
 import { TaskCreateInput } from "#/schemas/schema.ts";
 
 interface Values {
@@ -52,85 +50,54 @@ export function TaskForm({
 	submitLabel = "Queue task",
 	loading,
 }: Props) {
-	const [values, setValues] = useState<Values>({
+	const { errors, set, submitWith, values } = useZodForm<Values>({
 		agent: "",
 		projectId: "",
 		prompt: "",
 		signalId: defaultSignalId ?? "",
 		title: "",
 	});
-	const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>(
-		{},
-	);
 
-	/** Validation is the canonical Zod schema — no duplicated rules here. */
-	function validate(): boolean {
-		const result = TaskCreateInput.safeParse({
-			agent: values.agent || undefined,
-			projectId: values.projectId || undefined,
-			prompt: values.prompt || undefined,
-			signalId: values.signalId || undefined,
-			title: values.title,
-		});
-		if (!result.success) {
-			setErrors(fieldErrors(result.error));
-			return false;
-		}
-		setErrors({});
-		return true;
+	function toInput(v: Values) {
+		return {
+			agent: v.agent || undefined,
+			projectId: v.projectId || undefined,
+			prompt: v.prompt || undefined,
+			signalId: v.signalId || undefined,
+			title: v.title,
+		};
 	}
 
-	const submitText = loading ? "Saving…" : submitLabel;
-
 	async function handleSubmit(event: React.FormEvent) {
-		event.preventDefault();
-		if (!validate()) {
-			return;
-		}
-		await onSubmit({
-			agent: values.agent || undefined,
-			projectId: values.projectId || undefined,
-			prompt: values.prompt || undefined,
-			signalId: values.signalId || undefined,
-			title: values.title,
+		await submitWith(event, TaskCreateInput, toInput, async (v) => {
+			await onSubmit(toInput(v) as Parameters<typeof onSubmit>[0]);
 		});
 	}
 
 	return (
 		<form className="space-y-4" onSubmit={handleSubmit}>
-			<div className="space-y-2">
-				<Label htmlFor="title">Title *</Label>
+			<FormField error={errors.title} id="title" label="Title" required={true}>
 				<Input
 					id="title"
-					onChange={(e) => setValues((s) => ({ ...s, title: e.target.value }))}
+					onChange={(e) => set("title", e.target.value)}
 					placeholder="Fix empty-cart 500 in checkout service"
 					value={values.title}
 				/>
-				{errors.title ? (
-					<p className="text-destructive text-xs">{errors.title}</p>
-				) : null}
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="prompt">Prompt</Label>
+			</FormField>
+			<FormField error={errors.prompt} id="prompt" label="Prompt">
 				<Textarea
 					id="prompt"
-					onChange={(e) => setValues((s) => ({ ...s, prompt: e.target.value }))}
+					onChange={(e) => set("prompt", e.target.value)}
 					placeholder="Instruction for the agent — repro steps, constraints, definition of done"
 					rows={4}
 					value={values.prompt}
 				/>
-				{errors.prompt ? (
-					<p className="text-destructive text-xs">{errors.prompt}</p>
-				) : null}
-			</div>
+			</FormField>
 			<div className="grid grid-cols-2 gap-4">
-				<div className="space-y-2">
-					<Label htmlFor="signalId">Origin signal</Label>
+				<FormField id="signalId" label="Origin signal">
 					<Select
 						id="signalId"
-						onChange={(e) =>
-							setValues((s) => ({ ...s, signalId: e.target.value }))
-						}
+						onChange={(e) => set("signalId", e.target.value)}
 						value={values.signalId}
 					>
 						<option value="">Direct (no signal)</option>
@@ -140,14 +107,11 @@ export function TaskForm({
 							</option>
 						))}
 					</Select>
-				</div>
-				<div className="space-y-2">
-					<Label htmlFor="projectId">Project</Label>
+				</FormField>
+				<FormField id="projectId" label="Project">
 					<Select
 						id="projectId"
-						onChange={(e) =>
-							setValues((s) => ({ ...s, projectId: e.target.value }))
-						}
+						onChange={(e) => set("projectId", e.target.value)}
 						value={values.projectId}
 					>
 						<option value="">None</option>
@@ -157,13 +121,12 @@ export function TaskForm({
 							</option>
 						))}
 					</Select>
-				</div>
+				</FormField>
 			</div>
-			<div className="space-y-2">
-				<Label htmlFor="agent">Agent</Label>
+			<FormField error={errors.agent} id="agent" label="Agent">
 				<Select
 					id="agent"
-					onChange={(e) => setValues((s) => ({ ...s, agent: e.target.value }))}
+					onChange={(e) => set("agent", e.target.value)}
 					value={values.agent}
 				>
 					<option value="">Default (cli)</option>
@@ -173,20 +136,12 @@ export function TaskForm({
 						</option>
 					))}
 				</Select>
-				{errors.agent ? (
-					<p className="text-destructive text-xs">{errors.agent}</p>
-				) : null}
-			</div>
-			<div className="flex justify-end gap-2 pt-2">
-				{onCancel ? (
-					<Button onClick={onCancel} type="button" variant="outline">
-						Cancel
-					</Button>
-				) : null}
-				<Button disabled={Boolean(loading)} type="submit">
-					{submitText}
-				</Button>
-			</div>
+			</FormField>
+			<FormFooter
+				loading={loading}
+				onCancel={onCancel}
+				submitLabel={submitLabel}
+			/>
 		</form>
 	);
 }

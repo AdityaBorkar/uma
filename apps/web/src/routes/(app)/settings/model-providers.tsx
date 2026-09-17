@@ -1,16 +1,19 @@
-import { Menu } from "@base-ui/react/menu";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import {
+	ActionsMenu,
+	ActionsMenuItem,
+} from "#/components/data/ActionsMenu.tsx";
+import {
 	Audio,
 	Image,
 	KeyRound,
-	MoreHorizontal,
 	Pdf,
 	Plus,
 	Video,
 } from "#/components/icons.tsx";
+import { ListEmptyCard, PageHeader } from "#/components/lists/shared.tsx";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
@@ -41,6 +44,7 @@ import type {
 	ProviderAccount,
 } from "#/lib/model-providers/types.ts";
 import { maskKey } from "#/lib/model-providers/types.ts";
+import { copyText } from "#/stores/clipboard.ts";
 import { hydrateProviderStore, useProviderStore } from "#/stores/registries.ts";
 
 export const Route = createFileRoute("/(app)/settings/model-providers")({
@@ -143,9 +147,6 @@ interface ModelRow {
 	remove?: () => void;
 }
 
-const menuItemClass =
-	"flex w-full cursor-default items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-sm outline-none select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:opacity-50";
-
 function RowActions({
 	modelId,
 	onEdit,
@@ -156,46 +157,23 @@ function RowActions({
 	remove: (() => void) | undefined;
 }) {
 	return (
-		<Menu.Root>
-			<Menu.Trigger
-				aria-label={`More actions for ${modelId}`}
-				className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 data-[popup-open]:bg-muted data-[popup-open]:text-foreground"
+		<ActionsMenu label={`More actions for ${modelId}`}>
+			<ActionsMenuItem
+				onClick={() => {
+					copyText(modelId, "Model ID copied");
+				}}
 			>
-				<MoreHorizontal className="size-4" />
-			</Menu.Trigger>
-			<Menu.Portal>
-				<Menu.Positioner
-					align="end"
-					className="z-50 outline-none select-none"
-					side="bottom"
-					sideOffset={4}
-				>
-					<Menu.Popup className="min-w-40 rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-none">
-						<Menu.Item
-							className={menuItemClass}
-							onClick={() => {
-								void navigator.clipboard?.writeText(modelId)?.catch(() => {});
-							}}
-						>
-							Copy model ID
-						</Menu.Item>
-						{onEdit ? (
-							<Menu.Item className={menuItemClass} onClick={onEdit}>
-								Edit model
-							</Menu.Item>
-						) : null}
-						{remove ? (
-							<Menu.Item
-								className={`${menuItemClass} text-destructive data-highlighted:text-destructive`}
-								onClick={remove}
-							>
-								Remove model
-							</Menu.Item>
-						) : null}
-					</Menu.Popup>
-				</Menu.Positioner>
-			</Menu.Portal>
-		</Menu.Root>
+				Copy model ID
+			</ActionsMenuItem>
+			{onEdit ? (
+				<ActionsMenuItem onClick={onEdit}>Edit model</ActionsMenuItem>
+			) : null}
+			{remove ? (
+				<ActionsMenuItem danger={true} onClick={remove}>
+					Remove model
+				</ActionsMenuItem>
+			) : null}
+		</ActionsMenu>
 	);
 }
 
@@ -211,42 +189,19 @@ function ProviderActions({
 	remove: () => void;
 }) {
 	return (
-		<Menu.Root>
-			<Menu.Trigger
-				aria-label={`More actions for ${name}`}
-				className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 data-[popup-open]:bg-muted data-[popup-open]:text-foreground"
+		<ActionsMenu label={`More actions for ${name}`}>
+			<ActionsMenuItem
+				onClick={() => {
+					copyText(baseUrl, "Base URL copied");
+				}}
 			>
-				<MoreHorizontal className="size-4" />
-			</Menu.Trigger>
-			<Menu.Portal>
-				<Menu.Positioner
-					align="end"
-					className="z-50 outline-none select-none"
-					side="bottom"
-					sideOffset={4}
-				>
-					<Menu.Popup className="min-w-40 rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-none">
-						<Menu.Item
-							className={menuItemClass}
-							onClick={() => {
-								void navigator.clipboard?.writeText(baseUrl)?.catch(() => {});
-							}}
-						>
-							Copy base URL
-						</Menu.Item>
-						<Menu.Item className={menuItemClass} onClick={onEdit}>
-							Edit provider
-						</Menu.Item>
-						<Menu.Item
-							className={`${menuItemClass} text-destructive data-highlighted:text-destructive`}
-							onClick={remove}
-						>
-							Remove provider
-						</Menu.Item>
-					</Menu.Popup>
-				</Menu.Positioner>
-			</Menu.Portal>
-		</Menu.Root>
+				Copy base URL
+			</ActionsMenuItem>
+			<ActionsMenuItem onClick={onEdit}>Edit provider</ActionsMenuItem>
+			<ActionsMenuItem danger={true} onClick={remove}>
+				Remove provider
+			</ActionsMenuItem>
+		</ActionsMenu>
 	);
 }
 
@@ -260,34 +215,12 @@ function AccountActions({
 	remove: () => void;
 }) {
 	return (
-		<Menu.Root>
-			<Menu.Trigger
-				aria-label={`More actions for ${label}`}
-				className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 data-[popup-open]:bg-muted data-[popup-open]:text-foreground"
-			>
-				<MoreHorizontal className="size-4" />
-			</Menu.Trigger>
-			<Menu.Portal>
-				<Menu.Positioner
-					align="end"
-					className="z-50 outline-none select-none"
-					side="bottom"
-					sideOffset={4}
-				>
-					<Menu.Popup className="min-w-40 rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-none">
-						<Menu.Item className={menuItemClass} onClick={onEdit}>
-							Edit account
-						</Menu.Item>
-						<Menu.Item
-							className={`${menuItemClass} text-destructive data-highlighted:text-destructive`}
-							onClick={remove}
-						>
-							Remove account
-						</Menu.Item>
-					</Menu.Popup>
-				</Menu.Positioner>
-			</Menu.Portal>
-		</Menu.Root>
+		<ActionsMenu label={`More actions for ${label}`}>
+			<ActionsMenuItem onClick={onEdit}>Edit account</ActionsMenuItem>
+			<ActionsMenuItem danger={true} onClick={remove}>
+				Remove account
+			</ActionsMenuItem>
+		</ActionsMenu>
 	);
 }
 
@@ -1556,6 +1489,10 @@ function ModelProvidersPage() {
 
 	return (
 		<div className="space-y-6">
+			<PageHeader
+				description="Manage model providers, API keys and models stored in this browser."
+				title="Model Providers"
+			/>
 			<div className="flex flex-wrap items-center gap-2">
 				<Button
 					onClick={() => setProviderOpen(true)}
@@ -1597,15 +1534,10 @@ function ModelProvidersPage() {
 			<section className="space-y-3">
 				<h2 className="font-semibold text-sm">Providers</h2>
 				{store.providers.length === 0 ? (
-					<Card className="py-10">
-						<div className="px-4 text-center">
-							<p className="font-semibold text-sm">No providers</p>
-							<p className="mx-auto mt-1 max-w-md text-muted-foreground text-sm">
-								Add a provider to detect its models, then attach API keys and
-								register models.
-							</p>
-						</div>
-					</Card>
+					<ListEmptyCard
+						description="Add a provider to detect its models, then attach API keys and register models."
+						title="No providers"
+					/>
 				) : (
 					<Card className="overflow-hidden p-0">
 						<Table>
@@ -1674,14 +1606,10 @@ function ModelProvidersPage() {
 			<section className="space-y-3">
 				<h2 className="font-semibold text-sm">Accounts</h2>
 				{store.accounts.length === 0 ? (
-					<Card className="py-10">
-						<div className="px-4 text-center">
-							<p className="font-semibold text-sm">No accounts</p>
-							<p className="mx-auto mt-1 max-w-md text-muted-foreground text-sm">
-								Attach an API key to a provider to mark it configured.
-							</p>
-						</div>
-					</Card>
+					<ListEmptyCard
+						description="Attach an API key to a provider to mark it configured."
+						title="No accounts"
+					/>
 				) : (
 					<Card className="overflow-hidden p-0">
 						<Table>
