@@ -1,7 +1,8 @@
 import { MachineFrameSchema, type ServerFrame } from "@uma/orpc-contract";
 
 import { MIN_CLI_VERSION } from "./config.ts";
-import { appendTaskLog, finishTask, recordHeartbeat } from "./service.ts";
+import { recordHeartbeat } from "./heartbeat.ts";
+import { appendTaskLog, finishTask } from "./tasks.ts";
 
 /**
  * Validate + dispatch one inbound machine→server frame.
@@ -20,26 +21,11 @@ export async function handleMachineFrame(
 		console.warn("warn: machine frame with mismatched machineId ignored");
 		return null;
 	}
-	const t = rec.t;
-	if (
-		t !== "heartbeat" &&
-		t !== "log" &&
-		t !== "task-done" &&
-		t !== "check-ack" &&
-		t !== "reset-ack" &&
-		t !== "sync-ack" &&
-		t !== "claim-ack" &&
-		t !== "quota-exceeded"
-	) {
-		console.warn(
-			`warn: unknown machine frame ignored: ${JSON.stringify(raw).slice(0, 200)}`,
-		);
-		return null;
-	}
 	const parsed = MachineFrameSchema.safeParse(raw);
 	if (!parsed.success) {
+		const t = typeof rec.t === "string" && rec.t.length <= 64 ? rec.t : "?";
 		console.warn(
-			`warn: invalid machine frame ignored: ${parsed.error.issues[0]?.message ?? "schema"}`,
+			`warn: bad machine frame ignored t=${t}: ${parsed.error.issues[0]?.message ?? "schema"}`,
 		);
 		return null;
 	}
@@ -77,13 +63,12 @@ export async function handleMachineFrame(
 				machineId,
 				f.stream ?? "stdout",
 				f.chunk,
-			).catch(() => undefined);
+				userId,
+			);
 			return null;
 		}
 		case "task-done": {
-			await finishTask(taskIdOf(f.taskId), userId, f.status, f.result).catch(
-				() => undefined,
-			);
+			await finishTask(f.taskId, userId, f.status, f.result);
 			return null;
 		}
 		case "check-ack":
@@ -96,8 +81,4 @@ export async function handleMachineFrame(
 			return null;
 		}
 	}
-}
-
-function taskIdOf(taskId: string): string {
-	return taskId;
 }

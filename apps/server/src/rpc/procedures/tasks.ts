@@ -7,13 +7,15 @@ import { db } from "../../db/client.ts";
 import { taskLogs } from "../../db/machines.ts";
 import { projects } from "../../db/projects.ts";
 import { tasks } from "../../db/tasks.ts";
-import { type RpcContext, requireUser } from "../auth.ts";
+import { requireUser } from "../auth.ts";
 import { implementer } from "../contract.ts";
 import {
 	afterCursor,
 	assertProjectOwned,
+	mustReturn,
 	pageCursor,
 	paginate,
+	zeroFilledCounts,
 } from "../scope.ts";
 
 // TASK-4 transition map (docs/CONTEXT.md (Task) §5.2).
@@ -29,8 +31,7 @@ const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
 export const list = implementer.tasks.list.handler(
 	async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const user = await requireUser(context.headers);
 		const q = input?.q?.trim();
 		const status = input?.status;
 		const projectId = input?.projectId;
@@ -92,8 +93,7 @@ export const list = implementer.tasks.list.handler(
 
 export const stats = implementer.tasks.stats.handler(
 	async ({ context, input }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const user = await requireUser(context.headers);
 		const conditions: SQL[] = [eq(tasks.userId, user.id)];
 		if (input?.projectId) {
 			conditions.push(eq(tasks.projectId, input.projectId));
@@ -103,21 +103,25 @@ export const stats = implementer.tasks.stats.handler(
 			.from(tasks)
 			.where(and(...conditions))
 			.groupBy(tasks.status);
-		const byStatus = new Map(rows.map((r) => [r.status, r.count]));
-		return {
-			cancelled: byStatus.get("cancelled") ?? 0,
-			completed: byStatus.get("completed") ?? 0,
-			failed: byStatus.get("failed") ?? 0,
-			queued: byStatus.get("queued") ?? 0,
-			running: byStatus.get("running") ?? 0,
+		return zeroFilledCounts(rows, [
+			"cancelled",
+			"completed",
+			"failed",
+			"queued",
+			"running",
+		]) as {
+			cancelled: number;
+			completed: number;
+			failed: number;
+			queued: number;
+			running: number;
 		};
 	},
 );
 
 export const get = implementer.tasks.get.handler(
 	async ({ input, context, errors }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const user = await requireUser(context.headers);
 		const [row] = await db
 			.select()
 			.from(tasks)
@@ -130,8 +134,7 @@ export const get = implementer.tasks.get.handler(
 
 export const create = implementer.tasks.create.handler(
 	async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const user = await requireUser(context.headers);
 		if (input.projectId) {
 			await assertProjectOwned(input.projectId, user.id);
 		}
@@ -165,17 +168,13 @@ export const create = implementer.tasks.create.handler(
 				userId: user.id,
 			})
 			.returning();
-		if (!row) {
-			throw new ORPCError("INTERNAL_SERVER_ERROR");
-		}
-		return row;
+		return mustReturn(row);
 	},
 );
 
 export const updateStatus = implementer.tasks.updateStatus.handler(
 	async ({ input, context, errors }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const user = await requireUser(context.headers);
 		const [existing] = await db
 			.select()
 			.from(tasks)
@@ -210,9 +209,20 @@ export const updateStatus = implementer.tasks.updateStatus.handler(
 		const [updated] = await db
 			.update(tasks)
 			.set({ ...patch, updatedAt: new Date() })
-			.where(eq(tasks.id, input.id))
+			.where(
+				and(
+					eq(tasks.id, input.id),
+					eq(tasks.userId, user.id),
+					// Guarded: a concurrent claim/finish interleaving between the
+					// read above and this write loses instead of silently winning.
+					eq(tasks.status, existing.status),
+				),
+			)
 			.returning();
-		if (!updated) throw errors.NOT_FOUND();
+		if (!updated)
+			throw new ORPCError("CONFLICT", {
+				message: "Task changed concurrently; retry",
+			});
 		return updated;
 	},
 );
@@ -222,38 +232,40 @@ export const updateStatus = implementer.tasks.updateStatus.handler(
  * Machines append via the WS `log` frame; ownership is checked through the
  * parent task.
  */
-export const logsList = implementer.tasks.logs.list.handler(
-	async ({ input, context, errors }) => {
-		const user = await requireUser(context.headers);
-		const [task] = await db
-			.select({ id: tasks.id })
-			.from(tasks)
-			.where(and(eq(tasks.id, input.taskId), eq(tasks.userId, user.id)))
-			.limit(1);
-		if (!task) throw errors.NOT_FOUND();
-		const limit = input.limit ?? 50;
-		const cursor = await pageCursor(input.cursor, async (id) => {
-			const [row] = await db
-				.select({ createdAt: taskLogs.createdAt })
-				.from(taskLogs)
-				.where(and(eq(taskLogs.id, id), eq(taskLogs.taskId, input.taskId)))
+export const logs = {
+	list: implementer.tasks.logs.list.handler(
+		async ({ input, context, errors }) => {
+			const user = await requireUser(context.headers);
+			const [task] = await db
+				.select({ id: tasks.id })
+				.from(tasks)
+				.where(and(eq(tasks.id, input.taskId), eq(tasks.userId, user.id)))
 				.limit(1);
-			return row?.createdAt;
-		});
-		const rows = await db
-			.select()
-			.from(taskLogs)
-			.where(
-				and(
-					eq(taskLogs.taskId, input.taskId),
-					cursor
-						? afterCursor(taskLogs.createdAt, taskLogs.id, cursor)
-						: undefined,
-				),
-			)
-			.orderBy(desc(taskLogs.createdAt), desc(taskLogs.id))
-			.limit(limit + 1);
-		const { items, nextCursor } = paginate(rows, limit, (last) => last.id);
-		return { items, nextCursor: nextCursor ?? null };
-	},
-);
+			if (!task) throw errors.NOT_FOUND();
+			const limit = input.limit ?? 50;
+			const cursor = await pageCursor(input.cursor, async (id) => {
+				const [row] = await db
+					.select({ createdAt: taskLogs.createdAt })
+					.from(taskLogs)
+					.where(and(eq(taskLogs.id, id), eq(taskLogs.taskId, input.taskId)))
+					.limit(1);
+				return row?.createdAt;
+			});
+			const rows = await db
+				.select()
+				.from(taskLogs)
+				.where(
+					and(
+						eq(taskLogs.taskId, input.taskId),
+						cursor
+							? afterCursor(taskLogs.createdAt, taskLogs.id, cursor)
+							: undefined,
+					),
+				)
+				.orderBy(desc(taskLogs.createdAt), desc(taskLogs.id))
+				.limit(limit + 1);
+			const { items, nextCursor } = paginate(rows, limit, (last) => last.id);
+			return { items, nextCursor: nextCursor ?? null };
+		},
+	),
+};

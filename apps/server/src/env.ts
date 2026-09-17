@@ -34,13 +34,10 @@ export const env = createEnv({
 	},
 });
 
-export const dbUrl = `postgres://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/control_plane?${env.DB_SSL ? "sslmode=require" : ""}`;
+export const dbUrl = `postgres://${env.DB_USER}:${encodeURIComponent(env.DB_PASSWORD)}@${env.DB_HOST}:${env.DB_PORT}/control_plane${env.DB_SSL ? "?sslmode=require" : ""}`;
 
 /** Public user-facing origin (web UI). Used for OAuth redirects + device URIs. */
 export const publicWebUrl = `${env.PUBLIC_WEB_SSL ? "https" : "http"}://${env.PUBLIC_WEB_DOMAIN}:${env.PUBLIC_WEB_PORT}`;
-
-/** Back-compat alias: web code built these URLs from `serverUrl`. */
-export const serverUrl = publicWebUrl;
 
 function splitOrigins(raw: string | undefined): string[] {
 	if (!raw) return [];

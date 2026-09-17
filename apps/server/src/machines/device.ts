@@ -4,11 +4,11 @@ import {
 	sessionToken,
 	userCode,
 } from "@uma/orpc-contract";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../db/client.ts";
 import { deviceCodes, machineSessions, machines } from "../db/machines.ts";
-import { serverUrl } from "../env.ts";
+import { publicWebUrl } from "../env.ts";
 import {
 	allowedClients,
 	DEVICE_CODE_TTL_S,
@@ -45,15 +45,18 @@ export async function createDeviceCode(
 		}
 	}
 	const machineId = crypto.randomUUID();
+	const userCodeValue = userCode();
+	const verificationUri = new URL("/device", publicWebUrl);
+	const completeUri = new URL("/device", publicWebUrl);
+	completeUri.searchParams.set("code", userCodeValue);
 	const record: DeviceCodeRecord = {
 		device_code: deviceCode(),
 		expires_in: DEVICE_CODE_TTL_S,
 		interval: DEVICE_POLL_INTERVAL_S,
-		user_code: userCode(),
-		verification_uri: `${serverUrl}/device`,
-		verification_uri_complete: "",
+		user_code: userCodeValue,
+		verification_uri: verificationUri.toString(),
+		verification_uri_complete: completeUri.toString(),
 	};
-	record.verification_uri_complete = `${serverUrl}/device?code=${record.user_code}`;
 	await db.insert(deviceCodes).values({
 		clientId,
 		deviceCode: record.device_code,
@@ -86,11 +89,19 @@ export async function approveDevice(
 			.where(eq(deviceCodes.userCode, code))
 			.limit(1);
 		if (!rec) return "unknown" as ApproveResult;
+		// Idempotent replay: approving an already-approved code is a no-op.
+		if (rec.status === "approved") return "ok" as ApproveResult;
+		if (rec.status === "denied") return "denied" as ApproveResult;
 		if (!approve) {
 			await tx
 				.update(deviceCodes)
 				.set({ status: "denied" })
-				.where(eq(deviceCodes.deviceCode, rec.deviceCode));
+				.where(
+					and(
+						eq(deviceCodes.deviceCode, rec.deviceCode),
+						eq(deviceCodes.status, "pending"),
+					),
+				);
 			return "denied" as ApproveResult;
 		}
 		const name = rec.machineName ?? `machine-${rec.machineId.slice(0, 8)}`;
@@ -109,17 +120,29 @@ export async function approveDevice(
 		await tx
 			.update(deviceCodes)
 			.set({ status: "approved" })
-			.where(eq(deviceCodes.deviceCode, rec.deviceCode));
-		await tx
-			.insert(machines)
-			.values({
+			.where(
+				and(
+					eq(deviceCodes.deviceCode, rec.deviceCode),
+					eq(deviceCodes.status, "pending"),
+				),
+			);
+		try {
+			await tx.insert(machines).values({
 				configVersion: "v1",
 				id: rec.machineId,
 				name,
 				status: "enrolled",
 				userId,
-			})
-			.onConflictDoNothing();
+			});
+		} catch {
+			// Lost a concurrent same-name approval race: the unique index is
+			// the real guard; the pre-check above only picks the error string.
+			await tx
+				.update(deviceCodes)
+				.set({ status: "denied" })
+				.where(eq(deviceCodes.deviceCode, rec.deviceCode));
+			return "duplicate" as ApproveResult;
+		}
 		return "ok" as ApproveResult;
 	});
 }
@@ -145,13 +168,32 @@ export async function pollDeviceToken(
 	if (rec.status === "pending")
 		return { error: "authorization_pending", ok: false };
 	if (rec.status === "denied") return { error: "access_denied", ok: false };
-	const token = sessionToken();
 	const [m] = await db
 		.select({ userId: machines.userId })
 		.from(machines)
 		.where(eq(machines.id, rec.machineId))
 		.limit(1);
 	if (!m) return { error: "access_denied", ok: false };
+	// Idempotent poll: a second poll after approval returns the same token
+	// instead of minting a new live session per request.
+	const [existingSession] = await db
+		.select({ token: machineSessions.token })
+		.from(machineSessions)
+		.where(
+			and(
+				eq(machineSessions.machineId, rec.machineId),
+				isNull(machineSessions.revoked),
+			),
+		)
+		.limit(1);
+	if (existingSession) {
+		return {
+			machineId: rec.machineId,
+			ok: true,
+			token: existingSession.token,
+		};
+	}
+	const token = sessionToken();
 	await db.insert(machineSessions).values({
 		machineId: rec.machineId,
 		token,

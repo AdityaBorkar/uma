@@ -1,5 +1,5 @@
 import { HEARTBEAT_RETENTION_DAYS, needsUpgrade } from "@uma/orpc-contract";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lt, ne, sql } from "drizzle-orm";
 
 import { db } from "../db/client.ts";
 import {
@@ -42,6 +42,8 @@ export async function recordHeartbeat(
 			ts: now,
 			userId: h.userId,
 		});
+		// Guarded: a revoked machine must never flip back to `connected`
+		// when a stale token beats revocation by milliseconds.
 		await tx
 			.update(machines)
 			.set({
@@ -50,36 +52,45 @@ export async function recordHeartbeat(
 				status: "connected",
 				updatedAt: now,
 			})
-			.where(eq(machines.id, h.machineId));
-		for (const sb of h.sandboxes) {
+			.where(and(eq(machines.id, h.machineId), ne(machines.status, "revoked")));
+		if (h.sandboxes.length > 0) {
 			await tx
 				.insert(machineSandboxes)
-				.values({
-					machineId: h.machineId,
-					projectId: null,
-					sandboxId: sb.id,
-					status: sb.status,
-					taskId: sb.taskId,
-				})
+				.values(
+					h.sandboxes.map((sb) => ({
+						machineId: h.machineId,
+						projectId: null,
+						sandboxId: sb.id,
+						status: sb.status,
+						taskId: sb.taskId,
+					})),
+				)
 				.onConflictDoUpdate({
-					set: { status: sb.status, taskId: sb.taskId },
+					set: {
+						machineId: h.machineId,
+						status: sql`excluded.status`,
+						taskId: sql`excluded.task_id`,
+					},
 					target: machineSandboxes.sandboxId,
 				});
 		}
 	});
-	// Best-effort retention prune outside the transaction.
-	const cutoff = new Date(
-		now.getTime() - HEARTBEAT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
-	);
-	await db
-		.delete(machineHeartbeats)
-		.where(
-			and(
-				eq(machineHeartbeats.machineId, h.machineId),
-				lt(machineHeartbeats.ts, cutoff),
-			),
-		)
-		.catch(() => undefined);
+	// Best-effort retention prune, sampled: every heartbeat paying a full
+	// range delete is write amplification at 5s cadence × N machines.
+	if (Math.random() < 0.02) {
+		const cutoff = new Date(
+			now.getTime() - HEARTBEAT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+		);
+		await db
+			.delete(machineHeartbeats)
+			.where(
+				and(
+					eq(machineHeartbeats.machineId, h.machineId),
+					lt(machineHeartbeats.ts, cutoff),
+				),
+			)
+			.catch(() => undefined);
+	}
 	return { upgradeRequired: needsUpgrade(h.cliVersion, MIN_CLI_VERSION) };
 }
 
@@ -102,11 +113,34 @@ export async function heartbeatHistory(
 	return rows;
 }
 
-export async function sandboxList(machineId: string) {
-	return db
-		.select()
+export async function sandboxList(machineId: string, userId: string) {
+	const rows = await db
+		.select({ sandbox: machineSandboxes })
 		.from(machineSandboxes)
-		.where(eq(machineSandboxes.machineId, machineId));
+		.innerJoin(machines, eq(machines.id, machineSandboxes.machineId))
+		.where(
+			and(
+				eq(machineSandboxes.machineId, machineId),
+				eq(machines.userId, userId),
+			),
+		);
+	return rows.map((r) => r.sandbox);
+}
+
+/** Serialize heartbeat rows (Date → ISO) once for every RPC caller. */
+export function serializeHeartbeats<
+	T extends { createdAt: unknown; ts: unknown },
+>(
+	rows: T[],
+): (Omit<T, "createdAt" | "ts"> & { createdAt: string; ts: string })[] {
+	return rows.map((r) => ({
+		...r,
+		createdAt:
+			r.createdAt instanceof Date
+				? r.createdAt.toISOString()
+				: String(r.createdAt),
+		ts: r.ts instanceof Date ? r.ts.toISOString() : String(r.ts),
+	}));
 }
 
 /** Mark a machine `connected` on WS open (lastSeenAt stamps on heartbeat). */
@@ -114,7 +148,7 @@ export async function markConnected(machineId: string): Promise<void> {
 	await db
 		.update(machines)
 		.set({ status: "connected", updatedAt: new Date() })
-		.where(eq(machines.id, machineId));
+		.where(and(eq(machines.id, machineId), ne(machines.status, "revoked")));
 }
 
 /** Mark machines with no live socket `connected → disconnected` (reaper). */

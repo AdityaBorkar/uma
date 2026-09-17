@@ -1,13 +1,10 @@
 /**
- * Model Providers — client-safe shared types.
- *
- * Custom providers, manual models, and provider accounts are stored in the
- * browser (`localStorage`, see `STORAGE_KEY`) in v1.
+ * Model Providers — server-safe shared types and validators. Browser
+ * persistence lives in `apps/web` (`localStorage`); this module must never
+ * touch `window`.
  */
 
 import { z } from "zod";
-
-import { defineLocalStore } from "../lib/local-store.ts";
 
 export const DetectedModelSchema = z.object({
 	audio: z.boolean().nullable().default(null),
@@ -58,41 +55,6 @@ export const ModelProviderStoreSchema = z.object({
 });
 
 export type ModelProviderStore = z.infer<typeof ModelProviderStoreSchema>;
-
-export const STORAGE_KEY = "uma:model-providers:v1";
-
-export const EMPTY_STORE: ModelProviderStore = {
-	accounts: [],
-	models: [],
-	providers: [],
-};
-
-const storeDef = defineLocalStore(
-	STORAGE_KEY,
-	ModelProviderStoreSchema,
-	EMPTY_STORE,
-);
-
-/** Parse + validate the persisted store; returns empty store on any problem. */
-export function parseStore(raw: unknown): ModelProviderStore {
-	if (typeof raw !== "string") return EMPTY_STORE;
-	try {
-		const parsed: unknown = JSON.parse(raw);
-		const result = ModelProviderStoreSchema.safeParse(parsed);
-		if (!result.success) return EMPTY_STORE;
-		return result.data;
-	} catch {
-		return EMPTY_STORE;
-	}
-}
-
-export function loadStore(): ModelProviderStore {
-	return storeDef.load();
-}
-
-export function saveStore(store: ModelProviderStore): void {
-	storeDef.save(store);
-}
 
 /** Mask an API key for display: `••••abcd`. */
 export function maskKey(apiKey: string): string {

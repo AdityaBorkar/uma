@@ -3,14 +3,17 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "../../db/client.ts";
 import { machines } from "../../db/machines.ts";
+import { assertSessionOwnsMachine } from "../../machines/auth.ts";
+import { serializeHeartbeats } from "../../machines/heartbeat.ts";
 import {
 	claimTask,
-	heartbeatHistory,
 	latestVersion as latestVersionService,
-	resetState,
-	sandboxList,
+	heartbeatHistory as readHeartbeatHistory,
+	sandboxList as readSandboxList,
+	revokeMachine,
+	resetState as sendResetState,
 } from "../../machines/service.ts";
-import { type RpcContext, requireMachine, requireUser } from "../auth.ts";
+import { requireMachine, requireUser } from "../auth.ts";
 import { implementer } from "../contract.ts";
 
 /**
@@ -22,19 +25,20 @@ import { implementer } from "../contract.ts";
 
 export const claim = implementer.machines.claim.handler(
 	async ({ input, context, errors }) => {
-		const ctx = context as RpcContext;
-		const sess = await requireMachine(ctx.headers);
-		if (input.machineId !== sess.machineId) {
+		const sess = await requireMachine(context.headers);
+		try {
+			assertSessionOwnsMachine(sess, input.machineId);
+		} catch {
 			throw new ORPCError("FORBIDDEN", { message: "Machine mismatch" });
 		}
-		const ok = await claimTask(
+		const startedAt = await claimTask(
 			input.taskId,
 			sess.machineId,
 			sess.userId,
 			input.sandboxId,
 		);
-		if (!ok) throw errors.CONFLICT();
-		return { ok: true as const, startedAt: Date.now() };
+		if (!startedAt) throw errors.CONFLICT();
+		return { ok: true as const, startedAt: startedAt.getTime() };
 	},
 );
 
@@ -42,26 +46,18 @@ export const latestVersion = implementer.machines.latestVersion.handler(
 	async () => latestVersionService(),
 );
 
-export const heartbeatHistoryProc =
-	implementer.machines.heartbeatHistory.handler(async ({ context }) => {
-		const ctx = context as RpcContext;
-		const sess = await requireMachine(ctx.headers);
-		const rows = await heartbeatHistory(sess.machineId, sess.userId);
-		return {
-			heartbeats: rows.map((r) => ({
-				...r,
-				createdAt:
-					r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
-				ts: r.ts instanceof Date ? r.ts.toISOString() : r.ts,
-			})),
-		};
-	});
-
-export const sandboxListProc = implementer.machines.sandboxList.handler(
+export const heartbeatHistory = implementer.machines.heartbeatHistory.handler(
 	async ({ context }) => {
-		const ctx = context as RpcContext;
-		const sess = await requireMachine(ctx.headers);
-		const rows = await sandboxList(sess.machineId);
+		const sess = await requireMachine(context.headers);
+		const rows = await readHeartbeatHistory(sess.machineId, sess.userId);
+		return { heartbeats: serializeHeartbeats(rows) };
+	},
+);
+
+export const sandboxList = implementer.machines.sandboxList.handler(
+	async ({ context }) => {
+		const sess = await requireMachine(context.headers);
+		const rows = await readSandboxList(sess.machineId, sess.userId);
 		return {
 			sandboxes: rows.map((r) => ({
 				...r,
@@ -74,18 +70,16 @@ export const sandboxListProc = implementer.machines.sandboxList.handler(
 
 export const checkState = implementer.machines.checkState.handler(
 	async ({ context }) => {
-		const ctx = context as RpcContext;
-		await requireMachine(ctx.headers);
+		await requireMachine(context.headers);
 		// No server-side desired-state store yet; convergence is WS-driven.
 		return { drift: [], version: "v1" };
 	},
 );
 
-export const resetStateProc = implementer.machines.resetState.handler(
+export const resetState = implementer.machines.resetState.handler(
 	async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const sess = await requireMachine(ctx.headers);
-		const res = await resetState(sess.machineId, {
+		const sess = await requireMachine(context.headers);
+		const res = await sendResetState(sess.machineId, {
 			keys: input.keys ?? "*",
 		});
 		return { jobId: res.jobId, keys: res.keys };
@@ -95,8 +89,7 @@ export const resetStateProc = implementer.machines.resetState.handler(
 // --- Browser-side machine registry (web UI, contract-first) ---
 
 export const list = implementer.machines.list.handler(async ({ context }) => {
-	const ctx = context as RpcContext;
-	const user = await requireUser(ctx.headers);
+	const user = await requireUser(context.headers);
 	return db
 		.select({
 			cliVersion: machines.cliVersion,
@@ -112,9 +105,7 @@ export const list = implementer.machines.list.handler(async ({ context }) => {
 
 export const revoke = implementer.machines.revoke.handler(
 	async ({ input, context, errors }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const { revokeMachine } = await import("../../machines/service.ts");
+		const user = await requireUser(context.headers);
 		const ok = await revokeMachine(user.id, input.id);
 		if (!ok) throw errors.NOT_FOUND();
 		return { ok: true as const };
@@ -123,8 +114,7 @@ export const revoke = implementer.machines.revoke.handler(
 
 export const get = implementer.machines.get.handler(
 	async ({ input, context, errors }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const user = await requireUser(context.headers);
 		const [row] = await db
 			.select()
 			.from(machines)
@@ -138,9 +128,9 @@ export const get = implementer.machines.get.handler(
 /**
  * Browser-readable heartbeats for one owned machine (contract-first:
  * `apiContract machines.heartbeatList`). The machine-auth twin
- * (`heartbeatHistoryProc`) serves the daemon itself.
+ * (`heartbeatHistory`) serves the daemon itself.
  */
-export const heartbeatListProc = implementer.machines.heartbeatList.handler(
+export const heartbeatList = implementer.machines.heartbeatList.handler(
 	async ({ input, context, errors }) => {
 		const user = await requireUser(context.headers);
 		const [m] = await db
@@ -151,18 +141,11 @@ export const heartbeatListProc = implementer.machines.heartbeatList.handler(
 			)
 			.limit(1);
 		if (!m) throw errors.NOT_FOUND();
-		const rows = await heartbeatHistory(
+		const rows = await readHeartbeatHistory(
 			input.machineId,
 			user.id,
 			input.limit ?? 50,
 		);
-		return {
-			heartbeats: rows.map((r) => ({
-				...r,
-				createdAt:
-					r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
-				ts: r.ts instanceof Date ? r.ts.toISOString() : r.ts,
-			})),
-		};
+		return { heartbeats: serializeHeartbeats(rows) };
 	},
 );

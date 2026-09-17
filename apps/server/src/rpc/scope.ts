@@ -1,10 +1,17 @@
 import { ORPCError } from "@orpc/server";
 import { type AnyColumn, and, eq, lt, or } from "drizzle-orm";
 
-import { db } from "../db/client.ts";
+import { type DbTx, db } from "../db/client.ts";
 import { documents } from "../db/documents.ts";
 import { projects } from "../db/projects.ts";
-import { slugify, slugifyProject } from "../lib/slug.ts";
+import {
+	DOCUMENT_SLUG_MAX,
+	PROJECT_SLUG_MAX,
+	slugify,
+	slugifyProject,
+} from "../lib/slug.ts";
+
+export type { DbTx };
 
 /** Shared ownership + slug + keyset-pagination helpers for all oRPC procedures. */
 
@@ -17,6 +24,50 @@ export async function assertProjectOwned(projectId: string, userId: string) {
 	if (!row) {
 		throw new ORPCError("NOT_FOUND", { message: "Project not found" });
 	}
+}
+
+/**
+ * Require a single row owned by `userId` (by `id` + owner column).
+ * Throws NOT_FOUND when missing or owned by someone else, so callers never
+ * branch on ownership themselves.
+ */
+export function throwNotFound<T>(
+	row: T | undefined,
+	message = "Not found",
+): asserts row is T {
+	if (!row) {
+		throw new ORPCError("NOT_FOUND", { message });
+	}
+}
+
+/** Throw NOT_FOUND unless the mutation returned a row (guarded-write miss). */
+export function mustReturn<T>(row: T | undefined, message = "Not found"): T {
+	if (!row) {
+		throw new ORPCError("NOT_FOUND", { message });
+	}
+	return row;
+}
+
+/** Zero-fill `groupBy(status)` rows so every known status has a count. */
+export function zeroFilledCounts(
+	rows: { count: number; status: string }[],
+	keys: readonly string[],
+): Record<string, number> {
+	const byStatus = new Map(rows.map((r) => [r.status, r.count]));
+	return Object.fromEntries(keys.map((k) => [k, byStatus.get(k) ?? 0]));
+}
+
+/** Map a Postgres unique-violation to CONFLICT instead of a raw 500. */
+export function isUniqueViolation(error: unknown): boolean {
+	if (typeof error !== "object" || error === null) return false;
+	const code = (error as { code?: unknown }).code;
+	if (code === "23505") return true;
+	const message = error instanceof Error ? error.message : String(error);
+	return /duplicate key|unique constraint|UNIQUE constraint/i.test(message);
+}
+
+export function toConflict(message: string) {
+	return new ORPCError("CONFLICT", { message });
 }
 
 async function firstAvailableSlug(
@@ -36,7 +87,7 @@ async function firstAvailableSlug(
 
 /** Per-user unique document slug, canonical slugify from `#/lib/slug.ts`. */
 export function uniqueDocumentSlug(userId: string, title: string) {
-	const base = slugify(title, "document", 80);
+	const base = slugify(title, "document", DOCUMENT_SLUG_MAX);
 	return firstAvailableSlug(base, async (candidate) => {
 		const [taken] = await db
 			.select({ id: documents.id })
@@ -49,9 +100,9 @@ export function uniqueDocumentSlug(userId: string, title: string) {
 	});
 }
 
-/** Per-user unique project slug. */
+/** Per-user unique project slug (slugified, not just lowercased). */
 export function uniqueProjectSlug(userId: string, desired: string) {
-	const base = desired.toLowerCase();
+	const base = slugify(desired, "project", PROJECT_SLUG_MAX);
 	return firstAvailableSlug(base, async (candidate) => {
 		const [taken] = await db
 			.select({ id: projects.id })

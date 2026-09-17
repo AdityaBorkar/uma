@@ -1,7 +1,7 @@
 /**
- * Shared server-side document access. oRPC procedures and TanStack server
- * functions (`src/components/documents.fns.ts`) both go through here so
- * ownership checks, project-name joins, and event queries exist once.
+ * Shared server-side document access. oRPC procedures go through here so
+ * ownership checks exist once. Web clients must use oRPC HTTP — never import
+ * this module (it pulls in the Postgres pool).
  */
 
 import { ORPCError } from "@orpc/server";

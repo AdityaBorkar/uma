@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { assertSessionOwnsMachine } from "../machines/auth.ts";
 import {
 	authMachine,
 	bearerToken,
@@ -7,6 +10,28 @@ import {
 	latestVersion,
 	pollDeviceToken,
 } from "../machines/service.ts";
+
+const ClaimBody = z.object({
+	machineId: z.string().min(1),
+	sandboxId: z.string().min(1),
+	taskId: z.string().min(1),
+});
+
+const DeviceCodeBody = z.object({
+	client_id: z.string().min(1),
+	machineName: z.string().optional(),
+});
+
+const DeviceTokenBody = z.object({
+	client_id: z.string().min(1),
+	device_code: z.string().min(1),
+	grant_type: z.string().optional(),
+});
+
+function parseBody<T>(schema: z.ZodType<T>, raw: unknown): T | null {
+	const res = schema.safeParse(raw);
+	return res.success ? res.data : null;
+}
 
 /**
  * `POST /api/machines/claim` — atomic task claim for the device binary.
@@ -21,30 +46,28 @@ export async function handleClaim(request: Request): Promise<Response> {
 	if (!sess) {
 		return Response.json({ error: "unauthorized" }, { status: 401 });
 	}
-	const body = (await request.json().catch(() => ({}))) as {
-		machineId?: string;
-		sandboxId?: string;
-		taskId?: string;
-	};
-	if (!body.taskId || !body.machineId || !body.sandboxId) {
+	const body = parseBody(ClaimBody, await request.json().catch(() => null));
+	if (!body) {
 		return Response.json(
 			{ error: "taskId/machineId/sandboxId required" },
 			{ status: 400 },
 		);
 	}
-	if (body.machineId !== sess.machineId) {
+	try {
+		assertSessionOwnsMachine(sess, body.machineId);
+	} catch {
 		return Response.json({ error: "machine mismatch" }, { status: 403 });
 	}
-	const ok = await claimTask(
+	const startedAt = await claimTask(
 		body.taskId,
 		sess.machineId,
 		sess.userId,
 		body.sandboxId,
-	).catch(() => false);
-	if (!ok) {
+	).catch(() => null);
+	if (!startedAt) {
 		return Response.json({ error: "conflict" }, { status: 409 });
 	}
-	return Response.json({ ok: true, startedAt: Date.now() });
+	return Response.json({ ok: true, startedAt: startedAt.getTime() });
 }
 
 /**
@@ -52,11 +75,11 @@ export async function handleClaim(request: Request): Promise<Response> {
  * Canonical typed equivalent: `device.code` at `/api/rpc/device/code`.
  */
 export async function handleDeviceCode(request: Request): Promise<Response> {
-	const body = (await request.json().catch(() => ({}))) as {
-		client_id?: string;
-		machineName?: string;
-	};
-	if (!body.client_id) {
+	const body = parseBody(
+		DeviceCodeBody,
+		await request.json().catch(() => null),
+	);
+	if (!body) {
 		return Response.json({ error: "invalid_request" }, { status: 400 });
 	}
 	const res = await createDeviceCode(body.client_id, body.machineName).catch(
@@ -84,12 +107,11 @@ export async function handleDeviceCode(request: Request): Promise<Response> {
  * Canonical typed equivalent: `device.token` at `/api/rpc/device/token`.
  */
 export async function handleDeviceToken(request: Request): Promise<Response> {
-	const body = (await request.json().catch(() => ({}))) as {
-		client_id?: string;
-		device_code?: string;
-		grant_type?: string;
-	};
-	if (!body.device_code || !body.client_id) {
+	const body = parseBody(
+		DeviceTokenBody,
+		await request.json().catch(() => null),
+	);
+	if (!body) {
 		return Response.json({ error: "invalid_request" }, { status: 400 });
 	}
 	const res = await pollDeviceToken(body.device_code, body.client_id).catch(

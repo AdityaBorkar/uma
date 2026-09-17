@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { z } from "zod";
 
 import { user } from "../db/auth.gen.ts";
 import { db } from "../db/client.ts";
@@ -12,6 +13,16 @@ import {
 	heartbeatHistory,
 } from "../machines/service.ts";
 
+const DebugApproveBody = z.object({
+	approve: z.boolean().optional(),
+	user_code: z.string().min(1),
+});
+
+const DebugQueueTaskBody = z.object({
+	projectId: z.string().nullable().optional(),
+	prompt: z.string().optional(),
+});
+
 function notFound(): Response {
 	return new Response("not found", { status: 404 });
 }
@@ -22,14 +33,15 @@ function notFound(): Response {
  */
 export async function handleDebugApprove(request: Request): Promise<Response> {
 	if (!e2eSeedEnabled()) return notFound();
-	const body = (await request.json().catch(() => ({}))) as {
-		approve?: boolean;
-		user_code?: string;
-	};
-	if (!body.user_code) {
+	const parsed = DebugApproveBody.safeParse(
+		await request.json().catch(() => null),
+	);
+	if (!parsed.success) {
 		return Response.json({ error: "user_code required" }, { status: 400 });
 	}
-	const userId = `test-user-${Date.now().toString(36)}`;
+	const body = parsed.data;
+	// Fixed seed identity so roundtrip suites never leak a user row per call.
+	const userId = "test-user-roundtrip";
 	const now = new Date();
 	await db
 		.insert(user)
@@ -91,10 +103,9 @@ export async function handleDebugQueueTask(
 	if (!sess) {
 		return Response.json({ error: "unauthorized" }, { status: 401 });
 	}
-	const body = (await request.json().catch(() => ({}))) as {
-		projectId?: string | null;
-		prompt?: string;
-	};
+	const body =
+		DebugQueueTaskBody.safeParse(await request.json().catch(() => null)).data ??
+		{};
 	const prompt = body.prompt ?? "test prompt";
 	const [task] = await db
 		.insert(tasks)

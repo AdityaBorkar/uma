@@ -10,6 +10,11 @@ export const RESERVED_PROJECT_SLUGS = new Set([
 	"settings",
 ]);
 
+/** Max slug lengths (single source of truth for procedures + validation). */
+export const PROJECT_SLUG_MAX = 60;
+export const PROJECT_SLUG_MIN = 2;
+export const DOCUMENT_SLUG_MAX = 80;
+
 export function isReservedProjectSlug(slug: string): boolean {
 	return RESERVED_PROJECT_SLUGS.has(slug.toLowerCase());
 }
@@ -36,5 +41,5 @@ export function slugify(
 
 /** Project-specific slugify: max 60 chars, fallback `project`. */
 export function slugifyProject(name: string): string {
-	return slugify(name, "project", 60);
+	return slugify(name, "project", PROJECT_SLUG_MAX);
 }

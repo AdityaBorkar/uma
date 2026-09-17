@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "../db/client.ts";
 import { connections } from "../db/connections.ts";
+import { GITHUB_REPO_FULL_NAME_RE } from "../schemas/schema.ts";
 
 export interface GithubRepo {
 	defaultBranch: string | null;
@@ -39,7 +40,7 @@ function toGithubRepo(data: GithubApiRepo): GithubRepo {
 	};
 }
 
-export const GITHUB_REPO_FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+export { GITHUB_REPO_FULL_NAME_RE } from "../schemas/schema.ts";
 
 export function normalizeGithubRepoFullName(fullName: string): string {
 	return fullName.trim();

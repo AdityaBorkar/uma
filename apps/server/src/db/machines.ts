@@ -10,6 +10,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { Limits } from "../schemas/schema.ts";
 import { user } from "./auth.gen.ts";
 import { projects } from "./projects.ts";
 import { tasks } from "./tasks.ts";
@@ -44,10 +45,7 @@ export const machines = pgTable(
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		id: text("id").primaryKey(),
 		lastSeenAt: timestamp("last_seen_at"),
-		limits: jsonb("limits").$type<{
-			maxRunning?: number;
-			maxTotal?: number;
-		} | null>(),
+		limits: jsonb("limits").$type<Limits | null>(),
 		name: text("name").notNull(),
 		status: machineStatusEnum("status").notNull().default("enrolled"),
 		updatedAt: timestamp("updated_at")

@@ -10,15 +10,12 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import { AGENT_STATUS_VALUES, RUN_STATUS_VALUES } from "../schemas/schema.ts";
 import { user } from "./auth.gen.ts";
 import { machines } from "./machines.ts";
 import { tasks } from "./tasks.ts";
 
-export const agentStatusEnum = pgEnum("agent_status", [
-	"available",
-	"disabled",
-	"deprecated",
-]);
+export const agentStatusEnum = pgEnum("agent_status", AGENT_STATUS_VALUES);
 
 /**
  * Coding-agent registry: user-owned catalog of agent binaries that can run
@@ -62,12 +59,7 @@ export const KNOWN_AGENT_DESCRIPTIONS: Record<
 	pi: "Lightweight interactive coding agent.",
 };
 
-export const runStatusEnum = pgEnum("run_status", [
-	"running",
-	"completed",
-	"failed",
-	"cancelled",
-]);
+export const runStatusEnum = pgEnum("run_status", RUN_STATUS_VALUES);
 
 /**
  * Task runs: one row per execution attempt of a task on a machine.

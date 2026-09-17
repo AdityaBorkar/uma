@@ -1,6 +1,7 @@
 import type { ServerWebSocket } from "bun";
 
 import { env } from "./env.ts";
+import { bearerToken } from "./machines/auth.ts";
 import { handleMachineFrame } from "./machines/frames.ts";
 import {
 	authMachine,
@@ -12,19 +13,6 @@ import { trackSocket } from "./machines/sockets.ts";
 export interface WsData {
 	machineId: string;
 	userId: string;
-}
-
-function bearerOrQuery(request: Request): string | null {
-	const h = request.headers.get("authorization");
-	if (h) {
-		const m = h.match(/^Bearer\s+(.+)$/i);
-		if (m?.[1]) return m[1].trim();
-	}
-	try {
-		return new URL(request.url).searchParams.get("token");
-	} catch {
-		return null;
-	}
 }
 
 /**
@@ -42,7 +30,7 @@ export async function handleWsUpgrade(
 	if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") {
 		return Response.json({ error: "websocket required" }, { status: 426 });
 	}
-	const sess = await authMachine(bearerOrQuery(request));
+	const sess = await authMachine(bearerToken(request));
 	if (!sess) {
 		return Response.json({ error: "unauthorized" }, { status: 401 });
 	}
@@ -55,21 +43,28 @@ export async function handleWsUpgrade(
 	return undefined;
 }
 
-type Ws = ServerWebSocket<WsData> & { __untrack?: () => void };
+type Ws = ServerWebSocket<WsData> & { __untrack?: (() => void) | undefined };
+
+function finalize(ws: Ws, machineId: string): void {
+	try {
+		ws.__untrack?.();
+	} catch {
+		// ignore
+	}
+	ws.__untrack = undefined;
+	void markDisconnected(machineId).catch(() => undefined);
+}
 
 export const wsHandlers = {
 	async close(ws: Ws) {
-		try {
-			ws.__untrack?.();
-		} catch {
-			// ignore
-		}
+		finalize(ws, ws.data.machineId);
 	},
 
-	error(_ws: Ws, error: Error) {
+	error(ws: Ws, error: Error) {
 		console.error(
 			`ws error: ${error instanceof Error ? error.message : String(error).slice(0, 200)}`,
 		);
+		finalize(ws, ws.data.machineId);
 	},
 
 	async message(ws: Ws, message: string | Buffer) {
@@ -97,7 +92,8 @@ export const wsHandlers = {
 
 	async open(ws: Ws) {
 		const { machineId } = ws.data;
-		await markConnected(machineId).catch(() => undefined);
+		// Track first so a crash between registry + DB never leaves a ghost
+		// `connected` row with no live socket.
 		const untrack = trackSocket(machineId, {
 			send: (data: string) => {
 				try {
@@ -109,8 +105,8 @@ export const wsHandlers = {
 		});
 		ws.__untrack = () => {
 			untrack();
-			void markDisconnected(machineId).catch(() => undefined);
 		};
+		await markConnected(machineId).catch(() => undefined);
 	},
 };
 

@@ -1,4 +1,6 @@
-import { env, serverUrl } from "../env.ts";
+import { z } from "zod";
+
+import { env, publicWebUrl } from "../env.ts";
 
 export const GITHUB_SCOPES = [
 	"read:user",
@@ -25,7 +27,7 @@ export function isSupportedProvider(p: string): p is SupportedProvider {
 }
 
 export function getRedirectUri(provider: SupportedProvider): string {
-	return `${serverUrl}/api/connections/${provider}`;
+	return `${publicWebUrl}/api/connections/${provider}`;
 }
 
 export function buildAuthorizationUrl(
@@ -72,6 +74,19 @@ function buildGoogleAuthUrl(state: string, redirectUri: string): string {
 	return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
+const TokenResponseSchema = z
+	.object({
+		access_token: z.string().min(1).optional(),
+		error: z.string().optional(),
+		error_description: z.string().optional(),
+		expires_in: z.coerce.number().int().nonnegative().optional(),
+		id_token: z.string().optional(),
+		refresh_token: z.string().nullable().optional(),
+		scope: z.string().optional(),
+		token_type: z.string().optional(),
+	})
+	.passthrough();
+
 export interface TokenResult {
 	access_token: string;
 	expires_in?: number | undefined;
@@ -114,20 +129,20 @@ async function exchangeGithubCode(
 		},
 		method: "POST",
 	});
-	const data = (await res.json()) as Record<string, unknown>;
-	if (!res.ok || data.error) {
+	const parsed = TokenResponseSchema.safeParse(await res.json());
+	if (!parsed.success) {
+		throw new Error(`GitHub token exchange failed: ${res.statusText}`);
+	}
+	const data = parsed.data;
+	if (!res.ok || data.error || !data.access_token) {
 		throw new Error(
 			`GitHub token exchange failed: ${String(data.error_description ?? data.error ?? res.statusText)}`,
 		);
 	}
-	const accessToken = data.access_token as string | undefined;
-	if (!accessToken) {
-		throw new Error("GitHub token exchange: missing access_token");
-	}
 	return {
-		access_token: accessToken,
-		scope: data.scope as string | undefined,
-		token_type: data.token_type as string | undefined,
+		access_token: data.access_token,
+		scope: data.scope,
+		token_type: data.token_type,
 	};
 }
 
@@ -152,22 +167,22 @@ async function exchangeGoogleCode(
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		method: "POST",
 	});
-	const data = (await res.json()) as Record<string, unknown>;
-	if (!res.ok) {
+	const parsed = TokenResponseSchema.safeParse(await res.json());
+	if (!parsed.success) {
+		throw new Error(`Google token exchange failed: ${res.statusText}`);
+	}
+	const data = parsed.data;
+	if (!res.ok || !data.access_token) {
 		throw new Error(
-			`Google token exchange failed: ${String((data as { error_description?: string }).error_description ?? (data as { error?: string }).error ?? res.statusText)}`,
+			`Google token exchange failed: ${String(data.error_description ?? data.error ?? res.statusText)}`,
 		);
 	}
-	const accessToken = data.access_token as string | undefined;
-	if (!accessToken) {
-		throw new Error("Google token exchange: missing access_token");
-	}
 	return {
-		access_token: accessToken,
-		expires_in: data.expires_in as number | undefined,
-		id_token: data.id_token as string | undefined,
-		refresh_token: (data.refresh_token as string | undefined) ?? null,
-		scope: data.scope as string | undefined,
-		token_type: data.token_type as string | undefined,
+		access_token: data.access_token,
+		expires_in: data.expires_in,
+		id_token: data.id_token,
+		refresh_token: data.refresh_token ?? null,
+		scope: data.scope,
+		token_type: data.token_type,
 	};
 }

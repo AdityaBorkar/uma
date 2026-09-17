@@ -66,13 +66,17 @@ function runVerify(
 				timeout: VERIFY_TIMEOUT_MS,
 			},
 			(error, stdout, stderr) => {
+				const code =
+					error &&
+					typeof error === "object" &&
+					"code" in error &&
+					typeof error.code === "number"
+						? error.code
+						: error
+							? 1
+							: 0;
 				resolve({
-					code:
-						typeof (error as { code?: unknown } | null)?.code === "number"
-							? (error as { code: number }).code
-							: error
-								? 1
-								: 0,
+					code,
 					stderr: String(stderr ?? "").slice(0, MAX_OUTPUT_CHARS),
 					stdout: String(stdout ?? "").slice(0, MAX_OUTPUT_CHARS),
 				});

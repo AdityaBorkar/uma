@@ -1,4 +1,3 @@
-import { ORPCError } from "@orpc/server";
 import { KNOWN_AGENT_NAMES } from "@uma/orpc-contract";
 import { and, eq, ilike } from "drizzle-orm";
 
@@ -6,6 +5,7 @@ import { agents, KNOWN_AGENT_DESCRIPTIONS } from "../../db/agents.ts";
 import { db } from "../../db/client.ts";
 import { requireUser } from "../auth.ts";
 import { implementer } from "../contract.ts";
+import { isUniqueViolation, mustReturn } from "../scope.ts";
 
 /**
  * Coding-agent registry (contract-first: `apiContract agents.*`).
@@ -13,6 +13,16 @@ import { implementer } from "../contract.ts";
  */
 
 async function ensureDefaults(userId: string): Promise<void> {
+	// Read-before-write: the common case (seeded user) pays one indexed
+	// select instead of a write on every list call. Seeding happens once —
+	// when the user owns no agents yet — so deleting a well-known agent
+	// sticks instead of being resurrected on the next list.
+	const [existing] = await db
+		.select({ id: agents.id })
+		.from(agents)
+		.where(eq(agents.userId, userId))
+		.limit(1);
+	if (existing) return;
 	await db
 		.insert(agents)
 		.values(
@@ -63,25 +73,23 @@ export const create = implementer.agents.create.handler(
 	async ({ input, context, errors }) => {
 		const user = await requireUser(context.headers);
 		const name = input.name.trim();
-		const [existing] = await db
-			.select({ id: agents.id })
-			.from(agents)
-			.where(and(eq(agents.userId, user.id), eq(agents.name, name)))
-			.limit(1);
-		if (existing) throw errors.CONFLICT();
-		const [row] = await db
-			.insert(agents)
-			.values({
-				binary: input.binary ?? name,
-				description: input.description ?? null,
-				id: crypto.randomUUID(),
-				name,
-				userId: user.id,
-				version: input.version ?? null,
-			})
-			.returning();
-		if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR");
-		return row;
+		try {
+			const [row] = await db
+				.insert(agents)
+				.values({
+					binary: input.binary ?? name,
+					description: input.description ?? null,
+					id: crypto.randomUUID(),
+					name,
+					userId: user.id,
+					version: input.version ?? null,
+				})
+				.returning();
+			return mustReturn(row);
+		} catch (error) {
+			if (isUniqueViolation(error)) throw errors.CONFLICT();
+			throw error;
+		}
 	},
 );
 
@@ -98,12 +106,6 @@ export const update = implementer.agents.update.handler(
 		if (input.name !== undefined) {
 			const name = input.name.trim();
 			if (name !== existing.name) {
-				const [taken] = await db
-					.select({ id: agents.id })
-					.from(agents)
-					.where(and(eq(agents.userId, user.id), eq(agents.name, name)))
-					.limit(1);
-				if (taken) throw errors.CONFLICT();
 				patch.name = name;
 			}
 		}
@@ -113,13 +115,17 @@ export const update = implementer.agents.update.handler(
 		if (input.version !== undefined) patch.version = input.version ?? null;
 		if (input.status !== undefined) patch.status = input.status;
 		if (Object.keys(patch).length === 0) return existing;
-		const [updated] = await db
-			.update(agents)
-			.set({ ...patch, updatedAt: new Date() })
-			.where(eq(agents.id, input.id))
-			.returning();
-		if (!updated) throw errors.NOT_FOUND();
-		return updated;
+		try {
+			const [updated] = await db
+				.update(agents)
+				.set({ ...patch, updatedAt: new Date() })
+				.where(and(eq(agents.id, input.id), eq(agents.userId, user.id)))
+				.returning();
+			return mustReturn(updated);
+		} catch (error) {
+			if (isUniqueViolation(error)) throw errors.CONFLICT();
+			throw error;
+		}
 	},
 );
 
@@ -135,7 +141,9 @@ export const remove = implementer.agents.remove.handler(
 		if ((KNOWN_AGENT_NAMES as readonly string[]).includes(existing.name)) {
 			throw errors.BAD_REQUEST();
 		}
-		await db.delete(agents).where(eq(agents.id, input.id));
+		await db
+			.delete(agents)
+			.where(and(eq(agents.id, input.id), eq(agents.userId, user.id)));
 		return { ok: true as const };
 	},
 );

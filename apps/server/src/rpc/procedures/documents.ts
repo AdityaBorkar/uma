@@ -1,8 +1,8 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import matter from "gray-matter";
 
-import { db } from "../../db/client.ts";
+import { type DbTx, db } from "../../db/client.ts";
 import {
 	documentCounters,
 	documentEvents,
@@ -17,12 +17,15 @@ import {
 	DocumentUpdateInput,
 	documentMetaSchema,
 } from "../../schemas/schema.ts";
-import { type RpcContext, requireUser } from "../auth.ts";
+import { authed } from "../auth.ts";
 import {
 	afterCursor,
 	assertProjectOwned,
+	isUniqueViolation,
+	mustReturn,
 	pageCursor,
 	paginate,
+	toConflict,
 	uniqueDocumentSlug,
 } from "../scope.ts";
 
@@ -31,9 +34,8 @@ import {
  * upserted in the same transaction as the insert, so concurrent creations
  * can never collide (SOW §4/Risks).
  */
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-async function allocateNumber(tx: DbTransaction, userId: string) {
+async function allocateNumber(tx: DbTx, userId: string) {
 	const [row] = await tx
 		.insert(documentCounters)
 		.values({ nextNumber: 1, userId })
@@ -98,7 +100,7 @@ function composeBody(
 			message: `Invalid frontmatter for kind "${kind}": ${metaResult.error.issues[0]?.message}`,
 		});
 	}
-	const meta: Record<string, unknown> = metaResult.data;
+	const meta = metaResult.data as Record<string, unknown>;
 	merged.meta = meta;
 
 	return {
@@ -147,15 +149,14 @@ function toLabelEvents(
 	return events;
 }
 
-export const list = os
+export const list = authed
 	.input(DocumentListInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const userId = context.user.id;
 		const q = input?.q?.trim();
 		const limit = input?.limit ?? 20;
 
-		const conditions: SQL[] = [eq(documents.createdBy, user.id)];
+		const conditions: SQL[] = [eq(documents.createdBy, userId)];
 		if (input?.kind) {
 			conditions.push(eq(documents.kind, input.kind));
 		}
@@ -181,7 +182,7 @@ export const list = os
 			const [row] = await db
 				.select({ createdAt: documents.createdAt })
 				.from(documents)
-				.where(and(eq(documents.id, id), eq(documents.createdBy, user.id)))
+				.where(and(eq(documents.id, id), eq(documents.createdBy, userId)))
 				.limit(1);
 			return row?.createdAt;
 		});
@@ -218,12 +219,13 @@ export const list = os
 		return { items, nextCursor };
 	});
 
-export const get = os
+export const get = authed
 	.input(DocumentNumberInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const { doc, projectName } = await getOwnedDocument(input.number, user.id);
+		const { doc, projectName } = await getOwnedDocument(
+			input.number,
+			context.user.id,
+		);
 		return { ...doc, projectName };
 	});
 
@@ -232,12 +234,10 @@ export const get = os
  * ownership check as `get` (number → owned doc → events by id), so callers
  * can never enumerate another user's events.
  */
-export const events = os
+export const events = authed
 	.input(DocumentNumberInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const { doc } = await getOwnedDocument(input.number, user.id);
+		const { doc } = await getOwnedDocument(input.number, context.user.id);
 		return db
 			.select({
 				actorId: documentEvents.actorId,
@@ -251,12 +251,11 @@ export const events = os
 			.orderBy(desc(documentEvents.createdAt));
 	});
 
-export const create = os
+export const create = authed
 	.input(DocumentCreateInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		await assertProjectOwned(input.projectId, user.id);
+		const userId = context.user.id;
+		await assertProjectOwned(input.projectId, userId);
 		const { body, meta } = composeBody(input.body, {
 			kind: input.kind,
 			labels: input.labels,
@@ -265,45 +264,49 @@ export const create = os
 			title: input.title,
 		});
 		const id = crypto.randomUUID();
-		const slug = await uniqueDocumentSlug(user.id, input.title);
+		const slug = await uniqueDocumentSlug(userId, input.title);
 
-		return db.transaction(async (tx) => {
-			const number = await allocateNumber(tx, user.id);
-			const [row] = await tx
-				.insert(documents)
-				.values({
-					body,
-					createdBy: user.id,
-					id,
-					kind: input.kind,
-					labels: input.labels ?? [],
-					meta,
-					number,
-					projectId: input.projectId,
-					slug,
-					title: input.title,
-				})
-				.returning();
-			if (!row) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-			await tx.insert(documentEvents).values({
-				actorId: user.id,
-				documentId: row.id,
-				id: crypto.randomUUID(),
-				kind: "opened",
-				payload: {},
+		try {
+			return await db.transaction(async (tx) => {
+				const number = await allocateNumber(tx, userId);
+				const [row] = await tx
+					.insert(documents)
+					.values({
+						body,
+						createdBy: userId,
+						id,
+						kind: input.kind,
+						labels: input.labels ?? [],
+						meta,
+						number,
+						projectId: input.projectId,
+						slug,
+						title: input.title,
+					})
+					.returning();
+				const created = mustReturn(row);
+				await tx.insert(documentEvents).values({
+					actorId: userId,
+					documentId: created.id,
+					id: crypto.randomUUID(),
+					kind: "opened",
+					payload: {},
+				});
+				return created;
 			});
-			return row;
-		});
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw toConflict("A document with this slug already exists");
+			}
+			throw error;
+		}
 	});
 
-export const update = os
+export const update = authed
 	.input(DocumentUpdateInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const { doc: existing } = await getOwnedDocument(input.number, user.id);
+		const userId = context.user.id;
+		const { doc: existing } = await getOwnedDocument(input.number, userId);
 
 		// kind + projectId are locked after creation — the update input type
 		// no longer carries them, so there is nothing to reject here.
@@ -316,66 +319,67 @@ export const update = os
 		});
 		const slug =
 			input.title && input.title !== existing.title
-				? await uniqueDocumentSlug(user.id, input.title)
+				? await uniqueDocumentSlug(userId, input.title)
 				: existing.slug;
 
-		const [updated] = await db
-			.update(documents)
-			.set({
-				body,
-				...(input.labels !== undefined ? { labels: input.labels } : {}),
-				meta,
-				slug,
-				title: input.title ?? existing.title,
-				updatedAt: new Date(),
-			})
-			.where(eq(documents.id, existing.id))
-			.returning();
-		if (!updated) {
-			throw new ORPCError("NOT_FOUND");
-		}
+		const renamedEvent =
+			input.title !== undefined && input.title !== existing.title
+				? [
+						{
+							actorId: userId,
+							documentId: existing.id,
+							id: crypto.randomUUID(),
+							kind: "renamed",
+							payload: { from: existing.title, to: input.title },
+						},
+					]
+				: [];
+		const labelEvents =
+			input.labels !== undefined
+				? toLabelEvents(existing.labels, input.labels, existing.id, userId)
+				: [];
 
-		const events: Array<{
-			actorId: string;
-			documentId: string;
-			id: string;
-			kind: string;
-			payload: Record<string, unknown>;
-		}> = [];
-		if (updated.title !== existing.title) {
-			events.push({
-				actorId: user.id,
-				documentId: updated.id,
-				id: crypto.randomUUID(),
-				kind: "renamed",
-				payload: { from: existing.title, to: updated.title },
+		try {
+			return await db.transaction(async (tx) => {
+				const [updated] = await tx
+					.update(documents)
+					.set({
+						body,
+						...(input.labels !== undefined ? { labels: input.labels } : {}),
+						meta,
+						slug,
+						title: input.title ?? existing.title,
+						updatedAt: new Date(),
+					})
+					.where(
+						and(eq(documents.id, existing.id), eq(documents.createdBy, userId)),
+					)
+					.returning();
+				const row = mustReturn(updated, "Document not found");
+				const events = [...renamedEvent, ...labelEvents];
+				if (events.length > 0) {
+					await tx.insert(documentEvents).values(events);
+				}
+				return row;
 			});
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw toConflict("A document with this slug already exists");
+			}
+			throw error;
 		}
-		if (input.labels) {
-			events.push(
-				...toLabelEvents(existing.labels, updated.labels, updated.id, user.id),
-			);
-		}
-		if (events.length > 0) {
-			await db.insert(documentEvents).values(events);
-		}
-		return updated;
 	});
 
-export const close = os
+export const close = authed
 	.input(DocumentNumberInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		return transitionState(input.number, user.id, "closed");
+		return transitionState(input.number, context.user.id, "closed");
 	});
 
-export const reopen = os
+export const reopen = authed
 	.input(DocumentNumberInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		return transitionState(input.number, user.id, "open");
+		return transitionState(input.number, context.user.id, "open");
 	});
 
 async function transitionState(
@@ -388,34 +392,41 @@ async function transitionState(
 		return existing;
 	}
 
-	const [updated] = await db
-		.update(documents)
-		.set({
-			closedAt: to === "closed" ? new Date() : null,
-			state: to,
-			updatedAt: new Date(),
-		})
-		.where(eq(documents.id, existing.id))
-		.returning();
-	if (!updated) {
-		throw new ORPCError("NOT_FOUND");
-	}
-	await db.insert(documentEvents).values({
-		actorId: userId,
-		documentId: updated.id,
-		id: crypto.randomUUID(),
-		kind: to === "closed" ? "closed" : "reopened",
-		payload: {},
+	return db.transaction(async (tx) => {
+		const [updated] = await tx
+			.update(documents)
+			.set({
+				closedAt: to === "closed" ? new Date() : null,
+				state: to,
+				updatedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(documents.id, existing.id),
+					eq(documents.createdBy, userId),
+					// Guarded: a concurrent close/reopen interleaving loses instead
+					// of silently winning and orphaning its event.
+					eq(documents.state, existing.state),
+				),
+			)
+			.returning();
+		const row = mustReturn(updated, "Document not found");
+		await tx.insert(documentEvents).values({
+			actorId: userId,
+			documentId: row.id,
+			id: crypto.randomUUID(),
+			kind: to === "closed" ? "closed" : "reopened",
+			payload: {},
+		});
+		return row;
 	});
-	return updated;
 }
 
-export const remove = os
+export const remove = authed
 	.input(DocumentNumberInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const { doc: existing } = await getOwnedDocument(input.number, user.id);
+		const userId = context.user.id;
+		const { doc: existing } = await getOwnedDocument(input.number, userId);
 		// Deletion is reserved for settled work — open documents must be closed
 		// first (SOW §6: closing is a decision, deletion is not).
 		if (existing.state !== "closed") {
@@ -423,6 +434,10 @@ export const remove = os
 				message: "Only closed documents can be deleted",
 			});
 		}
-		await db.delete(documents).where(eq(documents.id, existing.id));
+		await db
+			.delete(documents)
+			.where(
+				and(eq(documents.id, existing.id), eq(documents.createdBy, userId)),
+			);
 		return { ok: true };
 	});

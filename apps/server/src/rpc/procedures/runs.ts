@@ -4,7 +4,7 @@ import { taskRuns } from "../../db/agents.ts";
 import { db } from "../../db/client.ts";
 import { requireUser } from "../auth.ts";
 import { implementer } from "../contract.ts";
-import { afterCursor, pageCursor } from "../scope.ts";
+import { afterCursor, pageCursor, zeroFilledCounts } from "../scope.ts";
 
 /**
  * Task-run tracking (contract-first: `apiContract runs.*`).
@@ -78,12 +78,16 @@ export const stats = implementer.runs.stats.handler(
 			.from(taskRuns)
 			.where(and(...conditions))
 			.groupBy(taskRuns.status);
-		const byStatus = new Map(rows.map((r) => [r.status, r.count]));
-		return {
-			cancelled: byStatus.get("cancelled") ?? 0,
-			completed: byStatus.get("completed") ?? 0,
-			failed: byStatus.get("failed") ?? 0,
-			running: byStatus.get("running") ?? 0,
+		return zeroFilledCounts(rows, [
+			"cancelled",
+			"completed",
+			"failed",
+			"running",
+		]) as {
+			cancelled: number;
+			completed: number;
+			failed: number;
+			running: number;
 		};
 	},
 );

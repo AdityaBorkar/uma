@@ -1,18 +1,16 @@
 /**
- * MCP servers — client-safe shared helpers.
+ * MCP servers — server-safe shared helpers (pure validation + config
+ * builders only). Browser persistence lives in `apps/web` (`localStorage`);
+ * this module must never touch `window`.
  *
  * Mirrors the opencode `mcp` config shape documented at
  * https://opencode.ai/docs/mcp-servers/ :
  *
  * - local:  `{ type: "local", command: ["npx", "-y", "pkg[@version]"], enabled }`
  * - remote: `{ type: "remote", url: "https://…/mcp", enabled }`
- *
- * Scope is intentionally local-only in v1 (browser `localStorage`).
  */
 
 import { z } from "zod";
-
-import { defineLocalStore } from "../lib/local-store.ts";
 
 export const McpKindSchema = z.enum(["local", "remote"]);
 export type McpKind = z.infer<typeof McpKindSchema>;
@@ -80,58 +78,6 @@ export const McpStoreSchema = z.object({
 });
 
 export type McpStore = z.infer<typeof McpStoreSchema>;
-
-export const STORAGE_KEY = "uma:mcp-servers:v1";
-
-export const EMPTY_STORE: McpStore = { items: [] };
-
-const storeDef = defineLocalStore(STORAGE_KEY, McpStoreSchema, EMPTY_STORE);
-
-function dedupe(items: InstalledMcpEntry[]): InstalledMcpEntry[] {
-	const seenIds = new Set<string>();
-	const seenNames = new Set<string>();
-	const out: InstalledMcpEntry[] = [];
-	for (const entry of items) {
-		if (seenIds.has(entry.id)) continue;
-		// Enforce kind-specific invariants + version safety beyond the schema.
-		if (entry.kind === "local") {
-			if (!isSafeMcpPackage(entry.package.trim())) continue;
-		} else if (!isSafeMcpUrl(entry.url.trim())) continue;
-		if (entry.version !== null && !isSafeMcpVersion(entry.version.trim()))
-			continue;
-		if (
-			entry.latestVersion !== null &&
-			!isSafeMcpVersion(entry.latestVersion.trim())
-		)
-			continue;
-		const lowered = entry.name.toLowerCase();
-		if (seenNames.has(lowered)) continue;
-		seenIds.add(entry.id);
-		seenNames.add(lowered);
-		out.push(entry);
-	}
-	return out;
-}
-
-export function parseStore(raw: unknown): McpStore {
-	if (typeof raw !== "string") return EMPTY_STORE;
-	try {
-		const parsed: unknown = JSON.parse(raw);
-		const result = McpStoreSchema.safeParse(parsed);
-		if (!result.success) return EMPTY_STORE;
-		return { items: dedupe(result.data.items) };
-	} catch {
-		return EMPTY_STORE;
-	}
-}
-
-export function loadStore(): McpStore {
-	return storeDef.load();
-}
-
-export function saveStore(store: McpStore): void {
-	storeDef.save(store);
-}
 
 /** Display name derived from an npm package (`@scope/name` → `name`). */
 export function defaultNameForPackage(pkg: string): string {

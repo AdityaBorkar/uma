@@ -11,3 +11,6 @@ export const db = drizzle({
 	client: pool,
 	relations: { ...relations, ...authRelations },
 });
+
+/** Transaction handle type for procedures that run multi-statement writes. */
+export type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];

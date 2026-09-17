@@ -20,12 +20,11 @@ import { verifyState } from "./state.ts";
  * redirect targets the public web origin (this server sits behind Caddy, so
  * the inbound Host is internal).
  */
-function redirectToAccount(
-	_request: Request,
-	params: URLSearchParams,
-): Response {
+const ACCOUNT_RETURN_PATH = "/settings/account";
+
+function redirectToAccount(params: URLSearchParams): Response {
 	return Response.redirect(
-		`${publicWebUrl}/settings/account?${params.toString()}`,
+		`${publicWebUrl}${ACCOUNT_RETURN_PATH}?${params.toString()}`,
 		302,
 	);
 }
@@ -39,7 +38,7 @@ export async function handleConnectionCallback(
 	const error = url.searchParams.get("error");
 	if (error) {
 		const desc = url.searchParams.get("error_description") ?? error;
-		return redirectToAccount(request, new URLSearchParams({ error: desc }));
+		return redirectToAccount(new URLSearchParams({ error: desc }));
 	}
 
 	const code = url.searchParams.get("code");
@@ -47,21 +46,16 @@ export async function handleConnectionCallback(
 
 	if (!(code && state)) {
 		return redirectToAccount(
-			request,
 			new URLSearchParams({ error: "missing_code_or_state" }),
 		);
 	}
 
 	const statePayload = verifyState(state);
 	if (!statePayload) {
-		return redirectToAccount(
-			request,
-			new URLSearchParams({ error: "invalid_state" }),
-		);
+		return redirectToAccount(new URLSearchParams({ error: "invalid_state" }));
 	}
 	if (statePayload.p !== provider) {
 		return redirectToAccount(
-			request,
 			new URLSearchParams({ error: "state_provider_mismatch" }),
 		);
 	}
@@ -76,13 +70,11 @@ export async function handleConnectionCallback(
 	}
 	if (!sessionUserId) {
 		return redirectToAccount(
-			request,
 			new URLSearchParams({ error: "not_authenticated" }),
 		);
 	}
 	if (sessionUserId !== statePayload.u) {
 		return redirectToAccount(
-			request,
 			new URLSearchParams({ error: "session_mismatch" }),
 		);
 	}
@@ -94,7 +86,6 @@ export async function handleConnectionCallback(
 		tokens = await exchangeCodeForTokens(provider, code, redirectUri);
 	} catch {
 		return redirectToAccount(
-			request,
 			new URLSearchParams({ error: "token_exchange_failed" }),
 		);
 	}
@@ -177,13 +168,9 @@ export async function handleConnectionCallback(
 		}
 	} catch {
 		return redirectToAccount(
-			request,
 			new URLSearchParams({ error: "db_upsert_failed" }),
 		);
 	}
 
-	return redirectToAccount(
-		request,
-		new URLSearchParams({ connected: provider }),
-	);
+	return redirectToAccount(new URLSearchParams({ connected: provider }));
 }

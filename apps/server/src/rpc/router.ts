@@ -9,37 +9,21 @@ import * as runs from "./procedures/runs.ts";
 import * as subagents from "./procedures/subagents.ts";
 import * as tasks from "./procedures/tasks.ts";
 
+/**
+ * oRPC router: every procedure module's export names match its
+ * `apiContract` namespace 1:1, so namespaces mount directly — no alias
+ * table. Adding a contract procedure means exporting the same name from
+ * the procedure module; this file stays untouched.
+ */
 export default {
 	agents,
 	connections,
 	device,
 	documents,
-	machines: {
-		// apiContract `machines.*` (machine Bearer auth; frozen schemas).
-		checkState: machines.checkState,
-		claim: machines.claim,
-		// Browser registry (cookie auth; web-only) — also on the contract.
-		get: machines.get,
-		heartbeatHistory: machines.heartbeatHistoryProc,
-		heartbeatList: machines.heartbeatListProc,
-		latestVersion: machines.latestVersion,
-		list: machines.list,
-		resetState: machines.resetStateProc,
-		revoke: machines.revoke,
-		sandboxList: machines.sandboxListProc,
-	},
+	machines,
 	projects,
 	promptTemplates,
 	runs,
 	subagents,
-	tasks: {
-		create: tasks.create,
-		get: tasks.get,
-		list: tasks.list,
-		logs: {
-			list: tasks.logsList,
-		},
-		stats: tasks.stats,
-		updateStatus: tasks.updateStatus,
-	},
+	tasks,
 };

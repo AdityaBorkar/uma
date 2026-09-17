@@ -1,4 +1,4 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError } from "@orpc/server";
 import { and, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
@@ -9,40 +9,37 @@ import {
 	PromptTemplateListInput,
 	PromptTemplateUpdateInput,
 } from "../../schemas/schema.ts";
-import { type RpcContext, requireUser } from "../auth.ts";
+import { authed } from "../auth.ts";
+import { isUniqueViolation, mustReturn, toConflict } from "../scope.ts";
 
 /** User-owned prompt templates (OpenCode-style slash commands `/name`). No built-ins seeded. */
 
-export const list = os
+export const list = authed
 	.input(PromptTemplateListInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const q = input?.q?.trim();
 		return db
 			.select()
 			.from(promptTemplates)
 			.where(
 				and(
-					eq(promptTemplates.userId, user.id),
+					eq(promptTemplates.userId, context.user.id),
 					q ? ilike(promptTemplates.name, `%${q}%`) : undefined,
 				),
 			)
 			.orderBy(promptTemplates.name);
 	});
 
-export const get = os
+export const get = authed
 	.input(z.object({ id: z.string() }))
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const [row] = await db
 			.select()
 			.from(promptTemplates)
 			.where(
 				and(
 					eq(promptTemplates.id, input.id),
-					eq(promptTemplates.userId, user.id),
+					eq(promptTemplates.userId, context.user.id),
 				),
 			)
 			.limit(1);
@@ -54,58 +51,45 @@ export const get = os
 		return row;
 	});
 
-export const create = os
+export const create = authed
 	.input(PromptTemplateCreateInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const userId = context.user.id;
 		const name = input.name.trim().toLowerCase();
-		const [existing] = await db
-			.select({ id: promptTemplates.id })
-			.from(promptTemplates)
-			.where(
-				and(
-					eq(promptTemplates.userId, user.id),
-					eq(promptTemplates.name, name),
-				),
-			)
-			.limit(1);
-		if (existing) {
-			throw new ORPCError("CONFLICT", {
-				message: "A prompt template with this name exists",
-			});
+		try {
+			const [row] = await db
+				.insert(promptTemplates)
+				.values({
+					agent: input.agent?.trim() ? input.agent.trim() : null,
+					description: input.description?.trim() ?? "",
+					id: crypto.randomUUID(),
+					model: input.model?.trim() ? input.model.trim() : null,
+					name,
+					subtask: input.subtask ?? false,
+					template: input.template,
+					userId,
+				})
+				.returning();
+			return mustReturn(row);
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw toConflict("A prompt template with this name exists");
+			}
+			throw error;
 		}
-		const [row] = await db
-			.insert(promptTemplates)
-			.values({
-				agent: input.agent?.trim() ? input.agent.trim() : null,
-				description: input.description?.trim() ?? "",
-				id: crypto.randomUUID(),
-				model: input.model?.trim() ? input.model.trim() : null,
-				name,
-				subtask: input.subtask ?? false,
-				template: input.template,
-				userId: user.id,
-			})
-			.returning();
-		if (!row) {
-			throw new ORPCError("INTERNAL_SERVER_ERROR");
-		}
-		return row;
 	});
 
-export const update = os
+export const update = authed
 	.input(PromptTemplateUpdateInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const userId = context.user.id;
 		const [existing] = await db
 			.select()
 			.from(promptTemplates)
 			.where(
 				and(
 					eq(promptTemplates.id, input.id),
-					eq(promptTemplates.userId, user.id),
+					eq(promptTemplates.userId, userId),
 				),
 			)
 			.limit(1);
@@ -118,21 +102,6 @@ export const update = os
 		if (input.name !== undefined) {
 			const name = input.name.trim().toLowerCase();
 			if (name !== existing.name) {
-				const [taken] = await db
-					.select({ id: promptTemplates.id })
-					.from(promptTemplates)
-					.where(
-						and(
-							eq(promptTemplates.userId, user.id),
-							eq(promptTemplates.name, name),
-						),
-					)
-					.limit(1);
-				if (taken) {
-					throw new ORPCError("CONFLICT", {
-						message: "A prompt template with this name exists",
-					});
-				}
 				patch.name = name;
 			}
 		}
@@ -145,31 +114,36 @@ export const update = os
 			patch.model = input.model?.trim() ? input.model.trim() : null;
 		if (input.subtask !== undefined) patch.subtask = input.subtask;
 		if (Object.keys(patch).length === 0) return existing;
-		const [updated] = await db
-			.update(promptTemplates)
-			.set({ ...patch, updatedAt: new Date() })
-			.where(eq(promptTemplates.id, input.id))
-			.returning();
-		if (!updated) {
-			throw new ORPCError("NOT_FOUND", {
-				message: "Prompt template not found",
-			});
+		try {
+			const [updated] = await db
+				.update(promptTemplates)
+				.set({ ...patch, updatedAt: new Date() })
+				.where(
+					and(
+						eq(promptTemplates.id, input.id),
+						eq(promptTemplates.userId, userId),
+					),
+				)
+				.returning();
+			return mustReturn(updated, "Prompt template not found");
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw toConflict("A prompt template with this name exists");
+			}
+			throw error;
 		}
-		return updated;
 	});
 
-export const remove = os
+export const remove = authed
 	.input(z.object({ id: z.string() }))
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const [existing] = await db
 			.select({ id: promptTemplates.id })
 			.from(promptTemplates)
 			.where(
 				and(
 					eq(promptTemplates.id, input.id),
-					eq(promptTemplates.userId, user.id),
+					eq(promptTemplates.userId, context.user.id),
 				),
 			)
 			.limit(1);
@@ -178,6 +152,13 @@ export const remove = os
 				message: "Prompt template not found",
 			});
 		}
-		await db.delete(promptTemplates).where(eq(promptTemplates.id, input.id));
+		await db
+			.delete(promptTemplates)
+			.where(
+				and(
+					eq(promptTemplates.id, input.id),
+					eq(promptTemplates.userId, context.user.id),
+				),
+			);
 		return { ok: true as const };
 	});

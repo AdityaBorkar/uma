@@ -1,9 +1,7 @@
 /**
- * Skills — client-safe shared helpers.
- *
- * Scope is intentionally undecided (per-user registry vs per-machine
- * `desired.json`): the settings UI persists through the `SkillsStore`
- * interface below (browser `localStorage` in v1).
+ * Skills — server-safe shared helpers (pure validation + command builders
+ * only). Browser persistence lives in `apps/web` (`localStorage`); this
+ * module must never touch `window`.
  *
  * Installs go through the skills.sh CLI. The canonical command uses `bunx`
  * (not `npx`). Verification runs `bunx skills add <source> --list -y`
@@ -11,8 +9,6 @@
  */
 
 import { z } from "zod";
-
-import { defineLocalStore } from "../lib/local-store.ts";
 
 export const VerifiedSkillSchema = z.object({
 	description: z.string().default(""),
@@ -40,12 +36,6 @@ export const SkillsStoreSchema = z.object({
 });
 
 export type SkillsStore = z.infer<typeof SkillsStoreSchema>;
-
-export const STORAGE_KEY = "uma:skills:v1";
-
-export const EMPTY_STORE: SkillsStore = { items: [] };
-
-const storeDef = defineLocalStore(STORAGE_KEY, SkillsStoreSchema, EMPTY_STORE);
 
 /** Reject only empty/oversized values and whitespace/control characters. */
 export function isSafeSkillSource(source: string): boolean {
@@ -168,48 +158,4 @@ export function buildUpdateCommand(skillName: string): string {
 
 export function buildRemoveCommand(skillName: string): string {
 	return `bunx skills remove ${skillName} -y`;
-}
-
-export const EMPTY_STORE_ALIAS = EMPTY_STORE;
-
-function dedupe(items: InstalledSkillEntry[]): InstalledSkillEntry[] {
-	const seen = new Set<string>();
-	const out: InstalledSkillEntry[] = [];
-	for (const entry of items) {
-		if (seen.has(entry.id)) continue;
-		if (!isSafeSkillSource(entry.source)) continue;
-		if (entry.version !== null && !isSafeSkillVersion(entry.version.trim()))
-			continue;
-		seen.add(entry.id);
-		out.push({
-			...entry,
-			githubUrl:
-				entry.githubUrl ?? normalizeSkillSource(entry.source).githubUrl,
-			name:
-				entry.name.trim() !== ""
-					? entry.name
-					: defaultNameForSource(entry.source),
-		});
-	}
-	return out;
-}
-
-export function parseStore(raw: unknown): SkillsStore {
-	if (typeof raw !== "string") return EMPTY_STORE;
-	try {
-		const parsed: unknown = JSON.parse(raw);
-		const result = SkillsStoreSchema.safeParse(parsed);
-		if (!result.success) return EMPTY_STORE;
-		return { items: dedupe(result.data.items) };
-	} catch {
-		return EMPTY_STORE;
-	}
-}
-
-export function loadStore(): SkillsStore {
-	return storeDef.load();
-}
-
-export function saveStore(store: SkillsStore): void {
-	storeDef.save(store);
 }

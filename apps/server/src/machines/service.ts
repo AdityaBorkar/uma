@@ -6,13 +6,15 @@
  * the small fan-out/health helpers so existing callers keep working.
  */
 
+import { randomUUID } from "node:crypto";
+
 import { sql } from "drizzle-orm";
 
 import { db } from "../db/client.ts";
 import { machines } from "../db/machines.ts";
 import { tasks } from "../db/tasks.ts";
 import { MIN_CLI_VERSION } from "./config.ts";
-import { isMachineConnected, sendToMachine } from "./sockets.ts";
+import { sendToMachine } from "./sockets.ts";
 
 export type { MachineSession } from "./auth.ts";
 export { authMachine, bearerToken } from "./auth.ts";
@@ -45,7 +47,7 @@ export async function resetState(
 	input: ResetStateInput,
 	version = "v1",
 ): Promise<{ jobId: string; keys: string[] | "*"; sent: boolean }> {
-	const jobId = `job_${Date.now()}`;
+	const jobId = `job_${randomUUID()}`;
 	const keys = input.keys ?? "*";
 	const frame = {
 		jobId,
@@ -58,11 +60,11 @@ export async function resetState(
 	return { jobId, keys, sent };
 }
 
-export function machineConnected(machineId: string): boolean {
-	return isMachineConnected(machineId);
-}
-
-/** Latest-version gate for the daemon upgrade check. */
+/**
+ * Latest-version gate for the daemon upgrade check. `latest` tracks the
+ * newest known CLI (today equal to the floor — bump both together until the
+ * server learns the real latest from heartbeats or release metadata).
+ */
 export function latestVersion(): { latest: string; min: string } {
 	return { latest: MIN_CLI_VERSION, min: MIN_CLI_VERSION };
 }

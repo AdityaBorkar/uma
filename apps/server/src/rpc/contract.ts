@@ -11,8 +11,8 @@ import type { RpcContext } from "./auth.ts";
  * REST mappings. Migrated namespaces (agents, runs, machines, tasks) are
  * implemented through this implementer so the compiler enforces contract
  * conformance; the remaining namespaces (connections, device, documents,
- * projects, promptTemplates, subagents) are still plain `os` procedures
- * using the same contract *schemas* and migrate incrementally. Do not mix
- * styles within one namespace.
+ * projects, promptTemplates, subagents) share the same contract *schemas*
+ * through the `authed` base (`src/rpc/auth.ts`) and migrate incrementally.
+ * Do not mix styles within one namespace.
  */
 export const implementer = implement(apiContract).$context<RpcContext>();

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "../db/client.ts";
 import { machineSessions, machines } from "../db/machines.ts";
@@ -9,37 +9,66 @@ export interface MachineSession {
 	userId: string;
 }
 
-export function bearerToken(headers: Headers): string | null {
+/**
+ * Single Bearer parser for the machine wire: `Authorization` header first,
+ * `?token=` query fallback (WS upgrades can't set headers in browsers).
+ */
+export function bearerToken(source: Headers | Request): string | null {
+	const headers = source instanceof Request ? source.headers : source;
 	const h = headers.get("authorization");
-	if (!h) return null;
-	const m = h.match(/^Bearer\s+(.+)$/i);
-	return m?.[1]?.trim() || null;
+	if (h) {
+		const m = h.match(/^Bearer\s+(.+)$/i);
+		if (m?.[1]?.trim()) return m[1].trim();
+	}
+	if (source instanceof Request) {
+		try {
+			return new URL(source.url).searchParams.get("token");
+		} catch {
+			return null;
+		}
+	}
+	return null;
 }
 
 /** Authenticate a machine Bearer token; null when unknown or revoked. */
 export async function authMachine(
 	token: string | null,
 ): Promise<(MachineSession & { name: string; status: string }) | null> {
-	if (!token) return null;
-	const clean = token.replace(/^Bearer\s+/i, "").trim();
+	const clean = token?.trim();
 	if (!clean) return null;
-	const [sess] = await db
-		.select()
+	const [row] = await db
+		.select({
+			machineId: machineSessions.machineId,
+			name: machines.name,
+			status: machines.status,
+			token: machineSessions.token,
+			userId: machineSessions.userId,
+		})
 		.from(machineSessions)
-		.where(eq(machineSessions.token, clean))
+		.innerJoin(machines, eq(machines.id, machineSessions.machineId))
+		.where(
+			and(eq(machineSessions.token, clean), isNull(machineSessions.revoked)),
+		)
 		.limit(1);
-	if (!sess || sess.revoked) return null;
-	const [m] = await db
-		.select({ name: machines.name, status: machines.status })
-		.from(machines)
-		.where(eq(machines.id, sess.machineId))
-		.limit(1);
-	if (!m || m.status === "revoked") return null;
+	if (!row || row.status === "revoked") return null;
 	return {
-		machineId: sess.machineId,
-		name: m.name,
-		status: m.status,
-		token: clean,
-		userId: sess.userId,
+		machineId: row.machineId,
+		name: row.name,
+		status: row.status,
+		token: row.token,
+		userId: row.userId,
 	};
+}
+
+/**
+ * Assert the session owns `claimedId`. Throws a caller-mapped error so HTTP
+ * (403), WS (ignore), and RPC (FORBIDDEN) share one identity check.
+ */
+export function assertSessionOwnsMachine(
+	session: MachineSession,
+	claimedId: string,
+): void {
+	if (session.machineId !== claimedId) {
+		throw new Error(`machine mismatch: ${claimedId}`);
+	}
 }

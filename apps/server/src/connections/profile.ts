@@ -1,5 +1,34 @@
+import { z } from "zod";
+
 import { env } from "../env.ts";
 import type { SupportedProvider } from "./providers.ts";
+
+const GithubProfileSchema = z
+	.object({
+		avatar_url: z.string().nullable().optional(),
+		email: z.string().nullable().optional(),
+		id: z.union([z.number(), z.string()]).nullable().optional(),
+		login: z.string().optional(),
+		name: z.string().nullable().optional(),
+	})
+	.passthrough();
+
+const GithubEmailSchema = z.object({
+	email: z.string(),
+	primary: z.boolean().optional(),
+	verified: z.boolean().optional(),
+});
+
+const GoogleProfileSchema = z
+	.object({
+		email: z.string().optional(),
+		hd: z.string().optional(),
+		id: z.string().optional(),
+		name: z.string().optional(),
+		picture: z.string().optional(),
+		sub: z.string().optional(),
+	})
+	.passthrough();
 
 export interface ProviderProfile {
 	metadata: Record<string, unknown>;
@@ -33,17 +62,19 @@ async function fetchGithubProfile(
 			`GitHub profile fetch failed: ${res.status} ${text.slice(0, 200)}`,
 		);
 	}
-	const data = (await res.json()) as Record<string, unknown>;
-	const id = data.id === null ? null : String(data.id);
-	const login = data.login as string | undefined;
+	const parsed = GithubProfileSchema.safeParse(await res.json());
+	if (!parsed.success) {
+		throw new Error("GitHub profile fetch failed: unexpected shape");
+	}
+	const data = parsed.data;
+	const id = data.id === null || data.id === undefined ? null : String(data.id);
 	const email =
-		(data.email as string | null | undefined) ??
-		(await fetchGithubPrimaryEmail(accessToken));
+		(data.email ?? (await fetchGithubPrimaryEmail(accessToken))) || null;
 	return {
 		metadata: {
-			githubAvatarUrl: (data.avatar_url as string | undefined) ?? null,
-			githubName: (data.name as string | undefined) ?? null,
-			githubUsername: login ?? null,
+			githubAvatarUrl: data.avatar_url ?? null,
+			githubName: data.name ?? null,
+			githubUsername: data.login ?? null,
 		},
 		providerAccountEmail: email,
 		providerAccountId: id,
@@ -64,11 +95,9 @@ async function fetchGithubPrimaryEmail(
 		if (!er.ok) {
 			return null;
 		}
-		const emails = (await er.json()) as Array<{
-			email: string;
-			primary: boolean;
-			verified: boolean;
-		}>;
+		const parsed = z.array(GithubEmailSchema).safeParse(await er.json());
+		if (!parsed.success) return null;
+		const emails = parsed.data;
 		const primary = emails.find((e) => e.primary) ?? emails[0];
 		return primary?.email ?? null;
 	} catch {
@@ -89,18 +118,19 @@ async function fetchGoogleProfile(
 			`Google profile fetch failed: ${res.status} ${text.slice(0, 200)}`,
 		);
 	}
-	const data = (await res.json()) as Record<string, unknown>;
+	const parsed = GoogleProfileSchema.safeParse(await res.json());
+	if (!parsed.success) {
+		throw new Error("Google profile fetch failed: unexpected shape");
+	}
+	const data = parsed.data;
 	return {
 		metadata: {
-			googleHd: (data.hd as string | undefined) ?? null,
-			googleName: (data.name as string | undefined) ?? null,
-			googlePicture: (data.picture as string | undefined) ?? null,
+			googleHd: data.hd ?? null,
+			googleName: data.name ?? null,
+			googlePicture: data.picture ?? null,
 		},
-		providerAccountEmail: (data.email as string | undefined) ?? null,
-		providerAccountId:
-			(data.id as string | undefined) ??
-			(data.sub as string | undefined) ??
-			null,
+		providerAccountEmail: data.email ?? null,
+		providerAccountId: data.id ?? data.sub ?? null,
 	};
 }
 

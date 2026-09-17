@@ -1,4 +1,4 @@
-import { ORPCError } from "@orpc/server";
+import { ORPCError, os } from "@orpc/server";
 
 import { getAuthSession } from "../auth/server.ts";
 import { authMachine, bearerToken } from "../machines/service.ts";
@@ -23,3 +23,14 @@ export async function requireMachine(headers: Headers) {
 	}
 	return sess;
 }
+
+/**
+ * Base procedure for browser-cookie-authenticated handlers. Injects `user`
+ * so handlers never call `requireUser` or cast `context` themselves.
+ */
+export const authed = os
+	.$context<RpcContext>()
+	.use(async ({ context, next }) => {
+		const user = await requireUser(context.headers);
+		return next({ context: { user } });
+	});

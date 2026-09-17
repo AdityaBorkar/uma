@@ -13,7 +13,7 @@ import {
 	createDeviceCode,
 	pollDeviceToken,
 } from "../../machines/service.ts";
-import { type RpcContext, requireUser } from "../auth.ts";
+import { authed } from "../auth.ts";
 
 /**
  * Device-code enrollment (apiContract `device.*`).
@@ -72,13 +72,15 @@ export const token = os
  * not part of the frozen wire contract). Creates the enrolled machine row on
  * approve.
  */
-export const approve = os
+export const approve = authed
 	.input(DeviceApproveInputSchema)
 	.output(DeviceApproveResponseSchema)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const res = await approveDevice(user.id, input.user_code, input.approve);
+		const res = await approveDevice(
+			context.user.id,
+			input.user_code,
+			input.approve,
+		);
 		if (res === "unknown") {
 			throw new ORPCError("NOT_FOUND", { message: "Unknown code" });
 		}

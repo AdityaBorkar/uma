@@ -8,25 +8,27 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import {
+	CONNECTION_AUTH_TYPE_VALUES,
+	CONNECTION_PROVIDER_VALUES,
+	CONNECTION_STATUS_VALUES,
+} from "../schemas/schema.ts";
 import { user } from "./auth.gen.ts";
 
-export const connectionProviderEnum = pgEnum("connection_provider", [
-	"github",
-	"google",
-]);
+export const connectionProviderEnum = pgEnum(
+	"connection_provider",
+	CONNECTION_PROVIDER_VALUES,
+);
 
-export const connectionStatusEnum = pgEnum("connection_status", [
-	"connected",
-	"disconnected",
-	"expired",
-	"error",
-]);
+export const connectionStatusEnum = pgEnum(
+	"connection_status",
+	CONNECTION_STATUS_VALUES,
+);
 
-export const connectionAuthTypeEnum = pgEnum("connection_auth_type", [
-	"oauth2",
-	"api_key",
-	"pat",
-]);
+export const connectionAuthTypeEnum = pgEnum(
+	"connection_auth_type",
+	CONNECTION_AUTH_TYPE_VALUES,
+);
 
 export const connections = pgTable(
 	"connections",

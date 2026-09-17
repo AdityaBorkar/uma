@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { DetectedModel } from "./types.ts";
 
 /**
@@ -36,6 +38,7 @@ function isRecord(value: unknown): value is RecordLike {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** First present (non-null, non-empty) value under any alias key. */
 function pick(record: RecordLike, keys: string[]): unknown {
 	for (const key of keys) {
 		const value = record[key];
@@ -44,17 +47,19 @@ function pick(record: RecordLike, keys: string[]): unknown {
 	return undefined;
 }
 
-function toNumber(value: unknown): number | null {
-	const n =
-		typeof value === "string" && value.trim() !== ""
-			? Number(value)
-			: typeof value === "number"
-				? value
-				: null;
-	return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : null;
-}
+/** Lenient number: numeric strings coerce, everything else degrades to null. */
+const LenientNumber = z.preprocess(
+	(value: unknown) =>
+		typeof value === "string"
+			? value.trim() === ""
+				? null
+				: Number(value)
+			: value,
+	z.number().finite().nonnegative().nullable().catch(null),
+);
 
-function toTriState(value: unknown): boolean | null {
+/** Lenient boolean: booleans plus common truthy/falsy spellings. */
+const TriState = z.preprocess((value: unknown) => {
 	if (typeof value === "boolean") return value;
 	if (typeof value === "string") {
 		const v = value.trim().toLowerCase();
@@ -62,7 +67,7 @@ function toTriState(value: unknown): boolean | null {
 		if (["false", "no", "0", "unsupported"].includes(v)) return false;
 	}
 	return null;
-}
+}, z.boolean().nullable().catch(null));
 
 function toStringArray(value: unknown): string[] {
 	const list = Array.isArray(value) ? value : [value];
@@ -160,7 +165,7 @@ function supportFromCapabilities(
 	const caps = entry.capabilities;
 	if (!isRecord(caps)) return null;
 	for (const key of keys) {
-		const v = toTriState(caps[key]);
+		const v = TriState.parse(caps[key]);
 		if (v !== null) return v;
 	}
 	return null;
@@ -173,7 +178,7 @@ function detectSupport(
 	capabilityKeys: string[],
 	modalityMatch: string[],
 ): boolean | null {
-	const direct = toTriState(pick(entry, directKeys));
+	const direct = TriState.parse(pick(entry, directKeys));
 	if (direct !== null) return direct;
 	const caps = supportFromCapabilities(entry, capabilityKeys);
 	if (caps !== null) return caps;
@@ -191,10 +196,9 @@ function normalizeReasoning(entry: RecordLike): string[] {
 			const variants = toStringArray(nested[key]);
 			if (variants.length > 0) return [...new Set(variants)];
 		}
-		const supported = toTriState(nested.supported);
-		if (supported === true) return ["supported"];
+		if (TriState.parse(nested.supported) === true) return ["supported"];
 	}
-	if (toTriState(entry.supports_reasoning) === true) return ["supported"];
+	if (TriState.parse(entry.supports_reasoning) === true) return ["supported"];
 	return [];
 }
 
@@ -225,8 +229,8 @@ export function normalizeModel(entry: unknown): DetectedModel | null {
 			["vision", "image"],
 			["image", "vision"],
 		),
-		maxInputTokens: toNumber(pick(entry, MAX_INPUT_KEYS)),
-		maxOutputTokens: toNumber(pick(entry, MAX_OUTPUT_KEYS)),
+		maxInputTokens: LenientNumber.parse(pick(entry, MAX_INPUT_KEYS)),
+		maxOutputTokens: LenientNumber.parse(pick(entry, MAX_OUTPUT_KEYS)),
 		name,
 		pdf: detectSupport(
 			entry,

@@ -5,23 +5,44 @@ import { taskRuns } from "../db/agents.ts";
 import { db } from "../db/client.ts";
 import { machineSandboxes, taskLogs } from "../db/machines.ts";
 import { tasks } from "../db/tasks.ts";
-import { LOG_CHUNK_CAP_BYTES } from "./config.ts";
 
 function byteLength(s: string): number {
 	return new TextEncoder().encode(s).length;
 }
 
+/** Truncate to a byte cap without splitting a code point. */
+function truncateToBytes(s: string, cap: number): string {
+	if (byteLength(s) <= cap) return s;
+	const bytes = new TextEncoder().encode(s);
+	let end = cap;
+	// Back off over UTF-8 continuation bytes (10xxxxxx).
+	while (end > 0 && (bytes[end] ?? 0) >= 0x80 && (bytes[end] ?? 0) < 0xc0) {
+		end--;
+	}
+	return new TextDecoder().decode(bytes.slice(0, end));
+}
+
+/** Max stored task-result chars (single source of truth for both writes). */
+export const RESULT_CAP_CHARS = 65536;
+
+/** Truncate to a char cap without splitting a surrogate pair. */
+function truncateToChars(s: string, cap: number): string {
+	if (s.length <= cap) return s;
+	return Array.from(s).slice(0, cap).join("");
+}
+
 /**
  * Atomic claim: `queued → running` guarded by `WHERE status='queued'`.
- * Returns true on claim, false on conflict (authoritative 409 upstream).
- * The task update, sandbox mirror, and run open happen in one transaction.
+ * Returns the authoritative `startedAt` on claim, null on conflict
+ * (authoritative 409 upstream). The task update, sandbox mirror, and run
+ * open happen in one transaction.
  */
 export async function claimTask(
 	taskId: string,
 	machineId: string,
 	userId: string,
 	sandboxId: string,
-): Promise<boolean> {
+): Promise<Date | null> {
 	return db.transaction(async (tx) => {
 		const now = new Date();
 		const updated = await tx
@@ -35,7 +56,7 @@ export async function claimTask(
 				),
 			)
 			.returning({ agent: tasks.agent, id: tasks.id });
-		if (updated.length === 0) return false;
+		if (updated.length === 0) return null;
 		await tx
 			.insert(machineSandboxes)
 			.values({
@@ -59,24 +80,28 @@ export async function claimTask(
 			taskId,
 			userId,
 		});
-		return true;
+		return now;
 	});
 }
 
+/**
+ * Append one log chunk. Ownership is checked through the session user so one
+ * machine can never append to another user's task. Returns false when the
+ * task is unknown or not owned (frame path ignores it, never throws).
+ */
 export async function appendTaskLog(
 	taskId: string,
 	machineId: string | null,
-	stream: string,
+	stream: "stdout" | "stderr" | "system",
 	chunk: string,
+	userId: string,
 ): Promise<boolean> {
-	const capped =
-		byteLength(chunk) > LOG_CHUNK_CAP_BYTES
-			? chunk.slice(0, LOG_FRAME_CAP_BYTES)
-			: chunk;
+	// Single contract cap, enforced in bytes (never slice UTF-16 units).
+	const capped = truncateToBytes(chunk, LOG_FRAME_CAP_BYTES);
 	const [t] = await db
 		.select({ id: tasks.id })
 		.from(tasks)
-		.where(eq(tasks.id, taskId))
+		.where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
 		.limit(1);
 	if (!t) return false;
 	await db.insert(taskLogs).values({
@@ -101,7 +126,7 @@ export async function finishTask(
 			.update(tasks)
 			.set({
 				finishedAt: now,
-				result: result?.slice(0, 65536) ?? null,
+				result: result ? truncateToChars(result, RESULT_CAP_CHARS) : null,
 				status,
 				updatedAt: now,
 			})
@@ -118,7 +143,7 @@ export async function finishTask(
 			.update(taskRuns)
 			.set({
 				finishedAt: now,
-				result: result?.slice(0, 65536) ?? null,
+				result: result ? truncateToChars(result, RESULT_CAP_CHARS) : null,
 				status,
 				updatedAt: now,
 			})

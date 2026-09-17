@@ -1,4 +1,4 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError } from "@orpc/server";
 import { and, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
@@ -9,37 +9,36 @@ import {
 	SubagentListInput,
 	SubagentUpdateInput,
 } from "../../schemas/schema.ts";
-import { type RpcContext, requireUser } from "../auth.ts";
+import { authed } from "../auth.ts";
+import { isUniqueViolation, mustReturn, toConflict } from "../scope.ts";
 
 /** User-owned OpenCode-style subagents. No built-ins seeded. */
 
-export const list = os
+export const list = authed
 	.input(SubagentListInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const q = input?.q?.trim();
 		return db
 			.select()
 			.from(subagents)
 			.where(
 				and(
-					eq(subagents.userId, user.id),
+					eq(subagents.userId, context.user.id),
 					q ? ilike(subagents.name, `%${q}%`) : undefined,
 				),
 			)
 			.orderBy(subagents.name);
 	});
 
-export const get = os
+export const get = authed
 	.input(z.object({ id: z.string() }))
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const [row] = await db
 			.select()
 			.from(subagents)
-			.where(and(eq(subagents.id, input.id), eq(subagents.userId, user.id)))
+			.where(
+				and(eq(subagents.id, input.id), eq(subagents.userId, context.user.id)),
+			)
 			.limit(1);
 		if (!row) {
 			throw new ORPCError("NOT_FOUND", { message: "Subagent not found" });
@@ -58,56 +57,48 @@ function cleanPermissions(
 	return out;
 }
 
-export const create = os
+export const create = authed
 	.input(SubagentCreateInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const userId = context.user.id;
 		const name = input.name.trim().toLowerCase();
-		const [existing] = await db
-			.select({ id: subagents.id })
-			.from(subagents)
-			.where(and(eq(subagents.userId, user.id), eq(subagents.name, name)))
-			.limit(1);
-		if (existing) {
-			throw new ORPCError("CONFLICT", {
-				message: "A subagent with this name exists",
-			});
-		}
 		const model = input.model?.trim() ? input.model.trim() : null;
-		const [row] = await db
-			.insert(subagents)
-			.values({
-				color: input.color ?? null,
-				description: input.description.trim(),
-				disabled: input.disabled ?? false,
-				hidden: input.hidden ?? false,
-				id: crypto.randomUUID(),
-				model,
-				name,
-				permissions: cleanPermissions(input.permissions),
-				prompt: input.prompt,
-				steps: input.steps ?? null,
-				temperature: input.temperature ?? null,
-				topP: input.topP ?? null,
-				userId: user.id,
-			})
-			.returning();
-		if (!row) {
-			throw new ORPCError("INTERNAL_SERVER_ERROR");
+		try {
+			const [row] = await db
+				.insert(subagents)
+				.values({
+					color: input.color ?? null,
+					description: input.description.trim(),
+					disabled: input.disabled ?? false,
+					hidden: input.hidden ?? false,
+					id: crypto.randomUUID(),
+					model,
+					name,
+					permissions: cleanPermissions(input.permissions),
+					prompt: input.prompt,
+					steps: input.steps ?? null,
+					temperature: input.temperature ?? null,
+					topP: input.topP ?? null,
+					userId,
+				})
+				.returning();
+			return mustReturn(row);
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw toConflict("A subagent with this name exists");
+			}
+			throw error;
 		}
-		return row;
 	});
 
-export const update = os
+export const update = authed
 	.input(SubagentUpdateInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
+		const userId = context.user.id;
 		const [existing] = await db
 			.select()
 			.from(subagents)
-			.where(and(eq(subagents.id, input.id), eq(subagents.userId, user.id)))
+			.where(and(eq(subagents.id, input.id), eq(subagents.userId, userId)))
 			.limit(1);
 		if (!existing) {
 			throw new ORPCError("NOT_FOUND", { message: "Subagent not found" });
@@ -116,16 +107,6 @@ export const update = os
 		if (input.name !== undefined) {
 			const name = input.name.trim().toLowerCase();
 			if (name !== existing.name) {
-				const [taken] = await db
-					.select({ id: subagents.id })
-					.from(subagents)
-					.where(and(eq(subagents.userId, user.id), eq(subagents.name, name)))
-					.limit(1);
-				if (taken) {
-					throw new ORPCError("CONFLICT", {
-						message: "A subagent with this name exists",
-					});
-				}
 				patch.name = name;
 			}
 		}
@@ -143,30 +124,38 @@ export const update = os
 		if (input.permissions !== undefined)
 			patch.permissions = cleanPermissions(input.permissions);
 		if (Object.keys(patch).length === 0) return existing;
-		const [updated] = await db
-			.update(subagents)
-			.set({ ...patch, updatedAt: new Date() })
-			.where(eq(subagents.id, input.id))
-			.returning();
-		if (!updated) {
-			throw new ORPCError("NOT_FOUND", { message: "Subagent not found" });
+		try {
+			const [updated] = await db
+				.update(subagents)
+				.set({ ...patch, updatedAt: new Date() })
+				.where(and(eq(subagents.id, input.id), eq(subagents.userId, userId)))
+				.returning();
+			return mustReturn(updated, "Subagent not found");
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw toConflict("A subagent with this name exists");
+			}
+			throw error;
 		}
-		return updated;
 	});
 
-export const remove = os
+export const remove = authed
 	.input(z.object({ id: z.string() }))
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const [existing] = await db
 			.select({ id: subagents.id })
 			.from(subagents)
-			.where(and(eq(subagents.id, input.id), eq(subagents.userId, user.id)))
+			.where(
+				and(eq(subagents.id, input.id), eq(subagents.userId, context.user.id)),
+			)
 			.limit(1);
 		if (!existing) {
 			throw new ORPCError("NOT_FOUND", { message: "Subagent not found" });
 		}
-		await db.delete(subagents).where(eq(subagents.id, input.id));
+		await db
+			.delete(subagents)
+			.where(
+				and(eq(subagents.id, input.id), eq(subagents.userId, context.user.id)),
+			);
 		return { ok: true as const };
 	});

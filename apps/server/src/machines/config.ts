@@ -27,8 +27,5 @@ export const DEVICE_POLL_INTERVAL_S = 2;
 /** Heartbeat rows older than this are pruned best-effort on write. */
 export const HEARTBEAT_RETENTION_DAYS = 30;
 
-/** Cap stored log chunks per row (matches the 256KB wire cap). */
-export const LOG_CHUNK_CAP_BYTES = 256 * 1024;
-
 /** Cap heartbeat rows read back per machine for history. */
 export const HEARTBEAT_HISTORY_LIMIT = 5000;

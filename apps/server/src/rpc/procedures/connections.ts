@@ -1,4 +1,4 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -21,35 +21,31 @@ import {
 	ConnectionGetAuthUrlInput,
 	ConnectionGetInput,
 } from "../../schemas/schema.ts";
-import { type RpcContext, requireUser } from "../auth.ts";
+import { authed } from "../auth.ts";
 
 function stripTokens(row: typeof connections.$inferSelect) {
 	const { accessToken: _a, refreshToken: _r, ...safe } = row;
 	return safe;
 }
 
-export const list = os.handler(async ({ context }) => {
-	const ctx = context as RpcContext;
-	const user = await requireUser(ctx.headers);
+export const list = authed.handler(async ({ context }) => {
 	const rows = await db
 		.select()
 		.from(connections)
-		.where(eq(connections.userId, user.id))
+		.where(eq(connections.userId, context.user.id))
 		.orderBy(connections.provider);
 	return rows.map(stripTokens);
 });
 
-export const get = os
+export const get = authed
 	.input(ConnectionGetInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const [row] = await db
 			.select()
 			.from(connections)
 			.where(
 				and(
-					eq(connections.userId, user.id),
+					eq(connections.userId, context.user.id),
 					eq(connections.provider, input.provider),
 				),
 			)
@@ -60,47 +56,39 @@ export const get = os
 		return stripTokens(row);
 	});
 
-export const getAuthUrl = os
+export const getAuthUrl = authed
 	.input(ConnectionGetAuthUrlInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		if (!isSupportedProvider(input.provider)) {
 			throw new ORPCError("BAD_REQUEST", { message: "Unsupported provider" });
 		}
 		const redirectUri = getRedirectUri(input.provider);
-		const state = signState(input.provider, user.id);
+		const state = signState(input.provider, context.user.id);
 		const url = buildAuthorizationUrl(input.provider, { redirectUri, state });
 		return { redirectUri, state, url };
 	});
 
-export const providers = os.input(z.void()).handler(async ({ context }) => {
-	const ctx = context as RpcContext;
-	await requireUser(ctx.headers);
+export const providers = authed.input(z.void()).handler(async () => {
 	return {
 		providers: SUPPORTED_PROVIDERS.map((id) => ({ id })),
 	};
 });
 
-export const githubRepos = os.handler(async ({ context }) => {
-	const ctx = context as RpcContext;
-	const user = await requireUser(ctx.headers);
-	const accessToken = await requireGithubAccessToken(user.id);
+export const githubRepos = authed.handler(async ({ context }) => {
+	const accessToken = await requireGithubAccessToken(context.user.id);
 	const repos = await fetchGithubRepos(accessToken);
 	return repos;
 });
 
-export const disconnect = os
+export const disconnect = authed
 	.input(ConnectionDisconnectInput)
 	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
 		const [existing] = await db
 			.select()
 			.from(connections)
 			.where(
 				and(
-					eq(connections.userId, user.id),
+					eq(connections.userId, context.user.id),
 					eq(connections.provider, input.provider),
 				),
 			)
@@ -109,13 +97,16 @@ export const disconnect = os
 			return { success: true as const };
 		}
 		if (existing.accessToken) {
-			void revokeToken(input.provider, existing.accessToken);
+			// Awaited: a failed provider revocation must surface instead of
+			// leaving the user believing disconnect propagated. Best-effort
+			// inside (never throws), so this only costs latency on success.
+			await revokeToken(input.provider, existing.accessToken);
 		}
 		await db
 			.delete(connections)
 			.where(
 				and(
-					eq(connections.userId, user.id),
+					eq(connections.userId, context.user.id),
 					eq(connections.provider, input.provider),
 				),
 			);

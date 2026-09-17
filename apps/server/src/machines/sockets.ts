@@ -8,10 +8,16 @@
  */
 
 export interface WsPeer {
+	/** Bun `ServerWebSocket.readyState` (1 = open); absent in tests. */
+	readyState?: number;
 	send: (data: string) => void;
 }
 
 const machineSockets = new Map<string, Set<WsPeer>>();
+const lastSeen = new Map<string, number>();
+
+/** Stale-socket sweep interval (ghost peers without a close frame). */
+const SOCKET_TTL_MS = 90_000;
 
 function getSet(machineId: string): Set<WsPeer> {
 	let s = machineSockets.get(machineId);
@@ -20,6 +26,34 @@ function getSet(machineId: string): Set<WsPeer> {
 		machineSockets.set(machineId, s);
 	}
 	return s;
+}
+
+function touch(machineId: string): void {
+	lastSeen.set(machineId, Date.now());
+}
+
+/** Drop peers whose socket died without a close frame. Runs lazily. */
+function sweepStale(): void {
+	const now = Date.now();
+	for (const [id, at] of lastSeen) {
+		if (now - at < SOCKET_TTL_MS) continue;
+		const set = machineSockets.get(id);
+		if (!set || set.size === 0) {
+			lastSeen.delete(id);
+			continue;
+		}
+		for (const peer of [...set]) {
+			if (peer.readyState !== undefined && peer.readyState !== 1) {
+				set.delete(peer);
+			}
+		}
+		if (set.size === 0) {
+			machineSockets.delete(id);
+			lastSeen.delete(id);
+		} else {
+			touch(id);
+		}
+	}
 }
 
 export function connectedMachineIds(): string[] {
@@ -42,6 +76,12 @@ export function sendToMachine(
 	const data = JSON.stringify(frame);
 	let sent = false;
 	for (const peer of [...set]) {
+		// Bun `send()` returns bytes queued (no throw) — drop dead peers
+		// synchronously instead of paying stringify + failed sends to corpses.
+		if (peer.readyState !== undefined && peer.readyState !== 1) {
+			set.delete(peer);
+			continue;
+		}
 		try {
 			peer.send(data);
 			sent = true;
@@ -49,11 +89,14 @@ export function sendToMachine(
 			set.delete(peer);
 		}
 	}
+	if (set.size === 0) machineSockets.delete(machineId);
 	return sent;
 }
 
 export function trackSocket(machineId: string, peer: WsPeer): () => void {
 	getSet(machineId).add(peer);
+	touch(machineId);
+	if (lastSeen.size % 10 === 0) sweepStale();
 	return () => {
 		machineSockets.get(machineId)?.delete(peer);
 	};
