@@ -8,7 +8,7 @@
 		"@pulumi/docker": "^5.2.0",
 		"@pulumi/local": "catalog:",
 		"@pulumi/oci": "^4.22.0",
-		"@pulumi/pulumi": "^3.261.0",
+		"@pulumi/pulumi": "^3.262.0",
 		"@types/bun": "catalog:",
 		"cac": "catalog:",
 		"commander": "^15.0.0",
