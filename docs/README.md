@@ -6,10 +6,10 @@ Bun monorepo: product web app, device agent, frozen wire contract, and Pulumi in
 
 - `apps/web` — product app: TanStack Start (React 19, file-based routes in `src/routes/`), oRPC API (`src/rpc/`, `src/routes/api/rpc.$.ts`), Drizzle/PostgreSQL schemas (`src/schemas/db/`), better-auth. Product language in `apps/web/docs/CONTEXT.md`; UI rules in `apps/web/docs/STYLE_GUIDE.md`; decisions in `apps/web/docs/adr/`.
 - `apps/machine` — `uma-machine`: CLI + daemon that runs Tasks in microsandbox sandboxes (Bun + SQLite). Module/port map in `apps/machine/docs/ARCHITECTURE.md`; domain language in `apps/machine/docs/CONTEXT.md`; entities in `apps/machine/docs/DOMAIN-MODELS.md`; wire snapshot in `apps/machine/docs/wire-schema.json` (generated via `bun run docs:wire`).
-- `apps/orpc-contract` — frozen `v1` machine↔server wire frames. `apps/machine` imports it by relative path (`../orpc-contract/src/index.ts`); it never imports from `apps/machine/src`. Policy and frame catalog in `apps/orpc-contract/docs/`. Wire-frame changes require a major version and `UPGRADE_REQUIRED` handling.
+- `apps/orpc-contract` — frozen `v1` machine↔server wire frames. Both `apps/machine` and `apps/web` import it as `@uma/orpc-contract` (workspace dep: `apps/machine/package.json:18`, `apps/web/package.json:51`); it never imports from `apps/machine/src`. Policy and frame catalog in `apps/orpc-contract/docs/`. Wire-frame changes require a major version and `UPGRADE_REQUIRED` handling.
 - `apps/infra` — Pulumi program (OCI VM + Cloudflare DNS + Docker containers + pgBackRest) and the app env manifest. `Pulumi.yaml` at the repo root points at `apps/infra/index.ts`. Stack `dev` skips the VM and uses local Docker; other stacks provision an OCI VM.
 - `docs/do-not-touch-ai/` — frozen product theory (`PRINCIPLES.md`, `REFERENCE.md`) and backup runbook (`BACKUPS.md`). Do not restructure; `REFERENCE.md` links assume a pre-move layout (`src/lib/*`, `infra/*`) and are aspirational for future engines.
-- `apps/cli` — `uma` repo CLI + docs MCP server (`uma mcp start`, `uma docs …`). Tools `read_docs` / `query_docs` serve all repo markdown; see `apps/cli/README.md`.
+- `apps/cli` — `uma` repo CLI + docs MCP server (`uma mcp start`, `uma docs list|read|query`, `uma version`). Tools `read_docs` / `query_docs` serve all repo markdown; see `apps/cli/README.md`.
 
 ## Context map
 
@@ -27,7 +27,7 @@ Two bounded contexts, one contract:
 
 Infra was moved out of `apps/web` into `apps/infra`, and not all paths were updated:
 
-- `apps/web/package.json` (`run:dev`) references `infra/utils/run-command.ts`, which no longer exists under `apps/web/`; `apps/web/scripts/check-env.ts` imports `../infra/utils/extract-env.ts`; the real manifest lives at `apps/infra/utils/extract-env.ts`.
-- `apps/infra/docker/app.ts` still builds with context `apps/` and Dockerfile `apps/Dockerfile` (neither exists); the real files are `apps/web` and `apps/web/Dockerfile`.
-- `apps/infra/utils/run-command.ts` resolves the project dir to `apps/` instead of the repo root where `Pulumi.yaml` lives.
+- `apps/infra/docker/app.ts:72-73` builds with context `apps/` and Dockerfile `apps/Dockerfile` (neither exists); the real file is `apps/web/Dockerfile`, which copies root-level `package.json`/`bun.lockb`/`bunfig.toml` (`apps/web/Dockerfile:5-9`), so it expects the repo root as build context.
+- `apps/infra/utils/run-command.ts:35-37` is now fixed — resolves to the repo root via `resolve(import.meta.dir, "../../../")` where `Pulumi.yaml` lives.
+- `apps/web/scripts/check-env.ts` does not exist (only `mdx-editor.roundtrip.ts`, `seed.ts`); `apps/infra/utils/extract-env.ts:8-9` still cites it as verifier. `apps/web/package.json:16` correctly runs `bun ../infra/utils/run-command.ts` (exists at `apps/infra/utils/run-command.ts`).
 - Web ADRs 006/007 and `docs/do-not-touch-ai/*` still cite pre-move `infra/*` paths; ADRs note the delta inline.
