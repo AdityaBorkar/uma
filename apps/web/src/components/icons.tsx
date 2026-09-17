@@ -1,4 +1,5 @@
 import {
+	ArrowLeft01Icon,
 	AudioWaveformIcon,
 	BoldIcon,
 	BookOpenIcon,
@@ -139,5 +140,6 @@ export const Lock = makeIcon(LockIcon);
 export const MoreHorizontal = makeIcon(MoreHorizontalIcon);
 export const Image = makeIcon(Image01Icon);
 export const Video = makeIcon(Video01Icon);
+export const ArrowLeft = makeIcon(ArrowLeft01Icon);
 export const Audio = makeIcon(AudioWaveformIcon);
 export const Pdf = makeIcon(Pdf01Icon);

@@ -3,6 +3,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { type ReactNode, useEffect, useState } from "react";
 
+import { CommandPalette } from "#/components/command-palette/CommandPalette.tsx";
 import { FormDialog } from "#/components/forms/FormDialog.tsx";
 import { ChevronDown, Layers, Settings2 } from "#/components/icons.tsx";
 import { useProjects } from "#/components/lists/shared.tsx";
@@ -10,6 +11,10 @@ import { ProjectForm } from "#/components/projects/ProjectForm.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
 import { useOptionalWorkspace } from "#/components/workspace.tsx";
 import { rpc } from "#/lib/rpc.ts";
+import {
+	clearCreateIntent,
+	createIntentStore,
+} from "#/stores/command-palette.ts";
 import { invalidateProjects } from "#/stores/invalidation.ts";
 import { hydrateScopeStore, lastScopeStore } from "#/stores/scope.ts";
 import { hydrateSidebarStore } from "#/stores/sidebar.ts";
@@ -100,6 +105,14 @@ export function AppShell({
 		hydrateScopeStore();
 		hydrateSidebarStore();
 	}, []);
+
+	const createIntent = useSelector(createIntentStore, (s) => s);
+	useEffect(() => {
+		if (createIntent === "project") {
+			clearCreateIntent();
+			setCreateOpen(true);
+		}
+	}, [createIntent]);
 
 	const currentScope =
 		workspace?.projectSlug ?? scopeOverride ?? storedScope ?? "~";
@@ -227,6 +240,11 @@ export function AppShell({
 				onCreated={(slug) => handleScopeChange(slug)}
 				onOpenChange={setCreateOpen}
 				open={createOpen}
+			/>
+			<CommandPalette
+				currentScope={currentScope}
+				onScopeChange={handleScopeSelect}
+				projects={projects}
 			/>
 		</div>
 	);

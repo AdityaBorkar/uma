@@ -8,7 +8,6 @@ import {
 	Radar,
 	Rocket,
 	SquareKanban,
-	Zap,
 } from "#/components/icons.tsx";
 import { AppShell } from "#/components/layout/AppShell.tsx";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert.tsx";
@@ -27,7 +26,6 @@ export const Route = createFileRoute("/(app)/$projectSlug")({
 
 const navItems = [
 	{ icon: LayoutDashboard, label: "Dashboard", to: "/$projectSlug/dashboard" },
-	{ icon: Zap, label: "Automations", to: "/$projectSlug/automations" },
 	{ icon: BookOpen, label: "Documents", to: "/$projectSlug/documents" },
 	{ icon: Rocket, label: "Releases", to: "/$projectSlug/releases" },
 	{ icon: Radar, label: "Monitor", to: "/$projectSlug/monitor" },

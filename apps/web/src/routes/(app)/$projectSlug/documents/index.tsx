@@ -1,7 +1,8 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { DocStateBadge } from "#/components/data/StatusBadge.tsx";
 import { NewDocumentDialog } from "#/components/documents/NewDocumentDialog.tsx";
@@ -39,6 +40,10 @@ import {
 	DocumentStateEnum,
 	kindLabel,
 } from "#/schemas/schema.ts";
+import {
+	clearCreateIntent,
+	createIntentStore,
+} from "#/stores/command-palette.ts";
 import { useUrlSearchInput } from "#/stores/filters.ts";
 
 interface DocumentsSearch {
@@ -98,6 +103,14 @@ function DocumentsPage() {
 	const search = Route.useSearch();
 	const [showFilters, setShowFilters] = useState(false);
 	const [createOpen, setCreateOpen] = useState(false);
+	// Command K "New document" lands here via a one-shot intent.
+	const createIntent = useSelector(createIntentStore, (s) => s);
+	useEffect(() => {
+		if (createIntent === "document") {
+			clearCreateIntent();
+			setCreateOpen(true);
+		}
+	}, [createIntent]);
 	// Group rail hover language
 	// (beui.dev/components/motion/shared-layout-bg): a muted wash glides
 	// between hovered groups on its own layoutId while the active surface

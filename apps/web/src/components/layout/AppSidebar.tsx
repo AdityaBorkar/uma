@@ -7,7 +7,7 @@ import type {
 } from "react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
-import { Layers, Plus, Settings } from "#/components/icons.tsx";
+import { ArrowLeft, Layers } from "#/components/icons.tsx";
 import {
 	Select,
 	SelectContent,
@@ -117,21 +117,14 @@ export function AppSidebar({
 			setSidebarWidth(SIDEBAR_MAX_WIDTH);
 		}
 	}, []);
-	const selectedIcon = isSettingsRoute ? (
-		<Settings className="size-4 shrink-0 text-muted-foreground" />
-	) : (
+	const selectedIcon = (
 		<Layers className="size-4 shrink-0 text-muted-foreground" />
 	);
 
-	const selectValue = isSettingsRoute
-		? SCOPE_VALUE.settings
-		: currentScope === "~"
-			? SCOPE_VALUE.multi
-			: currentScope;
+	const selectValue = currentScope === "~" ? SCOPE_VALUE.multi : currentScope;
 
-	const selectedLabel = isSettingsRoute
-		? "Settings"
-		: currentScope === "~"
+	const selectedLabel =
+		currentScope === "~"
 			? "All projects"
 			: (projects.find((p) => p.slug === currentScope)?.name ?? currentScope);
 
@@ -143,56 +136,46 @@ export function AppSidebar({
 			className="sticky top-0 hidden h-screen shrink-0 flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground md:flex"
 			style={{ width }}
 		>
-			{/* Project Selector — beUI Select (gooey unfold variant). */}
+			{/* Top slot: Back button on settings routes, otherwise the
+			    project selector (beUI Select, gooey unfold variant). */}
 			<div className="shrink-0 p-3">
-				<Select
-					onValueChange={(value) => {
-						if (value) {
-							onScopeChange?.(value);
-						}
-					}}
-					value={selectValue}
-				>
-					<SelectTrigger className="h-8 border-sidebar-border bg-sidebar-accent px-2.5 py-1 text-sidebar-foreground">
-						<span className="flex min-w-0 flex-1 items-center gap-2">
-							{selectedIcon}
-							<span className="truncate text-left">{selectedLabel}</span>
-						</span>
-					</SelectTrigger>
-					<SelectContent className="border-popover bg-popover text-popover-foreground">
-						<div className="max-h-80 overflow-y-auto scrollbar-thin">
-							<ul>
-								<SelectItem value={SCOPE_VALUE.multi}>
-									<span className="flex min-w-0 flex-1 items-center gap-2">
-										<Layers className="size-4 shrink-0 text-muted-foreground" />
-										<span className="min-w-0 flex-1 truncate">
-											All projects
-										</span>
-									</span>
-								</SelectItem>
-							</ul>
-							<div className="mt-1 border-popover border-t pt-1">
+				{isSettingsRoute ? (
+					<Link
+						aria-label="Back to workspace"
+						className="flex h-8 items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-accent px-2.5 py-1 text-sidebar-foreground text-sm outline-none hover:bg-sidebar-accent/70 focus-visible:ring-3 focus-visible:ring-ring/30"
+						params={{ projectSlug: currentScope }}
+						to="/$projectSlug/dashboard"
+					>
+						<ArrowLeft className="size-4 shrink-0 text-muted-foreground" />
+						<span className="truncate text-left">Back</span>
+					</Link>
+				) : (
+					<Select
+						onValueChange={(value) => {
+							if (value) {
+								onScopeChange?.(value);
+							}
+						}}
+						value={selectValue}
+					>
+						<SelectTrigger className="h-8 border-sidebar-border bg-sidebar-accent px-2.5 py-1 text-sidebar-foreground">
+							<span className="flex min-w-0 flex-1 items-center gap-2">
+								{selectedIcon}
+								<span className="truncate text-left">{selectedLabel}</span>
+							</span>
+						</SelectTrigger>
+						<SelectContent className="border-border bg-popover text-popover-foreground">
+							<div className="max-h-80 overflow-y-auto scrollbar-thin">
 								<ul>
-									<SelectItem value={SCOPE_VALUE.settings}>
+									<SelectItem value={SCOPE_VALUE.multi}>
 										<span className="flex min-w-0 flex-1 items-center gap-2">
-											<Settings className="size-4 shrink-0 text-muted-foreground" />
-											<span className="min-w-0 flex-1 truncate">Settings</span>
-										</span>
-									</SelectItem>
-									<SelectItem value={SCOPE_VALUE.create}>
-										<span className="flex min-w-0 flex-1 items-center gap-2">
-											<Plus className="size-4 shrink-0 text-muted-foreground" />
+											<Layers className="size-4 shrink-0 text-muted-foreground" />
 											<span className="min-w-0 flex-1 truncate">
-												Create project
+												All projects
 											</span>
 										</span>
 									</SelectItem>
 								</ul>
-							</div>
-							<div className="mt-1 border-popover border-t pt-1">
-								<div className="px-2.5 py-1 font-semibold text-micro text-muted-foreground uppercase tracking-wider">
-									Projects
-								</div>
 								{projects.length > 0 ? (
 									<ul>
 										{projects.map((p) => (
@@ -204,14 +187,14 @@ export function AppSidebar({
 										))}
 									</ul>
 								) : (
-									<div className="px-2.5 py-1.5 text-muted-foreground text-sm">
+									<div className="px-2.5 py-3 text-center text-muted-foreground text-sm">
 										No projects yet
 									</div>
 								)}
 							</div>
-						</div>
-					</SelectContent>
-				</Select>
+						</SelectContent>
+					</Select>
+				)}
 			</div>
 
 			{/* Navigation */}

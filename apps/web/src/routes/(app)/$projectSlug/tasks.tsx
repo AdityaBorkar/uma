@@ -5,8 +5,9 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import posthog from "posthog-js";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { FormDialog } from "#/components/forms/FormDialog.tsx";
 import { FilterBar } from "#/components/lists/FilterBar.tsx";
@@ -28,6 +29,10 @@ import { Button } from "#/components/ui/button.tsx";
 import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
 import { type TaskStatus, TaskStatusEnum } from "#/schemas/schema.ts";
+import {
+	clearCreateIntent,
+	createIntentStore,
+} from "#/stores/command-palette.ts";
 import { useUrlSearchInput } from "#/stores/filters.ts";
 import {
 	invalidateTasks,
@@ -66,6 +71,15 @@ function TasksPage() {
 	const onMutationError = useMutationErrorToast();
 	const search = Route.useSearch();
 	const [open, setOpen] = useState(false);
+
+	// Command K "New task" lands here via a one-shot intent.
+	const createIntent = useSelector(createIntentStore, (s) => s);
+	useEffect(() => {
+		if (createIntent === "task") {
+			clearCreateIntent();
+			setOpen(true);
+		}
+	}, [createIntent]);
 
 	function setSearch(patch: Partial<TasksSearch>) {
 		void navigate({
