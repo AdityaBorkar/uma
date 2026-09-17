@@ -28,12 +28,12 @@ import {
 	type InstalledSkillEntry,
 	isSafeSkillSource,
 	isSafeSkillVersion,
-	loadStore,
 	normalizeSkillSource,
-	type SkillsStore,
-	saveStore,
 	type VerifiedSkill,
 } from "#/lib/skills/skills.ts";
+import { copyText } from "#/stores/clipboard.ts";
+import { useLocalSearchInput } from "#/stores/filters.ts";
+import { hydrateSkillsStore, useSkillsStore } from "#/stores/registries.ts";
 
 export const Route = createFileRoute("/(app)/settings/skills")({
 	component: SkillsPage,
@@ -48,39 +48,6 @@ export const Route = createFileRoute("/(app)/settings/skills")({
 		],
 	}),
 });
-
-function useSkillsStore() {
-	const [store, setStore] = useState<SkillsStore>({ items: [] });
-
-	useEffect(() => {
-		// Local-only persistence: render SSR-safe empty first, then hydrate.
-		try {
-			setStore(loadStore());
-		} catch {
-			// ignore
-		}
-	}, []);
-
-	function update(next: SkillsStore) {
-		setStore(next);
-		saveStore(next);
-	}
-
-	return {
-		addItem(item: InstalledSkillEntry) {
-			update({ items: [...store.items, item] });
-		},
-		removeItem(id: string) {
-			update({ items: store.items.filter((i) => i.id !== id) });
-		},
-		store,
-		updateItem(id: string, patch: Partial<InstalledSkillEntry>) {
-			update({
-				items: store.items.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-			});
-		},
-	};
-}
 
 type VerifyState =
 	| { status: "idle" }
@@ -393,13 +360,21 @@ function PinDialog({
 function SkillsPage() {
 	const { toast } = useToast();
 	const { addItem, removeItem, store, updateItem } = useSkillsStore();
-	const [q, setQ] = useState("");
+	const {
+		input: qInput,
+		query: q,
+		setInput: setQInput,
+	} = useLocalSearchInput("", 200);
 	const [installOpen, setInstallOpen] = useState(false);
 	const [pinning, setPinning] = useState<InstalledSkillEntry | null>(null);
 	const [checking, setChecking] = useState<string | null>(null);
 
+	useEffect(() => {
+		hydrateSkillsStore();
+	}, []);
+
 	const items = useMemo(() => {
-		const needle = q.trim().toLowerCase();
+		const needle = (q ?? "").trim().toLowerCase();
 		const list = store.items;
 		if (!needle) return list;
 		return list.filter(
@@ -413,11 +388,8 @@ function SkillsPage() {
 		[store.items],
 	);
 
-	function copyText(text: string, title: string) {
-		void navigator.clipboard?.writeText(text).then(
-			() => toast({ title }),
-			() => toast({ title: "Copy failed", variant: "destructive" }),
-		);
+	function handleCopy(text: string, title: string) {
+		copyText(text, title);
 	}
 
 	async function handleUpgrade(item: InstalledSkillEntry) {
@@ -434,7 +406,7 @@ function SkillsPage() {
 					description: `${result.count} skill${result.count === 1 ? "" : "s"} at latest. Run the update command to upgrade.`,
 					title: "Upgrade check complete",
 				});
-				copyText(
+				handleCopy(
 					buildUpdateCommand(item.availableSkills[0]?.name ?? item.name),
 					"Update command copied",
 				);
@@ -475,9 +447,9 @@ function SkillsPage() {
 					</Label>
 					<Input
 						id="skill-search"
-						onChange={(e) => setQ(e.target.value)}
+						onChange={(e) => setQInput(e.target.value)}
 						placeholder="Filter by name or source…"
-						value={q}
+						value={qInput}
 					/>
 				</div>
 			</div>
@@ -550,7 +522,7 @@ function SkillsPage() {
 									) : null}
 									<Button
 										onClick={() =>
-											copyText(
+											handleCopy(
 												buildInstallCommand(item.source),
 												"Install command copied",
 											)
@@ -580,7 +552,7 @@ function SkillsPage() {
 									</Button>
 									<Button
 										onClick={() => {
-											copyText(
+											handleCopy(
 												buildRemoveCommand(
 													item.availableSkills[0]?.name ?? item.name,
 												),

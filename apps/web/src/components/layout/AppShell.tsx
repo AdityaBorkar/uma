@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { ChevronDown, Layers, Settings2 } from "#/components/icons.tsx";
@@ -14,7 +15,9 @@ import {
 } from "#/components/ui/dialog.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
 import { useOptionalWorkspace } from "#/components/workspace.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { invalidateProjects } from "#/stores/invalidation.ts";
+import { hydrateScopeStore, lastScopeStore } from "#/stores/scope.ts";
 import { AppSidebar } from "./AppSidebar.tsx";
 import { SCOPE_VALUE } from "./scope.ts";
 import { type NavItem, UnderlineNav } from "./UnderlineNav.tsx";
@@ -47,9 +50,7 @@ function CreateProjectDialog({
 				toast({ description: message, title: "Error", variant: "destructive" });
 			},
 			onSuccess: (data) => {
-				void queryClient.invalidateQueries({
-					queryKey: rpcPathKey(rpc.projects.list.key()),
-				});
+				invalidateProjects(queryClient);
 				toast({ description: data.name, title: "Project created" });
 				onOpenChange(false);
 				onCreated(data.slug);
@@ -97,22 +98,15 @@ export function AppShell({
 
 	// Scope is owned by WorkspaceProvider when present; settings shell and
 	// loading states fall back to the URL slug, then last-visited, then multi.
+	// Last-visited lives in `lastScopeStore` (persisted + cross-tab synced).
 	const workspace = useOptionalWorkspace();
 	const routerPathname = useRouterState({
 		select: (s) => s.location.pathname,
 	});
-	const [storedScope, setStoredScope] = useState<string | null>(null);
+	const storedScope = useSelector(lastScopeStore, (s) => s);
 
 	useEffect(() => {
-		try {
-			const last = localStorage.getItem("planner:lastScope");
-			// react-doctor-disable-next-line react-hooks-js/set-state-in-effect -- hydration fix: render SSR-safe "~" first, then sync browser-only stored scope post-mount; extra render is intentional per no-hydration-branch rule
-			if (last) {
-				setStoredScope(last);
-			}
-		} catch {
-			// ignore
-		}
+		hydrateScopeStore();
 	}, []);
 
 	const currentScope =

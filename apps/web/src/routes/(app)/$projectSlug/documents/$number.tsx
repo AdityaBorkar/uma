@@ -1,24 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import posthog from "posthog-js";
-import { useEffect } from "react";
 
 import { DocumentEditorSection } from "#/components/documents/DocumentEditorSection.tsx";
 import { DocumentFieldsSidebar } from "#/components/documents/DocumentFieldsSidebar.tsx";
 import { DocumentHeader } from "#/components/documents/DocumentHeader.tsx";
 import { DocumentTimeline } from "#/components/documents/DocumentTimeline.tsx";
-import {
-	cleanMeta,
-	parseLabels,
-	useDocumentDraft,
-	validateDraft,
-} from "#/components/documents/useDocumentDraft.ts";
 import { loadDocument } from "#/components/documents.fns.ts";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Skeleton } from "#/components/ui/skeleton.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import {
+	cleanMeta,
+	clearDraftDirty,
+	hydrateDraft,
+	parseLabels,
+	setDraftSaveError,
+	switchDraftMode,
+	useDraftBeforeUnload,
+	useDraftStore,
+	useHydrateDraftFromDoc,
+	validateDraft,
+} from "#/stores/draft.ts";
+import { invalidateDocuments } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/$projectSlug/documents/$number")({
 	component: DocumentDetailPage,
@@ -40,8 +46,7 @@ function DocumentDetailPage() {
 	const navigate = useNavigate();
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
-	const draft = useDocumentDraft();
-	const { state, hydrate, setSaveError, clearDirty } = draft;
+	const draftStore = useDraftStore();
 
 	const pageQuery = useQuery({
 		queryFn: () => loadDocument({ data: { number: docNumber } }),
@@ -50,27 +55,18 @@ function DocumentDetailPage() {
 	const doc = pageQuery.data?.document;
 
 	// Post-load hydration of editable fields. Guarded by `dirty` so user edits
-	// are not clobbered; the initial render has no raw yet, so deriving before
-	// render would still require an effect. This is intentional async-data hydration.
-	// react-doctor-disable-next-line react-hooks-js/set-state-in-effect -- hydrates editable state after raw loads
-	useEffect(() => {
-		if (!doc || state.dirty) {
-			return;
-		}
-		hydrate(doc);
-	}, [doc, state.dirty, hydrate]);
+	// are not clobbered; the store version replaces the old useState effect.
+	useHydrateDraftFromDoc(draftStore, doc);
+	useDraftBeforeUnload(draftStore);
 
 	function resetToRaw() {
 		if (doc) {
-			hydrate(doc);
+			hydrateDraft(draftStore, doc);
 		}
 	}
 
 	function invalidate() {
-		void queryClient.invalidateQueries({ queryKey: ["document", docNumber] });
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.documents.list.key()),
-		});
+		invalidateDocuments(queryClient, docNumber);
 	}
 
 	const closeMut = useMutation(
@@ -116,11 +112,11 @@ function DocumentDetailPage() {
 		rpc.documents.update.mutationOptions({
 			onError: (e: unknown) => {
 				const msg = e instanceof Error ? e.message : String(e);
-				setSaveError(msg);
+				setDraftSaveError(draftStore, msg);
 			},
 			onSuccess: (updated) => {
-				setSaveError(null);
-				clearDirty();
+				setDraftSaveError(draftStore, null);
+				clearDraftDirty(draftStore);
 				invalidate();
 				posthog.capture("document_updated", { bytes: updated.body.length });
 				toast({ description: `#${updated.number}`, title: "Document updated" });
@@ -159,18 +155,19 @@ function DocumentDetailPage() {
 	const canEdit = !isClosed;
 
 	async function handleSave() {
-		setSaveError(null);
-		const invalid = validateDraft(state.title, state.body);
+		const s = draftStore.state;
+		setDraftSaveError(draftStore, null);
+		const invalid = validateDraft(s.title, s.body);
 		if (invalid) {
-			setSaveError(invalid);
+			setDraftSaveError(draftStore, invalid);
 			return;
 		}
 		await updateMut.mutateAsync({
-			body: state.body,
-			labels: parseLabels(state.labelsText),
-			meta: cleanMeta(state.meta),
+			body: s.body,
+			labels: parseLabels(s.labelsText),
+			meta: cleanMeta(s.meta),
 			number: docNumber,
-			title: state.title.trim(),
+			title: s.title.trim(),
 		});
 	}
 
@@ -179,14 +176,14 @@ function DocumentDetailPage() {
 			<DocumentHeader
 				canEdit={canEdit}
 				doc={doc}
-				draft={draft}
+				draftStore={draftStore}
 				isSaving={updateMut.isPending}
 				onCancel={resetToRaw}
 				onClose={() => closeMut.mutate({ number: docNumber })}
 				onDelete={() => deleteMut.mutate({ number: docNumber })}
 				onReopen={() => reopenMut.mutate({ number: docNumber })}
 				onSave={handleSave}
-				onSwitchSourceMode={() => draft.switchMode("source")}
+				onSwitchSourceMode={() => switchDraftMode(draftStore, "source")}
 				pendingClose={closeMut.isPending}
 				pendingDelete={deleteMut.isPending}
 				pendingReopen={reopenMut.isPending}
@@ -198,7 +195,7 @@ function DocumentDetailPage() {
 					<DocumentEditorSection
 						canEdit={canEdit}
 						docHtml={doc.html}
-						draft={draft}
+						draftStore={draftStore}
 						isClosed={isClosed}
 						rawNumber={doc.number}
 					/>
@@ -208,7 +205,7 @@ function DocumentDetailPage() {
 					<DocumentFieldsSidebar
 						canEdit={canEdit}
 						createdAt={doc.createdAt}
-						draft={draft}
+						draftStore={draftStore}
 						isSaving={updateMut.isPending}
 						kind={doc.kind}
 						onReset={resetToRaw}

@@ -38,15 +38,10 @@ import type {
 	CustomModel,
 	CustomProvider,
 	DetectedModel,
-	ModelProviderStore,
 	ProviderAccount,
 } from "#/lib/model-providers/types.ts";
-import {
-	EMPTY_STORE,
-	loadStore,
-	maskKey,
-	saveStore,
-} from "#/lib/model-providers/types.ts";
+import { maskKey } from "#/lib/model-providers/types.ts";
+import { hydrateProviderStore, useProviderStore } from "#/stores/registries.ts";
 
 export const Route = createFileRoute("/(app)/settings/model-providers")({
 	component: ModelProvidersPage,
@@ -61,127 +56,6 @@ export const Route = createFileRoute("/(app)/settings/model-providers")({
 		],
 	}),
 });
-
-function useProviderStore() {
-	const [store, setStore] = useState<ModelProviderStore>(EMPTY_STORE);
-
-	useEffect(() => {
-		// Local-only persistence: render SSR-safe empty first, then hydrate.
-		try {
-			setStore(loadStore());
-		} catch {
-			// ignore
-		}
-	}, []);
-
-	function update(next: ModelProviderStore) {
-		setStore(next);
-		saveStore(next);
-	}
-
-	return {
-		addAccount(account: ProviderAccount) {
-			update({ ...store, accounts: [...store.accounts, account] });
-		},
-		addModel(model: CustomModel) {
-			update({ ...store, models: [...store.models, model] });
-		},
-		addProvider(provider: CustomProvider) {
-			update({ ...store, providers: [...store.providers, provider] });
-		},
-		removeAccount(id: string) {
-			update({ ...store, accounts: store.accounts.filter((a) => a.id !== id) });
-		},
-		removeModel(customId: string) {
-			update({
-				...store,
-				models: store.models.filter((m) => m.customId !== customId),
-			});
-		},
-		removeProvider(id: string) {
-			const provider = store.providers.find((p) => p.id === id);
-			update({
-				...store,
-				accounts: provider
-					? store.accounts.filter((a) => a.provider !== provider.name)
-					: store.accounts,
-				models: provider
-					? store.models.filter((m) => m.provider !== provider.name)
-					: store.models,
-				providers: store.providers.filter((p) => p.id !== id),
-			});
-		},
-		store,
-		updateAccount(
-			id: string,
-			patch: Omit<ProviderAccount, "createdAt" | "id">,
-		) {
-			update({
-				...store,
-				accounts: store.accounts.map((a) =>
-					a.id === id ? { ...a, ...patch } : a,
-				),
-			});
-		},
-		updateDetectedModel(
-			providerId: string,
-			modelId: string,
-			patch: DetectedModel,
-		) {
-			update({
-				...store,
-				providers: store.providers.map((p) =>
-					p.id === providerId
-						? {
-								...p,
-								models: p.models.map((m) =>
-									m.id === modelId ? { ...patch } : m,
-								),
-							}
-						: p,
-				),
-			});
-		},
-		updateManualModel(customId: string, patch: Omit<CustomModel, "customId">) {
-			update({
-				...store,
-				models: store.models.map((m) =>
-					m.customId === customId ? { ...m, ...patch } : m,
-				),
-			});
-		},
-		updateProvider(
-			id: string,
-			patch: { baseUrl: string; models?: DetectedModel[]; name: string },
-		) {
-			const prev = store.providers.find((p) => p.id === id);
-			const renamed = prev && prev.name !== patch.name;
-			update({
-				...store,
-				accounts: renamed
-					? store.accounts.map((a) =>
-							a.provider === prev.name ? { ...a, provider: patch.name } : a,
-						)
-					: store.accounts,
-				models: renamed
-					? store.models.map((m) =>
-							m.provider === prev.name ? { ...m, provider: patch.name } : m,
-						)
-					: store.models,
-				providers: store.providers.map((p) =>
-					p.id === id
-						? {
-								...p,
-								baseUrl: patch.baseUrl,
-								models: patch.models ?? p.models,
-								name: patch.name,
-							}
-						: p,
-				),
-			});
-		},
-	};
-}
 
 function InputModalitiesCell({ model }: { model: DetectedModel }) {
 	const modalities = [
@@ -1634,6 +1508,10 @@ function ModelProvidersPage() {
 		model: DetectedModel;
 		providerName: string;
 	} | null>(null);
+
+	useEffect(() => {
+		hydrateProviderStore();
+	}, []);
 
 	const providerNames = useMemo(
 		() => store.providers.map((p) => p.name),

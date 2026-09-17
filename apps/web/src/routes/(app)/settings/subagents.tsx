@@ -23,7 +23,10 @@ import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { copyText } from "#/stores/clipboard.ts";
+import { useLocalSearchInput } from "#/stores/filters.ts";
+import { invalidateSubagents } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/settings/subagents")({
 	component: SubagentsPage,
@@ -490,14 +493,18 @@ function SubagentDialog({
 function SubagentsPage() {
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
-	const [q, setQ] = useState("");
+	const {
+		input: qInput,
+		query: q,
+		setInput: setQInput,
+	} = useLocalSearchInput("", 250);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createInitial, setCreateInitial] = useState<SubagentForm>(EMPTY_FORM);
 	const [editing, setEditing] = useState<SubagentRow | null>(null);
 
 	const listQuery = useQuery(
 		rpc.subagents.list.queryOptions({
-			input: q.trim() ? { q: q.trim() } : undefined,
+			input: q ? { q } : undefined,
 		}),
 	);
 	const items = useMemo(
@@ -506,10 +513,7 @@ function SubagentsPage() {
 	);
 	const existingNames = useMemo(() => items.map((s) => s.name), [items]);
 
-	const invalidate = () =>
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.subagents.list.key()),
-		});
+	const invalidate = () => invalidateSubagents(queryClient);
 
 	const createMutation = useMutation(
 		rpc.subagents.create.mutationOptions({
@@ -565,13 +569,6 @@ function SubagentsPage() {
 		}),
 	);
 
-	function copyText(text: string, title: string) {
-		void navigator.clipboard?.writeText(text).then(
-			() => toast({ title }),
-			() => toast({ title: "Copy failed", variant: "destructive" }),
-		);
-	}
-
 	function openCreate() {
 		setCreateInitial(EMPTY_FORM);
 		setCreateOpen(true);
@@ -580,6 +577,10 @@ function SubagentsPage() {
 	function openDuplicate(row: SubagentRow) {
 		setCreateInitial({ ...toForm(row), name: `${row.name}-copy` });
 		setCreateOpen(true);
+	}
+
+	function handleCopy(text: string, title: string) {
+		copyText(text, title);
 	}
 
 	return (
@@ -601,9 +602,9 @@ function SubagentsPage() {
 					</Label>
 					<Input
 						id="subagent-search"
-						onChange={(e) => setQ(e.target.value)}
+						onChange={(e) => setQInput(e.target.value)}
 						placeholder="Filter by name…"
-						value={q}
+						value={qInput}
 					/>
 				</div>
 			</div>
@@ -670,7 +671,7 @@ function SubagentsPage() {
 										<Badge variant="destructive">disabled</Badge>
 									) : null}
 									<Button
-										onClick={() => copyText(toMarkdown(s), "Markdown copied")}
+										onClick={() => handleCopy(toMarkdown(s), "Markdown copied")}
 										size="sm"
 										type="button"
 										variant="outline"
@@ -678,7 +679,7 @@ function SubagentsPage() {
 										Copy md
 									</Button>
 									<Button
-										onClick={() => copyText(toJson(s), "JSON copied")}
+										onClick={() => handleCopy(toJson(s), "JSON copied")}
 										size="sm"
 										type="button"
 										variant="outline"

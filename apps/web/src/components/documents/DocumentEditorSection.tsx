@@ -1,7 +1,13 @@
+import { useSelector } from "@tanstack/react-store";
+
 import { DocumentEditor } from "#/components/documents/Editor.tsx";
-import type { DocumentDraft } from "#/components/documents/useDocumentDraft.ts";
 import { Button } from "#/components/ui/button.tsx";
 import { Label } from "#/components/ui/label.tsx";
+import {
+	type DraftStore,
+	setDraftBody,
+	switchDraftMode,
+} from "#/stores/draft.ts";
 
 function SanitizedHtml({ html }: { html: string | null }) {
 	// docHtml is server-rendered through the mdx.server.ts allowlist
@@ -19,7 +25,7 @@ function SanitizedHtml({ html }: { html: string | null }) {
 interface Props {
 	canEdit: boolean;
 	docHtml: string | null;
-	draft: DocumentDraft;
+	draftStore: DraftStore;
 	isClosed: boolean;
 	rawNumber: number;
 }
@@ -27,17 +33,20 @@ interface Props {
 /**
  * Body section without card chrome: the rich editor and the source textarea
  * already carry their own borders, so a wrapping Card only doubled them.
- * The only chrome is the Rich/Source switch; status (dirty/saved) lives in
- * the page header's Unsaved pill, not a footer bar.
+ * Subscribes only to body/mode/revision — title/labels/meta edits elsewhere
+ * do not remount or re-render the editor.
  */
 export function DocumentEditorSection({
 	canEdit,
 	docHtml,
-	draft,
+	draftStore,
 	isClosed,
 	rawNumber,
 }: Props) {
-	const { state } = draft;
+	const mode = useSelector(draftStore, (s) => s.mode);
+	const body = useSelector(draftStore, (s) => s.body);
+	const richHtml = useSelector(draftStore, (s) => s.richHtml);
+	const revision = useSelector(draftStore, (s) => s.revision);
 
 	if (isClosed) {
 		return (
@@ -53,9 +62,9 @@ export function DocumentEditorSection({
 				<div className="flex items-center justify-end gap-1">
 					<Button
 						className={
-							state.mode === "rich" ? "bg-accent text-accent-foreground" : ""
+							mode === "rich" ? "bg-accent text-accent-foreground" : ""
 						}
-						onClick={() => draft.switchMode("rich")}
+						onClick={() => switchDraftMode(draftStore, "rich")}
 						size="sm"
 						type="button"
 						variant="ghost"
@@ -64,9 +73,9 @@ export function DocumentEditorSection({
 					</Button>
 					<Button
 						className={
-							state.mode === "source" ? "bg-accent text-accent-foreground" : ""
+							mode === "source" ? "bg-accent text-accent-foreground" : ""
 						}
-						onClick={() => draft.switchMode("source")}
+						onClick={() => switchDraftMode(draftStore, "source")}
 						size="sm"
 						type="button"
 						variant="ghost"
@@ -76,11 +85,11 @@ export function DocumentEditorSection({
 				</div>
 			) : null}
 
-			{state.mode === "rich" ? (
+			{mode === "rich" ? (
 				<DocumentEditor
-					initialHtml={state.richHtml}
-					key={`${rawNumber}-${state.mode}-${state.revision}`}
-					onChange={draft.setBody}
+					initialHtml={richHtml}
+					key={`${rawNumber}-${mode}-${revision}`}
+					onChange={(mdx) => setDraftBody(draftStore, mdx)}
 				/>
 			) : (
 				<div>
@@ -91,9 +100,9 @@ export function DocumentEditorSection({
 						aria-label="Document body (MDX source)"
 						className="h-[520px] w-full resize-y rounded-md border bg-background p-3 font-mono text-sm"
 						id="doc-body"
-						onChange={(e) => draft.setBody(e.target.value)}
+						onChange={(e) => setDraftBody(draftStore, e.target.value)}
 						spellCheck={false}
-						value={state.body}
+						value={body}
 					/>
 					<p className="mt-2 text-muted-foreground text-xs">
 						Raw MDX with GFM tables and #&lt;number&gt; references. Imports,

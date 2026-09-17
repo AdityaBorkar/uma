@@ -15,7 +15,8 @@ import {
 } from "#/components/ui/card.tsx";
 import { Skeleton } from "#/components/ui/skeleton.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { invalidateProjects } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/settings/projects/$projectId/")({
 	component: ProjectDetailPage,
@@ -55,9 +56,7 @@ function ProjectDetailPage() {
 				void queryClient.invalidateQueries({
 					queryKey: rpc.projects.get.key({ input: { id: projectId } }),
 				});
-				void queryClient.invalidateQueries({
-					queryKey: rpcPathKey(rpc.projects.list.key()),
-				});
+				invalidateProjects(queryClient);
 				toast({ description: data.name, title: "Project updated" });
 				posthog.capture("project_updated", { projectId });
 				setEditing(false);

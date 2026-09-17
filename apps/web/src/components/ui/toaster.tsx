@@ -1,37 +1,22 @@
-import * as React from "react";
+import { useSelector } from "@tanstack/react-store";
 
 import { cn } from "#/lib/utils.ts";
+import { toast, toastStore } from "#/stores/toast.ts";
 
-type Toast = {
-	id: string;
-	title: string;
-	description?: string;
-	variant?: "default" | "destructive";
-};
+export type { ToastItem as Toast } from "#/stores/toast.ts";
+export { toast };
 
-const ToastContext = React.createContext<{
-	toasts: Toast[];
-	toast: (t: Omit<Toast, "id">) => void;
-} | null>(null);
-
+/** Store-backed hook. No provider required (kept name for existing imports). */
 export function useToast() {
-	const ctx = React.useContext(ToastContext);
-	if (!ctx) throw new Error("useToast must be used within ToastProvider");
-	return ctx;
+	const toasts = useSelector(toastStore, (s) => s);
+	return { toast, toasts };
 }
 
+/** Viewport + children. No context — state lives in `toastStore`. */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-	const [toasts, setToasts] = React.useState<Toast[]>([]);
-	const toast = (t: Omit<Toast, "id">) => {
-		const id = crypto.randomUUID();
-		setToasts((prev) => [...prev, { ...t, id }]);
-		setTimeout(
-			() => setToasts((prev) => prev.filter((x) => x.id !== id)),
-			3000,
-		);
-	};
+	const toasts = useSelector(toastStore, (s) => s);
 	return (
-		<ToastContext.Provider value={{ toast, toasts }}>
+		<>
 			{children}
 			<div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
 				{toasts.map((t) => (
@@ -50,6 +35,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 					</div>
 				))}
 			</div>
-		</ToastContext.Provider>
+		</>
 	);
 }

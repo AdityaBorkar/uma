@@ -14,7 +14,7 @@ import { cn } from "#/lib/utils.ts";
  * Rich-text composer for Documents (docs/adr/004-documents-single-primitive.md
  * §5). The extension list is the allowlisted node set — deliberately no
  * richer than what src/lib/mdx.server.ts renders. The editor never holds
- * frontmatter; metadata lives in DocumentForm's controls.
+ * frontmatter; metadata lives in the Fields sidebar controls.
  *
  * Chrome is contextual, not a static strip: selected text gets the inline
  * formatting bubble (SelectionToolbar.tsx) and "/" opens the block-insert

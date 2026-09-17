@@ -33,8 +33,13 @@ import {
 import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
 import { type TaskStatus, TaskStatusEnum } from "#/schemas/schema.ts";
+import { useUrlSearchInput } from "#/stores/filters.ts";
+import {
+	invalidateTasks,
+	optimisticTaskStatus,
+} from "#/stores/invalidation.ts";
 
 interface TasksSearch {
 	q?: string;
@@ -76,13 +81,13 @@ function TasksPage() {
 		});
 	}
 
+	const [qInput, setQInput] = useUrlSearchInput({
+		onCommit: (q) => setSearch({ q }),
+		urlQ: search.q,
+	});
+
 	function invalidate() {
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.tasks.list.key()),
-		});
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.tasks.stats.key()),
-		});
+		invalidateTasks(queryClient);
 	}
 
 	const tasksQuery = useInfiniteQuery(
@@ -125,8 +130,14 @@ function TasksPage() {
 	const statusMut = useMutation(
 		rpc.tasks.updateStatus.mutationOptions({
 			onError: onMutationError,
+			onMutate: (vars) =>
+				optimisticTaskStatus({
+					id: vars.id,
+					queryClient,
+					status: vars.status,
+				}),
+			onSettled: () => invalidate(),
 			onSuccess: (_data, vars) => {
-				invalidate();
 				posthog.capture("task_status_changed", { to: vars.status });
 			},
 		}),
@@ -163,9 +174,9 @@ function TasksPage() {
 						</Label>
 						<Input
 							id="q"
-							onChange={(e) => setSearch({ q: e.target.value || undefined })}
+							onChange={(e) => setQInput(e.target.value)}
 							placeholder="Filter by title"
-							value={search.q ?? ""}
+							value={qInput}
 						/>
 					</div>
 					<div className="w-full space-y-1.5 sm:w-40">

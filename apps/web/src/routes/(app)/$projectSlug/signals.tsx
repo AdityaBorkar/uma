@@ -35,13 +35,19 @@ import {
 import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
 import { Select } from "#/components/ui/select.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
 import {
 	type SignalSeverity,
 	SignalSeverityEnum,
 	type SignalStatus,
 	SignalStatusEnum,
 } from "#/schemas/schema.ts";
+import { useUrlSearchInput } from "#/stores/filters.ts";
+import {
+	invalidateSignalAndTasks,
+	invalidateSignals,
+	optimisticSignalStatus,
+} from "#/stores/invalidation.ts";
 
 interface SignalsSearch {
 	q?: string;
@@ -87,19 +93,13 @@ function SignalsPage() {
 		});
 	}
 
+	const [qInput, setQInput] = useUrlSearchInput({
+		onCommit: (q) => setSearch({ q }),
+		urlQ: search.q,
+	});
+
 	function invalidate() {
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.signals.list.key()),
-		});
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.signals.stats.key()),
-		});
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.tasks.list.key()),
-		});
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.tasks.stats.key()),
-		});
+		invalidateSignalAndTasks(queryClient);
 	}
 
 	const signalsQuery = useInfiniteQuery(
@@ -133,6 +133,13 @@ function SignalsPage() {
 	const updateMut = useMutation(
 		rpc.signals.update.mutationOptions({
 			onError: onMutationError,
+			onMutate: (vars) =>
+				optimisticSignalStatus({
+					id: vars.id,
+					queryClient,
+					status: vars.status,
+				}),
+			onSettled: () => invalidateSignals(queryClient),
 			onSuccess: () => invalidate(),
 		}),
 	);
@@ -195,9 +202,9 @@ function SignalsPage() {
 						</Label>
 						<Input
 							id="q"
-							onChange={(e) => setSearch({ q: e.target.value || undefined })}
+							onChange={(e) => setQInput(e.target.value)}
 							placeholder="Filter by title"
-							value={search.q ?? ""}
+							value={qInput}
 						/>
 					</div>
 					<div className="w-full space-y-1.5 sm:w-40">

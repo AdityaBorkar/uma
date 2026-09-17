@@ -22,7 +22,10 @@ import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
 import { Textarea } from "#/components/ui/textarea.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { copyText } from "#/stores/clipboard.ts";
+import { useLocalSearchInput } from "#/stores/filters.ts";
+import { invalidatePromptTemplates } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/settings/prompt-templates")({
 	component: PromptTemplatesPage,
@@ -330,7 +333,11 @@ function PromptTemplateDialog({
 function PromptTemplatesPage() {
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
-	const [q, setQ] = useState("");
+	const {
+		input: qInput,
+		query: q,
+		setInput: setQInput,
+	} = useLocalSearchInput("", 250);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createInitial, setCreateInitial] =
 		useState<PromptTemplateForm>(EMPTY_FORM);
@@ -338,7 +345,7 @@ function PromptTemplatesPage() {
 
 	const listQuery = useQuery(
 		rpc.promptTemplates.list.queryOptions({
-			input: q.trim() ? { q: q.trim() } : undefined,
+			input: q ? { q } : undefined,
 		}),
 	);
 	const items = useMemo(
@@ -347,10 +354,7 @@ function PromptTemplatesPage() {
 	);
 	const existingNames = useMemo(() => items.map((c) => c.name), [items]);
 
-	const invalidate = () =>
-		void queryClient.invalidateQueries({
-			queryKey: rpcPathKey(rpc.promptTemplates.list.key()),
-		});
+	const invalidate = () => invalidatePromptTemplates(queryClient);
 
 	const createMutation = useMutation(
 		rpc.promptTemplates.create.mutationOptions({
@@ -406,11 +410,8 @@ function PromptTemplatesPage() {
 		}),
 	);
 
-	function copyText(text: string, title: string) {
-		void navigator.clipboard?.writeText(text).then(
-			() => toast({ title }),
-			() => toast({ title: "Copy failed", variant: "destructive" }),
-		);
+	function handleCopy(text: string, title: string) {
+		copyText(text, title);
 	}
 
 	function openCreate() {
@@ -445,9 +446,9 @@ function PromptTemplatesPage() {
 					</Label>
 					<Input
 						id="prompt-template-search"
-						onChange={(e) => setQ(e.target.value)}
+						onChange={(e) => setQInput(e.target.value)}
 						placeholder="Filter by name…"
-						value={q}
+						value={qInput}
 					/>
 				</div>
 			</div>
@@ -498,7 +499,7 @@ function PromptTemplatesPage() {
 								<div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
 									{c.subtask ? <Badge variant="outline">subtask</Badge> : null}
 									<Button
-										onClick={() => copyText(toMarkdown(c), "Markdown copied")}
+										onClick={() => handleCopy(toMarkdown(c), "Markdown copied")}
 										size="sm"
 										type="button"
 										variant="outline"
@@ -506,7 +507,7 @@ function PromptTemplatesPage() {
 										Copy md
 									</Button>
 									<Button
-										onClick={() => copyText(toJson(c), "JSON copied")}
+										onClick={() => handleCopy(toJson(c), "JSON copied")}
 										size="sm"
 										type="button"
 										variant="outline"

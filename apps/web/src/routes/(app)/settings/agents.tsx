@@ -11,7 +11,8 @@ import {
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { invalidateAgents } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/settings/agents")({
 	component: AgentsPage,
@@ -39,10 +40,7 @@ function AgentsPage() {
 	);
 	const removeMutation = useMutation(
 		rpc.agents.remove.mutationOptions({
-			onSuccess: () =>
-				void queryClient.invalidateQueries({
-					queryKey: rpcPathKey(rpc.agents.list.key()),
-				}),
+			onSuccess: () => invalidateAgents(queryClient),
 		}),
 	);
 

@@ -18,6 +18,7 @@ import {
 	type WorkspaceValue,
 } from "#/components/workspace.tsx";
 import { rpc } from "#/lib/rpc.ts";
+import { setLastScope } from "#/stores/scope.ts";
 
 export const Route = createFileRoute("/(app)/$projectSlug")({
 	component: WorkspaceLayout,
@@ -50,11 +51,7 @@ function WorkspaceLayout() {
 	);
 
 	useEffect(() => {
-		try {
-			localStorage.setItem("planner:lastScope", projectSlug);
-		} catch {
-			// ignore — private mode / storage disabled
-		}
+		setLastScope(projectSlug);
 	}, [projectSlug]);
 
 	const project = isMulti ? null : projectQuery.data;

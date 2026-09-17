@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { stateBadgeClass } from "#/components/badges.ts";
+import { NewDocumentDialog } from "#/components/documents/NewDocumentDialog.tsx";
 import {
 	LIST_LIMIT,
 	ListEmptyCard,
@@ -35,6 +36,7 @@ import {
 	DocumentStateEnum,
 	kindLabel,
 } from "#/schemas/schema.ts";
+import { useUrlSearchInput } from "#/stores/filters.ts";
 
 interface DocumentsSearch {
 	kind?: (typeof DOCUMENT_KINDS)[number]["value"];
@@ -72,6 +74,7 @@ function DocumentsPage() {
 	const navigate = Route.useNavigate();
 	const search = Route.useSearch();
 	const [showFilters, setShowFilters] = useState(false);
+	const [createOpen, setCreateOpen] = useState(false);
 
 	function setSearch(patch: Partial<DocumentsSearch>) {
 		void navigate({
@@ -79,6 +82,11 @@ function DocumentsPage() {
 			search: (prev) => ({ ...prev, ...patch }),
 		});
 	}
+
+	const [qInput, setQInput] = useUrlSearchInput({
+		onCommit: (q) => setSearch({ q }),
+		urlQ: search.q,
+	});
 
 	const docsQuery = useInfiniteQuery(
 		rpc.documents.list.infiniteOptions({
@@ -101,13 +109,8 @@ function DocumentsPage() {
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-end">
-				<Button asChild={true} variant="primary">
-					<Link
-						params={{ projectSlug: ws.projectSlug }}
-						to="/$projectSlug/documents/new"
-					>
-						New document
-					</Link>
+				<Button onClick={() => setCreateOpen(true)} variant="primary">
+					New document
 				</Button>
 			</div>
 
@@ -148,9 +151,9 @@ function DocumentsPage() {
 						</Label>
 						<Input
 							id="q"
-							onChange={(e) => setSearch({ q: e.target.value || undefined })}
+							onChange={(e) => setQInput(e.target.value)}
 							placeholder="Filter by title or body"
-							value={search.q ?? ""}
+							value={qInput}
 						/>
 					</div>
 					<div className="w-full space-y-1.5 sm:w-36">
@@ -218,13 +221,12 @@ function DocumentsPage() {
 			) : items.length === 0 ? (
 				<ListEmptyCard
 					action={
-						<Button asChild={true} className="mt-4" variant="primary">
-							<Link
-								params={{ projectSlug: ws.projectSlug }}
-								to="/$projectSlug/documents/new"
-							>
-								Create the first document
-							</Link>
+						<Button
+							className="mt-4"
+							onClick={() => setCreateOpen(true)}
+							variant="primary"
+						>
+							Create the first document
 						</Button>
 					}
 					description="No documents yet. Everything you write lives here — start with a wiki page or a specification."
@@ -315,6 +317,8 @@ function DocumentsPage() {
 					/>
 				</ListResultCard>
 			)}
+
+			<NewDocumentDialog onOpenChange={setCreateOpen} open={createOpen} />
 		</div>
 	);
 }

@@ -1,6 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
 
 import {
 	LIST_LIMIT,
@@ -16,6 +15,7 @@ import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
 import { rpc } from "#/lib/rpc.ts";
+import { useLocalSearchInput } from "#/stores/filters.ts";
 
 export const Route = createFileRoute("/(app)/settings/projects/")({
 	component: ProjectsPage,
@@ -31,7 +31,11 @@ export const Route = createFileRoute("/(app)/settings/projects/")({
 });
 
 function ProjectsPage() {
-	const [q, setQ] = useState("");
+	const {
+		input: qInput,
+		query: q,
+		setInput: setQInput,
+	} = useLocalSearchInput("", 250);
 
 	const projectsQuery = useInfiniteQuery(
 		rpc.projects.list.infiniteOptions({
@@ -40,7 +44,7 @@ function ProjectsPage() {
 			input: (cursor: string | undefined) => ({
 				cursor,
 				limit: LIST_LIMIT,
-				q: q || undefined,
+				q: q,
 			}),
 		}),
 	);
@@ -67,9 +71,9 @@ function ProjectsPage() {
 						</Label>
 						<Input
 							id="q"
-							onChange={(e) => setQ(e.target.value)}
+							onChange={(e) => setQInput(e.target.value)}
 							placeholder="Filter by name"
-							value={q}
+							value={qInput}
 						/>
 					</div>
 				</CardContent>

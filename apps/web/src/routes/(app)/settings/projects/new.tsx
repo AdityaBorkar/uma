@@ -11,7 +11,8 @@ import {
 	CardTitle,
 } from "#/components/ui/card.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { invalidateProjects } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/settings/projects/new")({
 	component: NewProjectPage,
@@ -39,9 +40,7 @@ function NewProjectPage() {
 				toast({ description: message, title: "Error", variant: "destructive" });
 			},
 			onSuccess: async (data) => {
-				void queryClient.invalidateQueries({
-					queryKey: rpcPathKey(rpc.projects.list.key()),
-				});
+				invalidateProjects(queryClient);
 				toast({ description: data.name, title: "Project created" });
 				posthog.capture("project_created", { projectId: data.id });
 				await navigate({

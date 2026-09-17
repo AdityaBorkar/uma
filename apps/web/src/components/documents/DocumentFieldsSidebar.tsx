@@ -1,5 +1,6 @@
+import { useSelector } from "@tanstack/react-store";
+
 import { MetadataForm } from "#/components/documents/MetadataForm.tsx";
-import type { DocumentDraft } from "#/components/documents/useDocumentDraft.ts";
 import { Lock } from "#/components/icons.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
@@ -8,11 +9,16 @@ import { Label } from "#/components/ui/label.tsx";
 import { Separator } from "#/components/ui/separator.tsx";
 import { formatAgo } from "#/lib/age.ts";
 import { kindLabel } from "#/schemas/schema.ts";
+import {
+	type DraftStore,
+	setDraftLabelsText,
+	setDraftMeta,
+} from "#/stores/draft.ts";
 
 interface Props {
 	canEdit: boolean;
 	createdAt: string;
-	draft: DocumentDraft;
+	draftStore: DraftStore;
 	isSaving: boolean;
 	kind: string;
 	onReset: () => void;
@@ -24,7 +30,7 @@ interface Props {
 export function DocumentFieldsSidebar({
 	canEdit,
 	createdAt,
-	draft,
+	draftStore,
 	isSaving,
 	kind,
 	onReset,
@@ -32,7 +38,10 @@ export function DocumentFieldsSidebar({
 	projectName,
 	updatedAt,
 }: Props) {
-	const { state } = draft;
+	const labelsText = useSelector(draftStore, (s) => s.labelsText);
+	const meta = useSelector(draftStore, (s) => s.meta);
+	const dirty = useSelector(draftStore, (s) => s.dirty);
+
 	return (
 		<Card>
 			<CardContent className="space-y-4 p-4">
@@ -68,9 +77,9 @@ export function DocumentFieldsSidebar({
 					<Input
 						disabled={!canEdit}
 						id="doc-field-labels"
-						onChange={(e) => draft.setLabelsText(e.target.value)}
+						onChange={(e) => setDraftLabelsText(draftStore, e.target.value)}
 						placeholder="api, urgent"
-						value={state.labelsText}
+						value={labelsText}
 					/>
 					<p className="text-[11px] text-muted-foreground">
 						Comma-separated, ≤20
@@ -80,8 +89,8 @@ export function DocumentFieldsSidebar({
 				<div className={canEdit ? undefined : "pointer-events-none opacity-60"}>
 					<MetadataForm
 						kind={kind}
-						onChange={draft.setMeta}
-						value={state.meta}
+						onChange={(next) => setDraftMeta(draftStore, next)}
+						value={meta}
 					/>
 				</div>
 
@@ -89,7 +98,7 @@ export function DocumentFieldsSidebar({
 					<div className="flex gap-2 pt-2">
 						<Button
 							className="flex-1"
-							disabled={!state.dirty || isSaving}
+							disabled={!dirty || isSaving}
 							onClick={onSave}
 							size="sm"
 							variant="primary"
@@ -97,7 +106,7 @@ export function DocumentFieldsSidebar({
 							{isSaving ? "Saving…" : "Save fields"}
 						</Button>
 						<Button
-							disabled={!state.dirty}
+							disabled={!dirty}
 							onClick={onReset}
 							size="sm"
 							variant="ghost"

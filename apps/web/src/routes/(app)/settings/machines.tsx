@@ -12,7 +12,8 @@ import {
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
-import { rpc, rpcPathKey } from "#/lib/rpc.ts";
+import { rpc } from "#/lib/rpc.ts";
+import { invalidateMachines } from "#/stores/invalidation.ts";
 
 export const Route = createFileRoute("/(app)/settings/machines")({
 	component: MachinesPage,
@@ -38,10 +39,7 @@ function MachinesPage() {
 	const machinesQuery = useQuery(rpc.machines.list.queryOptions());
 	const revokeMutation = useMutation(
 		rpc.machines.revoke.mutationOptions({
-			onSuccess: () =>
-				void queryClient.invalidateQueries({
-					queryKey: rpcPathKey(rpc.machines.list.key()),
-				}),
+			onSuccess: () => invalidateMachines(queryClient),
 		}),
 	);
 

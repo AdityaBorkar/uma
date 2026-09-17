@@ -31,12 +31,12 @@ import {
 	isSafeMcpUrl,
 	isSafeMcpVersion,
 	isValidMcpRuntime,
-	loadStore,
 	type McpKind,
 	type McpRuntime,
-	type McpStore,
-	saveStore,
 } from "#/lib/mcp/mcp.ts";
+import { copyText } from "#/stores/clipboard.ts";
+import { useLocalSearchInput } from "#/stores/filters.ts";
+import { hydrateMcpStore, useMcpStore } from "#/stores/registries.ts";
 
 export const Route = createFileRoute("/(app)/settings/mcp-servers")({
 	component: McpServersPage,
@@ -51,39 +51,6 @@ export const Route = createFileRoute("/(app)/settings/mcp-servers")({
 		],
 	}),
 });
-
-function useMcpStore() {
-	const [store, setStore] = useState<McpStore>({ items: [] });
-
-	useEffect(() => {
-		// Local-only persistence: render SSR-safe empty first, then hydrate.
-		try {
-			setStore(loadStore());
-		} catch {
-			// ignore
-		}
-	}, []);
-
-	function update(next: McpStore) {
-		setStore(next);
-		saveStore(next);
-	}
-
-	return {
-		addItem(item: InstalledMcpEntry) {
-			update({ items: [...store.items, item] });
-		},
-		removeItem(id: string) {
-			update({ items: store.items.filter((i) => i.id !== id) });
-		},
-		store,
-		updateItem(id: string, patch: Partial<InstalledMcpEntry>) {
-			update({
-				items: store.items.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-			});
-		},
-	};
-}
 
 type LatestResult =
 	| { latest: string; status: "ok" }
@@ -486,14 +453,22 @@ function PinDialog({
 function McpServersPage() {
 	const { toast } = useToast();
 	const { addItem, removeItem, store, updateItem } = useMcpStore();
-	const [q, setQ] = useState("");
+	const {
+		input: qInput,
+		query: q,
+		setInput: setQInput,
+	} = useLocalSearchInput("", 200);
 	const [kindFilter, setKindFilter] = useState<"all" | McpKind>("all");
 	const [installOpen, setInstallOpen] = useState(false);
 	const [pinning, setPinning] = useState<InstalledMcpEntry | null>(null);
 	const [checking, setChecking] = useState<string | null>(null);
 
+	useEffect(() => {
+		hydrateMcpStore();
+	}, []);
+
 	const items = useMemo(() => {
-		const needle = q.trim().toLowerCase();
+		const needle = (q ?? "").trim().toLowerCase();
 		return store.items.filter((i) => {
 			if (kindFilter !== "all" && i.kind !== kindFilter) return false;
 			if (!needle) return true;
@@ -509,11 +484,8 @@ function McpServersPage() {
 		[store.items],
 	);
 
-	function copyText(text: string, title: string) {
-		void navigator.clipboard?.writeText(text).then(
-			() => toast({ title }),
-			() => toast({ title: "Copy failed", variant: "destructive" }),
-		);
+	function handleCopy(text: string, title: string) {
+		copyText(text, title);
 	}
 
 	async function handleUpgrade(item: InstalledMcpEntry) {
@@ -591,9 +563,9 @@ function McpServersPage() {
 					</Label>
 					<Input
 						id="mcp-search"
-						onChange={(e) => setQ(e.target.value)}
+						onChange={(e) => setQInput(e.target.value)}
 						placeholder="Filter by name, package, or URL…"
-						value={q}
+						value={qInput}
 					/>
 				</div>
 				<div className="w-44 space-y-1.5">
@@ -725,7 +697,7 @@ function McpServersPage() {
 										</Button>
 										<Button
 											onClick={() =>
-												copyText(buildMcpJson(item), "Config JSON copied")
+												handleCopy(buildMcpJson(item), "Config JSON copied")
 											}
 											size="sm"
 											type="button"

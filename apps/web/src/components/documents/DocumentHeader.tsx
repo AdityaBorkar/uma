@@ -1,17 +1,18 @@
 import { Link } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 
 import { stateBadgeClass } from "#/components/badges.ts";
-import type { DocumentDraft } from "#/components/documents/useDocumentDraft.ts";
 import type { RenderedDocument } from "#/components/documents.fns.ts";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { kindLabel } from "#/schemas/schema.ts";
+import { type DraftStore, setDraftTitle } from "#/stores/draft.ts";
 
 interface Props {
 	canEdit: boolean;
 	doc: RenderedDocument;
-	draft: DocumentDraft;
+	draftStore: DraftStore;
 	isSaving: boolean;
 	onCancel: () => void;
 	onClose: () => void;
@@ -28,7 +29,7 @@ interface Props {
 export function DocumentHeader({
 	canEdit,
 	doc,
-	draft,
+	draftStore,
 	isSaving,
 	onCancel,
 	onClose,
@@ -41,7 +42,11 @@ export function DocumentHeader({
 	pendingReopen,
 	projectSlug,
 }: Props) {
-	const { state } = draft;
+	const title = useSelector(draftStore, (s) => s.title);
+	const dirty = useSelector(draftStore, (s) => s.dirty);
+	const saveError = useSelector(draftStore, (s) => s.saveError);
+	const notice = useSelector(draftStore, (s) => s.notice);
+	const mode = useSelector(draftStore, (s) => s.mode);
 
 	return (
 		<>
@@ -55,7 +60,7 @@ export function DocumentHeader({
 				</Link>
 				<span className="text-muted-foreground/40">/</span>
 				<span className="text-foreground">#{doc.number}</span>
-				{state.dirty ? (
+				{dirty ? (
 					<span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800 text-xs dark:bg-amber-900/30 dark:text-amber-300">
 						Unsaved
 					</span>
@@ -79,9 +84,9 @@ export function DocumentHeader({
 						{canEdit ? (
 							<Input
 								className="h-auto border-transparent bg-transparent px-0 font-semibold text-xl tracking-tight shadow-none focus-visible:border-input focus-visible:bg-background focus-visible:px-3 focus-visible:ring-0"
-								onChange={(e) => draft.setTitle(e.target.value)}
+								onChange={(e) => setDraftTitle(draftStore, e.target.value)}
 								placeholder="Document title"
-								value={state.title}
+								value={title}
 							/>
 						) : (
 							<h1 className="font-semibold text-xl tracking-tight">
@@ -94,7 +99,7 @@ export function DocumentHeader({
 						{canEdit ? (
 							<>
 								<Button
-									disabled={!state.dirty || isSaving}
+									disabled={!dirty || isSaving}
 									onClick={onSave}
 									size="sm"
 									variant="primary"
@@ -102,7 +107,7 @@ export function DocumentHeader({
 									{isSaving ? "Saving…" : "Save"}
 								</Button>
 								<Button
-									disabled={!state.dirty || isSaving}
+									disabled={!dirty || isSaving}
 									onClick={onCancel}
 									size="sm"
 									variant="ghost"
@@ -143,13 +148,11 @@ export function DocumentHeader({
 					</div>
 				</div>
 
-				{state.saveError ? (
-					<p className="text-destructive text-sm">{state.saveError}</p>
+				{saveError ? (
+					<p className="text-destructive text-sm">{saveError}</p>
 				) : null}
-				{state.notice ? (
-					<p className="text-amber-600 text-xs dark:text-amber-400">
-						{state.notice}
-					</p>
+				{notice ? (
+					<p className="text-amber-600 text-xs dark:text-amber-400">{notice}</p>
 				) : null}
 				{doc.error ? (
 					<div className="rounded-md border border-destructive bg-destructive/5 p-3 text-sm">
@@ -157,7 +160,7 @@ export function DocumentHeader({
 							This document failed to render
 						</p>
 						<p className="text-muted-foreground text-xs">{doc.error}</p>
-						{canEdit && state.mode !== "source" ? (
+						{canEdit && mode !== "source" ? (
 							<Button
 								className="mt-2"
 								onClick={onSwitchSourceMode}
