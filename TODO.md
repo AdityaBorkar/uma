@@ -1,13 +1,27 @@
 # TODO
 
-Add Edit option for all the table items in
+Secrets & Auth
+Env
+
+Rules
+Tools
+Formatters
+LSP Servers
+Custom Tools
+Custom Plugins
+
+---
+
+MCP Server to access
+
+Create Style Guide and Components for the Markdown that is standard across the app.
 
 ---
 
 Reverse Engineer the Tally API to perform thefollowing list of  activities and design a REST API around it
 Create a Electron app for it with optimizations for RAM and Space overall (no tauri due to rust server management)
 
----
+---w
 
 https://hyper.charm.land/v1/
 https://hyper.charm.land/v1/models

@@ -159,12 +159,8 @@ frontmatter; routing does **not** depend on it — Documents are addressed by
 their sequential `number` (`/documents/$number`).
 _Avoid_: url, path
 
-**Comment**:
-Markdown discussion attached to a document (`document_comments`). One `authorId` per comment, `body 1..10_000` chars (Zod-only; DB column is free `text`).
-_Avoid_: reply, note
-
 **Event**:
-An append-only timeline entry on a document (`document_events`): `opened | closed | reopened | labeled | unlabeled | renamed | commented`. Written transactionally with the mutation that caused it. Kinds are convention-only — the DB column is free `text` (no pgEnum/`CHECK`).
+An append-only timeline entry on a document (`document_events`): `opened | closed | reopened | labeled | unlabeled | renamed`. Written transactionally with the mutation that caused it. Kinds are convention-only — the DB column is free `text` (no pgEnum/`CHECK`).
 _Avoid_: activity, log
 
 ### Devices & automation
@@ -176,6 +172,10 @@ _Avoid_: worker, node, runner
 **Agent**:
 A coding agent binary that can run inside a machine sandbox, owned per user in the `agents` registry (`agents.list/get/create/update/remove`). Well-known agents (`opencode | pi | omp`) are seeded on first list; custom binaries are registered by name. A Task pins one via its `agent` column (validated against the well-known names, the registry, or the legacy `cli` default).
 _Avoid_: model, bot
+
+**Prompt Template**:
+A user-owned reusable prompt run as `/name` in the TUI, with `$ARGUMENTS` / `$1..$n`, `!`shell`` and `@file` placeholders plus optional `agent` / `model` / `subtask` overrides. Backed by the `prompt_templates` table (`promptTemplates.list/get/create/update/remove`); no built-ins seeded.
+_Avoid_: command, slash command
 
 **Run**:
 One execution attempt of a Task on a Machine (`task_runs`): opened as a side effect of the atomic claim (`queued → running`, recording agent + machine + sandbox) and closed when the Task finishes. Browser clients read runs (`runs.list/get/stats`); writes are owned by the claim/finish paths so runs never disagree with Task status. Task logs (`tasks.logs.list`) stream per run via the WS `log` frame.

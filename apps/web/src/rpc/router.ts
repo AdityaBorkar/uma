@@ -1,10 +1,10 @@
 import * as agents from "./procedures/agents.ts";
-import * as commands from "./procedures/commands.ts";
 import * as connections from "./procedures/connections.ts";
 import * as device from "./procedures/device.ts";
 import * as documents from "./procedures/documents.ts";
 import * as machines from "./procedures/machines.ts";
 import * as projects from "./procedures/projects.ts";
+import * as promptTemplates from "./procedures/promptTemplates.ts";
 import * as runs from "./procedures/runs.ts";
 import * as signals from "./procedures/signals.ts";
 import * as subagents from "./procedures/subagents.ts";
@@ -12,15 +12,9 @@ import * as tasks from "./procedures/tasks.ts";
 
 export default {
 	agents,
-	commands,
 	connections,
 	device,
-	documents: {
-		...documents,
-		comments: {
-			create: documents.createComment,
-		},
-	},
+	documents,
 	machines: {
 		// apiContract `machines.*` (machine Bearer auth; frozen schemas).
 		checkState: machines.checkState,
@@ -36,6 +30,7 @@ export default {
 		sandboxList: machines.sandboxListProc,
 	},
 	projects,
+	promptTemplates,
 	runs,
 	signals,
 	subagents,

@@ -41,7 +41,7 @@ Main (mx-auto max-w-[1280px] px-4 py-6 sm:px-6)
 
 Nav items are defined in `navItems`
 (`src/routes/(app)/$projectSlug/route.tsx` — 5 items: dashboard/documents/monitor/signals/tasks, no insights/updates/wiki by design) and `settingsNavItems`
-(`src/routes/(app)/settings/route.tsx` — backed: account/analytics/evals/projects/machines/agents/model-providers/version-source; dead/planned with no backing files: skills/mcp/commands/subagents/web-search/browsers/computer-control), and passed to `<AppShell items={…}>`
+(`src/routes/(app)/settings/route.tsx` — backed: account/analytics/evals/projects/machines/agents/prompt-templates/model-providers/version-source; dead/planned with no backing files: skills/mcp/subagents/web-search/browsers/computer-control), and passed to `<AppShell items={…}>`
 (`isSettings` for the settings shell). Scoped items are `/$projectSlug/…` and
 receive `params.projectSlug` from the current scope (or `"~"` for Multi-Project)
 via `currentScope`. `monitor` is a backed route but renders a placeholder

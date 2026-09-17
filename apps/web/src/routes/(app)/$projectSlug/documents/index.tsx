@@ -100,14 +100,7 @@ function DocumentsPage() {
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h1 className="font-semibold text-2xl tracking-tight">Documents</h1>
-					<p className="text-muted-foreground text-sm">
-						Everything is a document — wiki pages, specs, bug reports,
-						changelogs.
-					</p>
-				</div>
+			<div className="flex justify-end">
 				<Button asChild={true} variant="primary">
 					<Link
 						params={{ projectSlug: ws.projectSlug }}

@@ -1,7 +1,7 @@
 /**
  * Server function backing the document detail view. One call returns the raw
  * fields the editor needs, the server-rendered HTML, the project name, and
- * the discussion — the client never sees compiler output or unsanitized
+ * the event timeline — the client never sees compiler output or unsanitized
  * markup, and the page never refetches the same document through a second
  * data path. Same structure as `session.ts`: server imports at module scope
  * are fine — handler bodies are stripped from the client bundle.
@@ -16,10 +16,7 @@ import {
 	splitFrontmatter,
 } from "#/components/mdx.server.ts";
 import { getAuthSession } from "#/lib/auth/server.ts";
-import {
-	getDocumentDiscussion,
-	getOwnedDocument,
-} from "#/lib/documents.server.ts";
+import { getDocumentEvents, getOwnedDocument } from "#/lib/documents.server.ts";
 import { DocumentNumberInput } from "#/schemas/schema.ts";
 
 export interface RenderedDocument {
@@ -45,13 +42,6 @@ export interface LoadedDocument extends RenderedDocument {
 	slug: string;
 }
 
-export interface DocumentComment {
-	authorId: string;
-	body: string;
-	createdAt: string;
-	id: string;
-}
-
 export interface DocumentEvent {
 	actorId: string;
 	createdAt: string;
@@ -61,7 +51,6 @@ export interface DocumentEvent {
 }
 
 export interface DocumentPage {
-	comments: DocumentComment[];
 	document: LoadedDocument;
 	events: DocumentEvent[];
 }
@@ -114,16 +103,12 @@ export const loadDocument = createServerFn({ method: "GET" })
 			data.number,
 			session.user.id,
 		);
-		const [rendered, discussion] = await Promise.all([
+		const [rendered, events] = await Promise.all([
 			renderDocument(doc.body),
-			getDocumentDiscussion(doc.id),
+			getDocumentEvents(doc.id),
 		]);
 
 		return {
-			comments: discussion.comments.map((comment) => ({
-				...comment,
-				createdAt: comment.createdAt.toISOString(),
-			})),
 			document: {
 				body: doc.body,
 				closedAt: doc.closedAt?.toISOString() ?? null,
@@ -142,7 +127,7 @@ export const loadDocument = createServerFn({ method: "GET" })
 				title: doc.title,
 				updatedAt: doc.updatedAt.toISOString(),
 			},
-			events: discussion.events.map((event) => ({
+			events: events.map((event) => ({
 				...event,
 				createdAt: event.createdAt.toISOString(),
 				payload: toJson(event.payload) as Record<string, FrontmatterValue>,

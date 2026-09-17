@@ -1,18 +1,14 @@
 /**
  * Shared server-side document access. oRPC procedures and TanStack server
  * functions (`src/components/documents.fns.ts`) both go through here so
- * ownership checks, project-name joins, and discussion queries exist once.
+ * ownership checks, project-name joins, and event queries exist once.
  */
 
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "#/lib/db.ts";
-import {
-	documentComments,
-	documentEvents,
-	documents,
-} from "#/schemas/db/documents.ts";
+import { documentEvents, documents } from "#/schemas/db/documents.ts";
 import { projects } from "#/schemas/db/projects.ts";
 
 export interface OwnedDocument {
@@ -36,29 +32,16 @@ export async function getOwnedDocument(
 	return row;
 }
 
-export async function getDocumentDiscussion(documentId: string) {
-	const [comments, events] = await Promise.all([
-		db
-			.select({
-				authorId: documentComments.authorId,
-				body: documentComments.body,
-				createdAt: documentComments.createdAt,
-				id: documentComments.id,
-			})
-			.from(documentComments)
-			.where(eq(documentComments.documentId, documentId))
-			.orderBy(desc(documentComments.createdAt)),
-		db
-			.select({
-				actorId: documentEvents.actorId,
-				createdAt: documentEvents.createdAt,
-				id: documentEvents.id,
-				kind: documentEvents.kind,
-				payload: documentEvents.payload,
-			})
-			.from(documentEvents)
-			.where(eq(documentEvents.documentId, documentId))
-			.orderBy(desc(documentEvents.createdAt)),
-	]);
-	return { comments, events };
+export async function getDocumentEvents(documentId: string) {
+	return db
+		.select({
+			actorId: documentEvents.actorId,
+			createdAt: documentEvents.createdAt,
+			id: documentEvents.id,
+			kind: documentEvents.kind,
+			payload: documentEvents.payload,
+		})
+		.from(documentEvents)
+		.where(eq(documentEvents.documentId, documentId))
+		.orderBy(desc(documentEvents.createdAt));
 }

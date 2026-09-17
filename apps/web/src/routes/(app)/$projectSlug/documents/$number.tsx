@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import posthog from "posthog-js";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import { DocumentComments } from "#/components/documents/DocumentComments.tsx";
 import { DocumentEditorSection } from "#/components/documents/DocumentEditorSection.tsx";
 import { DocumentFieldsSidebar } from "#/components/documents/DocumentFieldsSidebar.tsx";
 import { DocumentHeader } from "#/components/documents/DocumentHeader.tsx";
@@ -27,7 +26,7 @@ export const Route = createFileRoute("/(app)/$projectSlug/documents/$number")({
 		meta: [
 			{ title: "Document — Planner" },
 			{
-				content: "View and edit a document with comments and history.",
+				content: "View and edit a document with history.",
 				name: "description",
 			},
 		],
@@ -41,7 +40,6 @@ function DocumentDetailPage() {
 	const navigate = useNavigate();
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
-	const [commentText, setCommentText] = useState("");
 	const draft = useDocumentDraft();
 	const { state, hydrate, setSaveError, clearDirty } = draft;
 
@@ -110,23 +108,6 @@ function DocumentDetailPage() {
 				void navigate({
 					params: { projectSlug },
 					to: "/$projectSlug/documents",
-				});
-			},
-		}),
-	);
-	const commentMut = useMutation(
-		rpc.documents.comments.create.mutationOptions({
-			onError: (e: unknown) =>
-				toast({
-					description: String(e),
-					title: "Error",
-					variant: "destructive",
-				}),
-			onSuccess: () => {
-				setCommentText("");
-				posthog.capture("comment_added");
-				void queryClient.invalidateQueries({
-					queryKey: ["document", docNumber],
 				});
 			},
 		}),
@@ -221,31 +202,20 @@ function DocumentDetailPage() {
 						isClosed={isClosed}
 						rawNumber={doc.number}
 					/>
-
-					<DocumentComments
-						comments={pageQuery.data.comments}
-						commentText={commentText}
-						isClosed={isClosed}
-						onChange={setCommentText}
-						onSubmit={() =>
-							commentMut.mutate({
-								body: commentText.trim(),
-								documentNumber: docNumber,
-							})
-						}
-						pending={commentMut.isPending}
-					/>
 				</div>
 
 				<aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
 					<DocumentFieldsSidebar
 						canEdit={canEdit}
+						createdAt={doc.createdAt}
 						draft={draft}
 						isSaving={updateMut.isPending}
 						kind={doc.kind}
 						onReset={resetToRaw}
 						onSave={handleSave}
+						projectId={doc.projectId}
 						projectName={doc.projectName}
+						updatedAt={doc.updatedAt}
 					/>
 
 					<DocumentTimeline

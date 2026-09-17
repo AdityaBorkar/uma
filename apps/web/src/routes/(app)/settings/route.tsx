@@ -34,7 +34,11 @@ const settingsNavItems = [
 	{ icon: BotMessageSquare, label: "Agents", to: "/settings/agents" },
 	{ icon: FileCode, label: "Skills", to: "/settings/skills" },
 	{ icon: HardDrive, label: "MCP Servers", to: "/settings/mcp-servers" },
-	{ icon: FileSymlink, label: "Commands", to: "/settings/commands" },
+	{
+		icon: FileSymlink,
+		label: "Prompt Templates",
+		to: "/settings/prompt-templates",
+	},
 	{ icon: FileSliders, label: "Subagents", to: "/settings/subagents" },
 	{ icon: Sparkle, label: "Model Providers", to: "/settings/model-providers" },
 	{ id: "providers-integrations", type: "divider" },

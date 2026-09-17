@@ -6,7 +6,6 @@ import type { RenderedDocument } from "#/components/documents.fns.ts";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Input } from "#/components/ui/input.tsx";
-import { formatAgo } from "#/lib/age.ts";
 import { kindLabel } from "#/schemas/schema.ts";
 
 interface Props {
@@ -43,9 +42,6 @@ export function DocumentHeader({
 	projectSlug,
 }: Props) {
 	const { state } = draft;
-	const projectLabel = doc.projectId
-		? ` · ${doc.projectName ?? doc.projectId} (locked)`
-		: "";
 
 	return (
 		<>
@@ -95,11 +91,6 @@ export function DocumentHeader({
 								{doc.title}
 							</h1>
 						)}
-						<p className="text-muted-foreground text-xs">
-							opened {formatAgo(doc.createdAt)} · updated{" "}
-							{formatAgo(doc.updatedAt)}
-							{projectLabel} ·{kindLabel(doc.kind)} locked
-						</p>
 					</div>
 
 					<div className="flex shrink-0 flex-wrap items-center gap-2">

@@ -18,26 +18,10 @@ export const relations = defineRelations(schema, (r) => ({
 			to: r.user.id,
 		}),
 	},
-	commands: {
-		owner: r.one.user({
-			from: r.commands.userId,
-			to: r.user.id,
-		}),
-	},
 	connections: {
 		owner: r.one.user({
 			from: r.connections.userId,
 			to: r.user.id,
-		}),
-	},
-	documentComments: {
-		author: r.one.user({
-			from: r.documentComments.authorId,
-			to: r.user.id,
-		}),
-		document: r.one.documents({
-			from: r.documentComments.documentId,
-			to: r.documents.id,
 		}),
 	},
 	documentCounters: {
@@ -60,10 +44,6 @@ export const relations = defineRelations(schema, (r) => ({
 		author: r.one.user({
 			from: r.documents.createdBy,
 			to: r.user.id,
-		}),
-		comments: r.many.documentComments({
-			from: r.documents.id,
-			to: r.documentComments.documentId,
 		}),
 		events: r.many.documentEvents({
 			from: r.documents.id,
@@ -154,6 +134,12 @@ export const relations = defineRelations(schema, (r) => ({
 		tasks: r.many.tasks({
 			from: r.projects.id,
 			to: r.tasks.projectId,
+		}),
+	},
+	promptTemplates: {
+		owner: r.one.user({
+			from: r.promptTemplates.userId,
+			to: r.user.id,
 		}),
 	},
 	signals: {

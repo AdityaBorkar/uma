@@ -13,14 +13,12 @@ import {
 	uniqueDocumentSlug,
 } from "#/rpc/scope.ts";
 import {
-	documentComments,
 	documentCounters,
 	documentEvents,
 	documents,
 } from "#/schemas/db/documents.ts";
 import { projects } from "#/schemas/db/projects.ts";
 import {
-	CommentCreateInput,
 	DocumentCreateInput,
 	DocumentListInput,
 	DocumentNumberInput,
@@ -403,34 +401,4 @@ export const remove = os
 		}
 		await db.delete(documents).where(eq(documents.id, existing.id));
 		return { ok: true };
-	});
-
-export const createComment = os
-	.input(CommentCreateInput)
-	.handler(async ({ input, context }) => {
-		const ctx = context as RpcContext;
-		const user = await requireUser(ctx.headers);
-		const { doc } = await getOwnedDocument(input.documentNumber, user.id);
-		return db.transaction(async (tx) => {
-			const [row] = await tx
-				.insert(documentComments)
-				.values({
-					authorId: user.id,
-					body: input.body,
-					documentId: doc.id,
-					id: crypto.randomUUID(),
-				})
-				.returning();
-			if (!row) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-			await tx.insert(documentEvents).values({
-				actorId: user.id,
-				documentId: doc.id,
-				id: crypto.randomUUID(),
-				kind: "commented",
-				payload: {},
-			});
-			return row;
-		});
 	});

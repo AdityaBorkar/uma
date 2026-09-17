@@ -5,28 +5,38 @@ import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
 import { Separator } from "#/components/ui/separator.tsx";
+import { formatAgo } from "#/lib/age.ts";
 import { kindLabel } from "#/schemas/schema.ts";
 
 interface Props {
 	canEdit: boolean;
+	createdAt: string;
 	draft: DocumentDraft;
 	isSaving: boolean;
 	kind: string;
 	onReset: () => void;
 	onSave: () => void;
+	projectId: string | null;
 	projectName: string | null;
+	updatedAt: string;
 }
 
 export function DocumentFieldsSidebar({
 	canEdit,
+	createdAt,
 	draft,
 	isSaving,
 	kind,
 	onReset,
 	onSave,
+	projectId,
 	projectName,
+	updatedAt,
 }: Props) {
 	const { state } = draft;
+	const projectLabel = projectId
+		? ` · ${projectName ?? projectId} (locked)`
+		: "";
 	return (
 		<Card>
 			<CardContent className="space-y-4 p-4">
@@ -109,6 +119,12 @@ export function DocumentFieldsSidebar({
 				{state.saveError ? (
 					<p className="text-destructive text-xs">{state.saveError}</p>
 				) : null}
+
+				<Separator />
+				<p className="text-muted-foreground text-xs">
+					opened {formatAgo(createdAt)} · updated {formatAgo(updatedAt)}
+					{projectLabel} · {kindLabel(kind)} locked
+				</p>
 			</CardContent>
 		</Card>
 	);

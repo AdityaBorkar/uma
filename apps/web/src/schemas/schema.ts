@@ -298,11 +298,6 @@ export const DocumentNumberInput = z.object({
 	number: z.number().int().positive(),
 });
 
-export const CommentCreateInput = z.object({
-	body: z.string().min(1).max(10_000),
-	documentNumber: z.number().int().positive(),
-});
-
 // --- Coding agents & task runs (mirrors @uma/orpc-contract, which is
 // canonical for the wire; this file stays dependency-free for the browser) ---
 
@@ -438,11 +433,11 @@ export const SubagentListInput = z
 	.optional();
 export type SubagentListInput = z.infer<typeof SubagentListInput>;
 
-// --- Commands (OpenCode-style slash commands `/name`; distinct from the
-// `subagents` assistants above. Template is the prompt sent to the LLM;
+// --- Prompt templates (OpenCode-style slash commands `/name`; distinct from
+// the `subagents` assistants above. Template is the prompt sent to the LLM;
 // description/agent/model/subtask are optional overrides) ---
 
-export const CommandNameSchema = z
+export const PromptTemplateNameSchema = z
 	.string()
 	.min(1, "Must be at least 1 character")
 	.max(64, "Max 64 characters")
@@ -451,36 +446,40 @@ export const CommandNameSchema = z
 		"Lowercase slug (letters, digits, dashes)",
 	);
 
-export const CommandCreateInput = z.object({
+export const PromptTemplateCreateInput = z.object({
 	agent: z.string().max(64, "Max 64 characters").optional(),
 	description: z.string().max(500, "Max 500 characters").optional(),
 	model: z.string().max(200, "Max 200 characters").optional(),
-	name: CommandNameSchema,
+	name: PromptTemplateNameSchema,
 	subtask: z.boolean().optional(),
 	template: z
 		.string()
 		.min(1, "Template is required")
 		.max(20_000, "Max 20000 characters"),
 });
-export type CommandCreateInput = z.infer<typeof CommandCreateInput>;
+export type PromptTemplateCreateInput = z.infer<
+	typeof PromptTemplateCreateInput
+>;
 
-export const CommandUpdateInput = z.object({
+export const PromptTemplateUpdateInput = z.object({
 	agent: z.string().max(64).nullable().optional(),
 	description: z.string().max(500).optional(),
 	id: z.string(),
 	model: z.string().max(200).nullable().optional(),
-	name: CommandNameSchema.optional(),
+	name: PromptTemplateNameSchema.optional(),
 	subtask: z.boolean().optional(),
 	template: z.string().min(1).max(20_000).optional(),
 });
-export type CommandUpdateInput = z.infer<typeof CommandUpdateInput>;
+export type PromptTemplateUpdateInput = z.infer<
+	typeof PromptTemplateUpdateInput
+>;
 
-export const CommandListInput = z
+export const PromptTemplateListInput = z
 	.object({
 		q: z.string().optional(),
 	})
 	.optional();
-export type CommandListInput = z.infer<typeof CommandListInput>;
+export type PromptTemplateListInput = z.infer<typeof PromptTemplateListInput>;
 
 export const RUN_STATUS_VALUES = [
 	"running",

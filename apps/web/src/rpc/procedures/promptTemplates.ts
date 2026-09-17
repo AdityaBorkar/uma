@@ -4,31 +4,31 @@ import { z } from "zod";
 
 import { db } from "#/lib/db.ts";
 import { type RpcContext, requireUser } from "#/rpc/auth.ts";
-import { commands } from "#/schemas/db/commands.ts";
+import { promptTemplates } from "#/schemas/db/prompt_templates.ts";
 import {
-	CommandCreateInput,
-	CommandListInput,
-	CommandUpdateInput,
+	PromptTemplateCreateInput,
+	PromptTemplateListInput,
+	PromptTemplateUpdateInput,
 } from "#/schemas/schema.ts";
 
-/** User-owned OpenCode-style slash commands (`/name`). No built-ins seeded. */
+/** User-owned prompt templates (OpenCode-style slash commands `/name`). No built-ins seeded. */
 
 export const list = os
-	.input(CommandListInput)
+	.input(PromptTemplateListInput)
 	.handler(async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const q = input?.q?.trim();
 		return db
 			.select()
-			.from(commands)
+			.from(promptTemplates)
 			.where(
 				and(
-					eq(commands.userId, user.id),
-					q ? ilike(commands.name, `%${q}%`) : undefined,
+					eq(promptTemplates.userId, user.id),
+					q ? ilike(promptTemplates.name, `%${q}%`) : undefined,
 				),
 			)
-			.orderBy(commands.name);
+			.orderBy(promptTemplates.name);
 	});
 
 export const get = os
@@ -38,33 +38,45 @@ export const get = os
 		const user = await requireUser(ctx.headers);
 		const [row] = await db
 			.select()
-			.from(commands)
-			.where(and(eq(commands.id, input.id), eq(commands.userId, user.id)))
+			.from(promptTemplates)
+			.where(
+				and(
+					eq(promptTemplates.id, input.id),
+					eq(promptTemplates.userId, user.id),
+				),
+			)
 			.limit(1);
 		if (!row) {
-			throw new ORPCError("NOT_FOUND", { message: "Command not found" });
+			throw new ORPCError("NOT_FOUND", {
+				message: "Prompt template not found",
+			});
 		}
 		return row;
 	});
 
 export const create = os
-	.input(CommandCreateInput)
+	.input(PromptTemplateCreateInput)
 	.handler(async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const name = input.name.trim().toLowerCase();
 		const [existing] = await db
-			.select({ id: commands.id })
-			.from(commands)
-			.where(and(eq(commands.userId, user.id), eq(commands.name, name)))
+			.select({ id: promptTemplates.id })
+			.from(promptTemplates)
+			.where(
+				and(
+					eq(promptTemplates.userId, user.id),
+					eq(promptTemplates.name, name),
+				),
+			)
 			.limit(1);
 		if (existing) {
 			throw new ORPCError("CONFLICT", {
-				message: "A command with this name exists",
+				message: "A prompt template with this name exists",
 			});
 		}
 		const [row] = await db
-			.insert(commands)
+			.insert(promptTemplates)
 			.values({
 				agent: input.agent?.trim() ? input.agent.trim() : null,
 				description: input.description?.trim() ?? "",
@@ -83,30 +95,42 @@ export const create = os
 	});
 
 export const update = os
-	.input(CommandUpdateInput)
+	.input(PromptTemplateUpdateInput)
 	.handler(async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const [existing] = await db
 			.select()
-			.from(commands)
-			.where(and(eq(commands.id, input.id), eq(commands.userId, user.id)))
+			.from(promptTemplates)
+			.where(
+				and(
+					eq(promptTemplates.id, input.id),
+					eq(promptTemplates.userId, user.id),
+				),
+			)
 			.limit(1);
 		if (!existing) {
-			throw new ORPCError("NOT_FOUND", { message: "Command not found" });
+			throw new ORPCError("NOT_FOUND", {
+				message: "Prompt template not found",
+			});
 		}
-		const patch: Partial<typeof commands.$inferInsert> = {};
+		const patch: Partial<typeof promptTemplates.$inferInsert> = {};
 		if (input.name !== undefined) {
 			const name = input.name.trim().toLowerCase();
 			if (name !== existing.name) {
 				const [taken] = await db
-					.select({ id: commands.id })
-					.from(commands)
-					.where(and(eq(commands.userId, user.id), eq(commands.name, name)))
+					.select({ id: promptTemplates.id })
+					.from(promptTemplates)
+					.where(
+						and(
+							eq(promptTemplates.userId, user.id),
+							eq(promptTemplates.name, name),
+						),
+					)
 					.limit(1);
 				if (taken) {
 					throw new ORPCError("CONFLICT", {
-						message: "A command with this name exists",
+						message: "A prompt template with this name exists",
 					});
 				}
 				patch.name = name;
@@ -122,12 +146,14 @@ export const update = os
 		if (input.subtask !== undefined) patch.subtask = input.subtask;
 		if (Object.keys(patch).length === 0) return existing;
 		const [updated] = await db
-			.update(commands)
+			.update(promptTemplates)
 			.set({ ...patch, updatedAt: new Date() })
-			.where(eq(commands.id, input.id))
+			.where(eq(promptTemplates.id, input.id))
 			.returning();
 		if (!updated) {
-			throw new ORPCError("NOT_FOUND", { message: "Command not found" });
+			throw new ORPCError("NOT_FOUND", {
+				message: "Prompt template not found",
+			});
 		}
 		return updated;
 	});
@@ -138,13 +164,20 @@ export const remove = os
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const [existing] = await db
-			.select({ id: commands.id })
-			.from(commands)
-			.where(and(eq(commands.id, input.id), eq(commands.userId, user.id)))
+			.select({ id: promptTemplates.id })
+			.from(promptTemplates)
+			.where(
+				and(
+					eq(promptTemplates.id, input.id),
+					eq(promptTemplates.userId, user.id),
+				),
+			)
 			.limit(1);
 		if (!existing) {
-			throw new ORPCError("NOT_FOUND", { message: "Command not found" });
+			throw new ORPCError("NOT_FOUND", {
+				message: "Prompt template not found",
+			});
 		}
-		await db.delete(commands).where(eq(commands.id, input.id));
+		await db.delete(promptTemplates).where(eq(promptTemplates.id, input.id));
 		return { ok: true as const };
 	});

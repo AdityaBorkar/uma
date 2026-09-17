@@ -45,7 +45,7 @@ export const documentCounters = pgTable("document_counters", {
 /**
  * Documents: the single content primitive (docs/adr/004-documents-single-primitive.md + docs/CONTEXT.md).
  * Everything a user writes is a Document — a GitHub-issue-like record
- * (number, open/closed state, labels, comments, events) whose body is MDX
+ * (number, open/closed state, labels, events) whose body is MDX
  * with frontmatter. `body` stores the complete MDX source including its
  * frontmatter block; common frontmatter fields are mirrored into real
  * columns so every kind is uniformly queryable, kind-specific extras live
@@ -93,28 +93,8 @@ export const documents = pgTable(
 );
 
 /**
- * Comments on a document (GitHub-style discussion). Markdown body, v1 is
- * single-author but the table already carries authorId for later phases.
- */
-export const documentComments = pgTable(
-	"document_comments",
-	{
-		authorId: text("author_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		body: text("body").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		documentId: text("document_id")
-			.notNull()
-			.references(() => documents.id, { onDelete: "cascade" }),
-		id: text("id").primaryKey(),
-	},
-	(table) => [index("document_comments_document_idx").on(table.documentId)],
-);
-
-/**
  * Append-only event timeline: opened | closed | reopened | labeled |
- * unlabeled | renamed | commented. Written in the same transaction as the
+ * unlabeled | renamed. Written in the same transaction as the
  * mutation that caused it (SOW §6/D2 acceptance).
  */
 export const documentEvents = pgTable(
