@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useId, useState } from "react";
 
 import { DocStateBadge } from "#/components/data/StatusBadge.tsx";
 import { NewDocumentDialog } from "#/components/documents/NewDocumentDialog.tsx";
@@ -28,6 +29,7 @@ import {
 } from "#/components/ui/table.tsx";
 import { useWorkspace } from "#/components/workspace.tsx";
 import { formatAgo } from "#/lib/age.ts";
+import { useHoverCapable } from "#/lib/hooks/use-hover-capable.ts";
 import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
 import { cn } from "#/lib/utils.ts";
@@ -55,6 +57,16 @@ const DOCUMENT_GROUPS: Array<{
 	{ label: "Specification", value: "spec" },
 	{ label: "Bug Reports", value: "bug_report" },
 ];
+
+// Settle without overshoot: the group rail scrolls on small screens, so even
+// a small overshoot would flash a transient scrollbar (same spring as
+// motion/tabs.tsx and layout/UnderlineNav.tsx).
+const GROUP_TRANSITION = {
+	damping: 30,
+	mass: 1.2,
+	stiffness: 170,
+	type: "spring",
+} as const;
 
 export const Route = createFileRoute("/(app)/$projectSlug/documents/")({
 	component: DocumentsPage,
@@ -86,6 +98,16 @@ function DocumentsPage() {
 	const search = Route.useSearch();
 	const [showFilters, setShowFilters] = useState(false);
 	const [createOpen, setCreateOpen] = useState(false);
+	// Group rail hover language
+	// (beui.dev/components/motion/shared-layout-bg): a muted wash glides
+	// between hovered groups on its own layoutId while the active surface
+	// keeps gliding on the primary one. Touch taps fire phantom `:hover`
+	// that sticks, so the hover pill only tracks where a true hover exists.
+	const groupActiveId = useId();
+	const groupHoverId = useId();
+	const reduce = useReducedMotion();
+	const canHover = useHoverCapable();
+	const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
 
 	function setSearch(patch: Partial<DocumentsSearch>) {
 		void navigate({
@@ -135,7 +157,11 @@ function DocumentsPage() {
 						<div className="border-b bg-muted/50 px-4 py-2 font-semibold text-muted-foreground text-xs">
 							Groups
 						</div>
-						<ul className="flex flex-row gap-1 overflow-x-auto p-2 scrollbar-none lg:flex-col">
+						<motion.ul
+							className="flex flex-row gap-1 overflow-x-auto p-2 scrollbar-none lg:flex-col"
+							layoutRoot
+							onMouseLeave={() => setHoveredGroup(null)}
+						>
 							{DOCUMENT_GROUPS.map((group) => {
 								const active = search.kind === group.value;
 								return (
@@ -143,20 +169,72 @@ function DocumentsPage() {
 										<button
 											aria-current={active ? "page" : undefined}
 											className={cn(
-												"w-auto whitespace-nowrap rounded-md px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 lg:w-full",
+												"relative w-auto whitespace-nowrap rounded-md px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 lg:w-full",
 												active
-													? "bg-muted font-semibold text-foreground"
-													: "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+													? "font-semibold text-foreground"
+													: "text-muted-foreground hover:text-foreground",
 											)}
+											onBlur={() =>
+												setHoveredGroup((cur) =>
+													cur === group.label ? null : cur,
+												)
+											}
 											onClick={() => setSearch({ kind: group.value })}
+											onFocus={() => setHoveredGroup(group.label)}
+											onMouseEnter={() => setHoveredGroup(group.label)}
+											onMouseLeave={() =>
+												setHoveredGroup((cur) =>
+													cur === group.label ? null : cur,
+												)
+											}
 											type="button"
 										>
-											{group.label}
+											{active ? (
+												<motion.span
+													aria-hidden={true}
+													className="absolute inset-0 rounded-md bg-muted"
+													layout="position"
+													layoutId={groupActiveId}
+													transition={
+														reduce ? { duration: 0 } : GROUP_TRANSITION
+													}
+												/>
+											) : null}
+											<AnimatePresence>
+												{canHover && !active && hoveredGroup === group.label ? (
+													<motion.span
+														animate={
+															reduce
+																? { opacity: 1 }
+																: { filter: "blur(0px)", opacity: 1 }
+														}
+														aria-hidden={true}
+														className="absolute inset-0 rounded-md bg-muted/50"
+														exit={
+															reduce
+																? { opacity: 0 }
+																: { filter: "blur(4px)", opacity: 0 }
+														}
+														initial={
+															reduce
+																? { opacity: 0 }
+																: { filter: "blur(4px)", opacity: 0 }
+														}
+														key="group-hover"
+														layout="position"
+														layoutId={groupHoverId}
+														transition={
+															reduce ? { duration: 0 } : GROUP_TRANSITION
+														}
+													/>
+												) : null}
+											</AnimatePresence>
+											<span className="relative">{group.label}</span>
 										</button>
 									</li>
 								);
 							})}
-						</ul>
+						</motion.ul>
 					</Card>
 				</nav>
 

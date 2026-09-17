@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "motion/react";
-import { useId } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useId, useState } from "react";
+
+import { useHoverCapable } from "#/lib/hooks/use-hover-capable.ts";
 
 export interface NavLinkItem {
 	icon?: React.ComponentType<{ className?: string }>;
@@ -37,7 +39,12 @@ export function UnderlineNav({
 	items: readonly NavItem[];
 }) {
 	const underlineId = useId();
+	const hoverUnderlineId = useId();
 	const reduce = useReducedMotion();
+	// Touch taps fire phantom `:hover` that sticks — only track the gliding
+	// hover underline where a true hover exists.
+	const canHover = useHoverCapable();
+	const [hovered, setHovered] = useState<string | null>(null);
 	return (
 		<nav
 			aria-label="Primary"
@@ -48,6 +55,7 @@ export function UnderlineNav({
 			<motion.div
 				className="mx-auto flex max-w-320 items-center gap-1 overflow-x-auto px-2 scrollbar-none sm:px-6"
 				layoutRoot
+				onMouseLeave={() => setHovered(null)}
 			>
 				{items.map((item) => {
 					if (isNavDivider(item)) {
@@ -68,6 +76,12 @@ export function UnderlineNav({
 							}}
 							className="relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-3 text-muted-foreground text-sm outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
 							key={item.to}
+							onBlur={() => setHovered((cur) => (cur === item.to ? null : cur))}
+							onFocus={() => setHovered(item.to)}
+							onMouseEnter={() => setHovered(item.to)}
+							onMouseLeave={() =>
+								setHovered((cur) => (cur === item.to ? null : cur))
+							}
 							to={item.to}
 							{...(isScoped && currentScope
 								? { params: { projectSlug: currentScope } }
@@ -91,6 +105,27 @@ export function UnderlineNav({
 											}
 										/>
 									) : null}
+									{/* Hover language (beui.dev/components/motion/shared-layout-bg):
+									    a muted underline glides between hovered tabs on
+									    its own layoutId — opacity-only, so it stays
+									    quiet next to the white active bar. */}
+									<AnimatePresence>
+										{canHover && !isActive && hovered === item.to ? (
+											<motion.span
+												animate={{ opacity: 1 }}
+												aria-hidden={true}
+												className="absolute inset-x-0 bottom-0 h-0.5 bg-border"
+												exit={{ opacity: 0 }}
+												initial={{ opacity: 0 }}
+												key="nav-hover"
+												layout="position"
+												layoutId={hoverUnderlineId}
+												transition={
+													reduce ? { duration: 0 } : UNDERLINE_TRANSITION
+												}
+											/>
+										) : null}
+									</AnimatePresence>
 								</>
 							)}
 						</Link>

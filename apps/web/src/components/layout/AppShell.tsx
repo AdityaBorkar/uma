@@ -12,6 +12,7 @@ import { useOptionalWorkspace } from "#/components/workspace.tsx";
 import { rpc } from "#/lib/rpc.ts";
 import { invalidateProjects } from "#/stores/invalidation.ts";
 import { hydrateScopeStore, lastScopeStore } from "#/stores/scope.ts";
+import { hydrateSidebarStore } from "#/stores/sidebar.ts";
 import { AppSidebar } from "./AppSidebar.tsx";
 import { SCOPE_VALUE } from "./scope.ts";
 import { type NavItem, UnderlineNav } from "./UnderlineNav.tsx";
@@ -97,6 +98,7 @@ export function AppShell({
 
 	useEffect(() => {
 		hydrateScopeStore();
+		hydrateSidebarStore();
 	}, []);
 
 	const currentScope =

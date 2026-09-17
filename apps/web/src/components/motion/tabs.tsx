@@ -1,7 +1,11 @@
 "use client";
 // beui.dev/components/motion/tabs
+// Hover language: beui.dev/components/motion/shared-layout-bg — a second,
+// subtle pill/underline glides between hovered triggers on its own layoutId
+// while the active indicator keeps gliding on the primary one.
 
 import {
+	AnimatePresence,
 	MotionConfig,
 	motion,
 	type Transition,
@@ -9,7 +13,9 @@ import {
 } from "motion/react";
 import {
 	createContext,
+	type Dispatch,
 	type ReactNode,
+	type SetStateAction,
 	useCallback,
 	useContext,
 	useId,
@@ -18,6 +24,7 @@ import {
 } from "react";
 
 import { EASE_OUT } from "#/lib/ease.ts";
+import { useHoverCapable } from "#/lib/hooks/use-hover-capable.ts";
 import { cn } from "#/lib/utils.ts";
 
 type Variant = "pill" | "underline" | "segment";
@@ -26,6 +33,10 @@ type Ctx = {
 	value: string;
 	setValue: (v: string) => void;
 	layoutId: string;
+	hoverLayoutId: string;
+	hovered: string | null;
+	setHovered: Dispatch<SetStateAction<string | null>>;
+	canHover: boolean;
 	variant: Variant;
 };
 
@@ -63,7 +74,13 @@ export function Tabs({
 }) {
 	const [internal, setInternal] = useState(defaultValue ?? "");
 	const layoutId = useId();
+	const hoverLayoutId = useId();
+	const [hovered, setHovered] = useState<string | null>(null);
 	const reduce = useReducedMotion();
+	// Touch taps fire phantom `:hover` that sticks — only track the gliding
+	// hover pill where a true hover exists. The pill stays unrendered on
+	// touch, so no `setHovered` update there ever paints.
+	const canHover = useHoverCapable();
 	const controlled = value !== undefined;
 	const current = controlled ? value : internal;
 	const setValue = useCallback(
@@ -74,8 +91,17 @@ export function Tabs({
 		[controlled, onValueChange],
 	);
 	const contextValue = useMemo(
-		() => ({ layoutId, setValue, value: current, variant }),
-		[current, layoutId, setValue, variant],
+		() => ({
+			canHover,
+			hovered,
+			hoverLayoutId,
+			layoutId,
+			setHovered,
+			setValue,
+			value: current,
+			variant,
+		}),
+		[canHover, current, hoverLayoutId, hovered, layoutId, setValue, variant],
 	);
 	return (
 		<MotionConfig transition={reduce ? { duration: 0 } : transition}>
@@ -105,9 +131,13 @@ export function TabsList({
 	children: ReactNode;
 	className?: string;
 }) {
-	const { variant } = useTabs();
+	const { variant, setHovered } = useTabs();
 	return (
-		<div className={cn(listClasses[variant], className)} role="tablist">
+		<div
+			className={cn(listClasses[variant], className)}
+			onMouseLeave={() => setHovered(null)}
+			role="tablist"
+		>
 			{children}
 		</div>
 	);
@@ -124,8 +154,21 @@ export function TabsTrigger({
 	className?: string;
 	indicatorClassName?: string;
 }) {
-	const { value: current, setValue, layoutId, variant } = useTabs();
+	const {
+		value: current,
+		setValue,
+		layoutId,
+		hoverLayoutId,
+		hovered,
+		setHovered,
+		canHover,
+		variant,
+	} = useTabs();
 	const active = current === value;
+	// The hover pill only ever decorates an inactive trigger — the active
+	// indicator already owns that surface.
+	const showHover = canHover && !active && hovered === value;
+	const clearHover = () => setHovered((cur) => (cur === value ? null : cur));
 
 	if (variant === "underline") {
 		return (
@@ -138,7 +181,11 @@ export function TabsTrigger({
 						: "text-muted-foreground hover:text-foreground",
 					className,
 				)}
+				onBlur={clearHover}
 				onClick={() => setValue(value)}
+				onFocus={() => setHovered(value)}
+				onMouseEnter={() => setHovered(value)}
+				onMouseLeave={clearHover}
 				role="tab"
 				type="button"
 			>
@@ -153,6 +200,23 @@ export function TabsTrigger({
 						layoutId={layoutId}
 					/>
 				) : null}
+				{/* Hover language: a muted underline glides between hovered tabs
+				    on its own layoutId — opacity-only, so it stays quiet next
+				    to the white active bar. */}
+				<AnimatePresence>
+					{showHover ? (
+						<motion.span
+							animate={{ opacity: 1 }}
+							aria-hidden={true}
+							className="absolute -bottom-px left-0 right-0 h-px bg-border"
+							exit={{ opacity: 0 }}
+							initial={{ opacity: 0 }}
+							key="tab-hover"
+							layout="position"
+							layoutId={hoverLayoutId}
+						/>
+					) : null}
+				</AnimatePresence>
 			</button>
 		);
 	}
@@ -173,6 +237,14 @@ export function TabsTrigger({
 					style={{ borderRadius: variant === "pill" ? 9999 : 8 }}
 				/>
 			) : null}
+			{/* Hover language: a muted wash glides between hovered triggers on
+			    its own layoutId, fading + de-blurring in (opacity-only under
+			    reduced motion). */}
+			<AnimatePresence>
+				{showHover ? (
+					<HoverPill key="tab-hover" layoutId={hoverLayoutId} radius={radius} />
+				) : null}
+			</AnimatePresence>
 			<button
 				aria-selected={active}
 				className={cn(
@@ -184,13 +256,33 @@ export function TabsTrigger({
 					radius,
 					className,
 				)}
+				onBlur={clearHover}
 				onClick={() => setValue(value)}
+				onFocus={() => setHovered(value)}
+				onMouseEnter={() => setHovered(value)}
+				onMouseLeave={clearHover}
 				role="tab"
 				type="button"
 			>
 				{children}
 			</button>
 		</div>
+	);
+}
+
+/** Shared-layout hover wash for pill/segment triggers (see `TabsTrigger`). */
+function HoverPill({ layoutId, radius }: { layoutId: string; radius: string }) {
+	const reduce = useReducedMotion();
+	return (
+		<motion.span
+			animate={reduce ? { opacity: 1 } : { filter: "blur(0px)", opacity: 1 }}
+			aria-hidden={true}
+			className={cn("absolute inset-0 bg-muted", radius)}
+			exit={reduce ? { opacity: 0 } : { filter: "blur(4px)", opacity: 0 }}
+			initial={reduce ? { opacity: 0 } : { filter: "blur(4px)", opacity: 0 }}
+			layout="position"
+			layoutId={layoutId}
+		/>
 	);
 }
 

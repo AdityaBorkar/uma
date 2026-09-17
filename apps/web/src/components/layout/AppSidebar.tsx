@@ -1,16 +1,28 @@
-import { Select } from "@base-ui/react/select";
 import { Link } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import { motion, useReducedMotion } from "motion/react";
-import { useId } from "react";
+import type {
+	KeyboardEvent as ReactKeyboardEvent,
+	PointerEvent as ReactPointerEvent,
+} from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
+import { Layers, Plus, Settings } from "#/components/icons.tsx";
 import {
-	Check,
-	ChevronDown,
-	Layers,
-	Plus,
-	Settings,
-} from "#/components/icons.tsx";
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+} from "#/components/motion/select.tsx";
 import { EASE_OUT, SPRING_LAYOUT, SPRING_PRESS } from "#/lib/ease.ts";
+import {
+	hydrateSidebarStore,
+	SIDEBAR_DEFAULT_WIDTH,
+	SIDEBAR_MAX_WIDTH,
+	SIDEBAR_MIN_WIDTH,
+	setSidebarWidth,
+	sidebarWidthStore,
+} from "#/stores/sidebar.ts";
 import { SCOPE_VALUE } from "./scope.ts";
 import type { NavItem } from "./UnderlineNav.tsx";
 import { isNavDivider } from "./UnderlineNav.tsx";
@@ -38,6 +50,73 @@ export function AppSidebar({
 }: AppSidebarProps) {
 	const reduce = useReducedMotion();
 	const activeId = useId();
+	const width = useSelector(sidebarWidthStore, (s) => s);
+	const [resizing, setResizing] = useState(false);
+	const dragState = useRef<{ startWidth: number; startX: number } | null>(null);
+
+	useEffect(() => {
+		hydrateSidebarStore();
+	}, []);
+
+	const handlePointerMove = useCallback((e: PointerEvent) => {
+		const drag = dragState.current;
+		if (!drag) return;
+		setSidebarWidth(drag.startWidth + (e.clientX - drag.startX));
+	}, []);
+
+	const endDrag = useCallback(() => {
+		dragState.current = null;
+		setResizing(false);
+		document.body.style.removeProperty("user-select");
+		document.body.style.removeProperty("cursor");
+		window.removeEventListener("pointermove", handlePointerMove);
+		window.removeEventListener("pointerup", endDrag);
+		window.removeEventListener("pointercancel", endDrag);
+	}, [handlePointerMove]);
+
+	useEffect(
+		() => () => {
+			window.removeEventListener("pointermove", handlePointerMove);
+			window.removeEventListener("pointerup", endDrag);
+			window.removeEventListener("pointercancel", endDrag);
+		},
+		[endDrag, handlePointerMove],
+	);
+
+	const beginDrag = useCallback(
+		(e: ReactPointerEvent) => {
+			if (e.button !== 0) return;
+			e.preventDefault();
+			dragState.current = {
+				startWidth: sidebarWidthStore.state,
+				startX: e.clientX,
+			};
+			setResizing(true);
+			document.body.style.userSelect = "none";
+			document.body.style.cursor = "col-resize";
+			window.addEventListener("pointermove", handlePointerMove);
+			window.addEventListener("pointerup", endDrag);
+			window.addEventListener("pointercancel", endDrag);
+		},
+		[endDrag, handlePointerMove],
+	);
+
+	const handleResizeKeyDown = useCallback((e: ReactKeyboardEvent) => {
+		const step = e.shiftKey ? 24 : 8;
+		if (e.key === "ArrowLeft") {
+			e.preventDefault();
+			setSidebarWidth(sidebarWidthStore.state - step);
+		} else if (e.key === "ArrowRight") {
+			e.preventDefault();
+			setSidebarWidth(sidebarWidthStore.state + step);
+		} else if (e.key === "Home") {
+			e.preventDefault();
+			setSidebarWidth(SIDEBAR_MIN_WIDTH);
+		} else if (e.key === "End") {
+			e.preventDefault();
+			setSidebarWidth(SIDEBAR_MAX_WIDTH);
+		}
+	}, []);
 	const selectedIcon = isSettingsRoute ? (
 		<Settings className="size-4 shrink-0 text-muted-foreground" />
 	) : (
@@ -50,24 +129,23 @@ export function AppSidebar({
 			? SCOPE_VALUE.multi
 			: currentScope;
 
-	const selectItems = [
-		{ label: "All projects", value: SCOPE_VALUE.multi },
-		{ label: "Settings", value: SCOPE_VALUE.settings },
-		{ label: "Create project", value: SCOPE_VALUE.create },
-		...projects.map((p) => ({ label: p.name, value: p.slug })),
-	];
+	const selectedLabel = isSettingsRoute
+		? "Settings"
+		: currentScope === "~"
+			? "All projects"
+			: (projects.find((p) => p.slug === currentScope)?.name ?? currentScope);
 
 	// Pseudo-values (multi/settings/create) are dispatched by AppShell's
 	// single `handleScopeSelect` — this component only forwards.
-	const itemClass =
-		"grid cursor-default select-item-grid items-center gap-2 rounded-sm py-1.5 pr-2 pl-1 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground";
 
 	return (
-		<aside className="sticky top-0 hidden h-screen w-70 shrink-0 flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground md:flex">
-			{/* Project Selector */}
+		<aside
+			className="sticky top-0 hidden h-screen shrink-0 flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground md:flex"
+			style={{ width }}
+		>
+			{/* Project Selector — beUI Select (gooey unfold variant). */}
 			<div className="shrink-0 p-3">
-				<Select.Root
-					items={selectItems}
+				<Select
 					onValueChange={(value) => {
 						if (value) {
 							onScopeChange?.(value);
@@ -75,121 +153,65 @@ export function AppSidebar({
 					}}
 					value={selectValue}
 				>
-					<Select.Trigger
-						aria-label="Project selector"
-						className="relative flex h-8 w-full select-none items-center rounded-md border border-sidebar-border bg-sidebar-accent py-1 pr-8 pl-8 text-sidebar-foreground text-sm shadow-none outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 data-[popup-open]:border-ring"
-						id="project-selector"
-					>
-						<span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
+					<SelectTrigger className="h-8 border-sidebar-border bg-sidebar-accent px-2.5 py-1 text-sidebar-foreground">
+						<span className="flex min-w-0 flex-1 items-center gap-2">
 							{selectedIcon}
+							<span className="truncate text-left">{selectedLabel}</span>
 						</span>
-						<Select.Value
-							className="truncate text-left"
-							placeholder="Select project"
-						/>
-						<span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-muted-foreground">
-							<ChevronDown className="size-4" />
-						</span>
-					</Select.Trigger>
-					<Select.Portal>
-						<Select.Positioner
-							align="start"
-							className="z-50 outline-hidden select-none"
-							side="bottom"
-							sideOffset={4}
-						>
-							<Select.Popup className="select-popup rounded-md border border-popover bg-popover p-1 text-popover-foreground outline-hidden">
-								{/* beUI select language: the panel unfolds out of the
-								    trigger with a short blur rise (150–250ms). */}
-								<motion.div
-									animate={
-										reduce
-											? { opacity: 1 }
-											: { filter: "blur(0px)", opacity: 1, scale: 1, y: 0 }
-									}
-									initial={
-										reduce
-											? { opacity: 0 }
-											: { filter: "blur(4px)", opacity: 0, scale: 0.98, y: -4 }
-									}
-									transition={{ duration: 0.18, ease: EASE_OUT }}
-								>
-									<Select.List className="select-list overflow-y-auto outline-hidden scrollbar-thin">
-										<Select.Item
-											className={itemClass}
-											value={SCOPE_VALUE.multi}
-										>
-											<Select.ItemIndicator className="col-start-1 flex items-center justify-center">
-												<Check className="size-4.25" />
-											</Select.ItemIndicator>
-											<Select.ItemText className="col-start-2 flex min-w-0 items-center gap-2">
-												<Layers className="size-4.25 shrink-0 text-muted-foreground" />
+					</SelectTrigger>
+					<SelectContent className="border-popover bg-popover text-popover-foreground">
+						<div className="max-h-80 overflow-y-auto scrollbar-thin">
+							<ul>
+								<SelectItem value={SCOPE_VALUE.multi}>
+									<span className="flex min-w-0 flex-1 items-center gap-2">
+										<Layers className="size-4 shrink-0 text-muted-foreground" />
+										<span className="min-w-0 flex-1 truncate">
+											All projects
+										</span>
+									</span>
+								</SelectItem>
+							</ul>
+							<div className="mt-1 border-popover border-t pt-1">
+								<ul>
+									<SelectItem value={SCOPE_VALUE.settings}>
+										<span className="flex min-w-0 flex-1 items-center gap-2">
+											<Settings className="size-4 shrink-0 text-muted-foreground" />
+											<span className="min-w-0 flex-1 truncate">Settings</span>
+										</span>
+									</SelectItem>
+									<SelectItem value={SCOPE_VALUE.create}>
+										<span className="flex min-w-0 flex-1 items-center gap-2">
+											<Plus className="size-4 shrink-0 text-muted-foreground" />
+											<span className="min-w-0 flex-1 truncate">
+												Create project
+											</span>
+										</span>
+									</SelectItem>
+								</ul>
+							</div>
+							<div className="mt-1 border-popover border-t pt-1">
+								<div className="px-2.5 py-1 font-semibold text-micro text-muted-foreground uppercase tracking-wider">
+									Projects
+								</div>
+								{projects.length > 0 ? (
+									<ul>
+										{projects.map((p) => (
+											<SelectItem key={p.id} value={p.slug}>
 												<span className="min-w-0 flex-1 truncate">
-													All projects
+													{p.name}
 												</span>
-											</Select.ItemText>
-										</Select.Item>
-										<div className="mt-1 border-popover border-t pt-1">
-											<Select.Item
-												className={itemClass}
-												value={SCOPE_VALUE.settings}
-											>
-												<Select.ItemIndicator className="col-start-1 flex items-center justify-center">
-													<Check className="size-4.25" />
-												</Select.ItemIndicator>
-												<Select.ItemText className="col-start-2 flex min-w-0 items-center gap-2">
-													<Settings className="size-4.25 shrink-0 text-muted-foreground" />
-													<span className="min-w-0 flex-1 truncate">
-														Settings
-													</span>
-												</Select.ItemText>
-											</Select.Item>
-											<Select.Item
-												className={itemClass}
-												value={SCOPE_VALUE.create}
-											>
-												<Select.ItemIndicator className="col-start-1 flex items-center justify-center">
-													<Check className="size-4.25" />
-												</Select.ItemIndicator>
-												<Select.ItemText className="col-start-2 flex min-w-0 items-center gap-2">
-													<Plus className="size-4.25 shrink-0 text-muted-foreground" />
-													<span className="min-w-0 flex-1 truncate">
-														Create project
-													</span>
-												</Select.ItemText>
-											</Select.Item>
-										</div>
-										<Select.Group className="mt-1 border-popover border-t pt-1">
-											<Select.GroupLabel className="px-2 py-1 font-semibold text-micro text-muted-foreground uppercase tracking-wider">
-												Projects
-											</Select.GroupLabel>
-											{projects.length > 0 ? (
-												projects.map((p) => (
-													<Select.Item
-														className={itemClass}
-														key={p.id}
-														value={p.slug}
-													>
-														<Select.ItemIndicator className="col-start-1 flex items-center justify-center">
-															<Check className="size-4.25" />
-														</Select.ItemIndicator>
-														<Select.ItemText className="col-start-2 min-w-0 truncate">
-															{p.name}
-														</Select.ItemText>
-													</Select.Item>
-												))
-											) : (
-												<div className="px-2 py-1.5 text-muted-foreground text-sm">
-													No projects yet
-												</div>
-											)}
-										</Select.Group>
-									</Select.List>
-								</motion.div>
-							</Select.Popup>
-						</Select.Positioner>
-					</Select.Portal>
-				</Select.Root>
+											</SelectItem>
+										))}
+									</ul>
+								) : (
+									<div className="px-2.5 py-1.5 text-muted-foreground text-sm">
+										No projects yet
+									</div>
+								)}
+							</div>
+						</div>
+					</SelectContent>
+				</Select>
 			</div>
 
 			{/* Navigation */}
@@ -267,6 +289,33 @@ export function AppSidebar({
 					})}
 				</motion.ul>
 			</nav>
+
+			{/* Resizable right border: drag to resize, double-click to reset.
+			    Width persists per device in `sidebarWidthStore` (localStorage). */}
+			{/* biome-ignore lint/a11y/useSemanticElements: no native element is a focusable resize splitter; role="separator" with aria-valuenow is the WAI-ARIA splitter pattern. */}
+			<div
+				aria-label="Resize sidebar"
+				aria-orientation="vertical"
+				aria-valuemax={SIDEBAR_MAX_WIDTH}
+				aria-valuemin={SIDEBAR_MIN_WIDTH}
+				aria-valuenow={Math.round(width)}
+				className="group absolute inset-y-0 -right-1.5 flex w-3 cursor-col-resize touch-none items-center justify-center outline-none"
+				onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH)}
+				onKeyDown={handleResizeKeyDown}
+				onPointerDown={beginDrag}
+				role="separator"
+				tabIndex={0}
+				title="Drag to resize (double-click to reset)"
+			>
+				<span
+					aria-hidden={true}
+					className={
+						resizing
+							? "h-full w-0.5 bg-ring"
+							: "h-full w-px bg-transparent transition-colors group-hover:bg-sidebar-border group-focus-visible:bg-ring"
+					}
+				/>
+			</div>
 		</aside>
 	);
 }
