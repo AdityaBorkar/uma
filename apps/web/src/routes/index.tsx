@@ -22,8 +22,7 @@ export const Route = createFileRoute("/")({
 		meta: [
 			{ title: "Sign in — Planner" },
 			{
-				content:
-					"Sign in to Planner to manage projects, documents, signals and tasks.",
+				content: "Sign in to Planner to manage projects, documents and tasks.",
 				name: "description",
 			},
 		],

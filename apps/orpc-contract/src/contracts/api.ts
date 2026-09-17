@@ -43,10 +43,6 @@ import {
 	ResetStateRequestSchema,
 	ResetStateResponseSchema,
 	SandboxListResponseSchema,
-	SignalCreateInputSchema,
-	SignalListInputSchema,
-	SignalStatsOutputSchema,
-	SignalUpdateInputSchema,
 	StatsInputSchema,
 	TaskClaimResponseSchema,
 	TaskCreateInputSchema,
@@ -617,79 +613,12 @@ export const apiContract = {
 			.input(TaskRunStatsInputSchema)
 			.output(TaskRunStatsOutputSchema),
 	},
-	signals: {
-		create: oc
-			.meta(
-				openapi({
-					description: "Create a signal, optionally linked to a project.",
-					method: "POST",
-					path: "/signals",
-					successStatus: 201,
-					summary: "Create signal",
-					tags: ["signals"],
-				}),
-			)
-			.input(SignalCreateInputSchema)
-			.output(DbRecordSchema),
-		get: oc
-			.meta(
-				openapi({
-					description: "Get a signal by id.",
-					method: "GET",
-					path: "/signals/{id}",
-					summary: "Get signal",
-					tags: ["signals"],
-				}),
-			)
-			.input(IdInputSchema)
-			.output(DbRecordSchema)
-			.errors({ NOT_FOUND: {} }),
-		list: oc
-			.meta(
-				openapi({
-					description:
-						"List signals with cursor pagination and optional project/severity/status/search filters.",
-					method: "GET",
-					path: "/signals",
-					summary: "List signals",
-					tags: ["signals"],
-				}),
-			)
-			.input(SignalListInputSchema)
-			.output(PageOutputSchema),
-		stats: oc
-			.meta(
-				openapi({
-					description:
-						"Count signals by status (new/triaged/dismissed), optionally scoped to a project.",
-					method: "GET",
-					path: "/signals/stats",
-					summary: "Signal stats",
-					tags: ["signals"],
-				}),
-			)
-			.input(StatsInputSchema)
-			.output(SignalStatsOutputSchema),
-		update: oc
-			.meta(
-				openapi({
-					description: "Patch a signal's fields.",
-					method: "PATCH",
-					path: "/signals/{id}",
-					summary: "Update signal",
-					tags: ["signals"],
-				}),
-			)
-			.input(SignalUpdateInputSchema)
-			.output(DbRecordSchema)
-			.errors({ NOT_FOUND: {} }),
-	},
 	tasks: {
 		create: oc
 			.meta(
 				openapi({
 					description:
-						"Create a queued task, optionally linked to a project or signal and pinned to an agent.",
+						"Create a queued task, optionally linked to a project and pinned to an agent.",
 					method: "POST",
 					path: "/tasks",
 					successStatus: 201,

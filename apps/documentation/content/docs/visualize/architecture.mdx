@@ -23,7 +23,7 @@ export const ascii = `┌──────────┐  enroll (/api/machine
                                                   ▼
                                               ┌────────┐  TanStack Query  ┌─────────┐
                                               │  web   │ ◀══════════════ │ browser │
-                                              │ (oRPC) │  tasks/signals/… │ (Start) │
+                                              │ (oRPC) │  tasks/… │ (Start) │
                                               └───┬────┘                  └─────────┘
                                                   │ Drizzle
                                                   ▼
@@ -54,7 +54,7 @@ export const ascii = `┌──────────┐  enroll (/api/machine
   </div>
   <div class="rounded-xl border border-fd-border bg-fd-card p-5">
     <h2 class="font-semibold">4 · Watch in the browser</h2>
-    <p class="mt-1 text-sm text-fd-muted-foreground">Signal → Task (queued) → assign → running → completed/failed. The frontend calls <code class="font-mono">tasks.list/stats</code> over <code class="font-mono">POST /api/rpc/*</code>.</p>
+    <p class="mt-1 text-sm text-fd-muted-foreground">Task (queued) → assign → running → completed/failed. The frontend calls <code class="font-mono">tasks.list/stats</code> over <code class="font-mono">POST /api/rpc/*</code>.</p>
   </div>
 </div>
 

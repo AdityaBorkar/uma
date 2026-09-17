@@ -4,8 +4,7 @@ import { rpc, rpcPathKey } from "#/lib/rpc.ts";
 
 /**
  * Central invalidation map. Every page previously hand-rolled its own
- * `invalidate()` with overlapping `rpcPathKey` sets (and asymmetric gaps:
- * signals→tasks but not reverse; dashboard relying on 15s poll).
+ * `invalidate()` with overlapping `rpcPathKey` sets.
  * All mutation `onSuccess` handlers go through here now.
  */
 
@@ -16,20 +15,6 @@ export function invalidateTasks(queryClient: QueryClient) {
 	void queryClient.invalidateQueries({
 		queryKey: rpcPathKey(rpc.tasks.stats.key()),
 	});
-}
-
-export function invalidateSignals(queryClient: QueryClient) {
-	void queryClient.invalidateQueries({
-		queryKey: rpcPathKey(rpc.signals.list.key()),
-	});
-	void queryClient.invalidateQueries({
-		queryKey: rpcPathKey(rpc.signals.stats.key()),
-	});
-}
-
-export function invalidateSignalAndTasks(queryClient: QueryClient) {
-	invalidateSignals(queryClient);
-	invalidateTasks(queryClient);
 }
 
 export function invalidateDocuments(
@@ -118,22 +103,5 @@ export async function optimisticTaskStatus(args: {
 		args.queryClient,
 		rpcPathKey(rpc.tasks.list.key()) as readonly unknown[],
 		(item) => (item.id === args.id ? { ...item, status: args.status } : item),
-	);
-}
-
-export async function optimisticSignalStatus(args: {
-	id: string;
-	queryClient: QueryClient;
-	status: string | undefined;
-}) {
-	if (args.status === undefined) return;
-	const status: string = args.status;
-	await args.queryClient.cancelQueries({
-		queryKey: rpcPathKey(rpc.signals.list.key()),
-	});
-	patchInfiniteItems<{ id: string; status: string }>(
-		args.queryClient,
-		rpcPathKey(rpc.signals.list.key()) as readonly unknown[],
-		(item) => (item.id === args.id ? { ...item, status } : item),
 	);
 }

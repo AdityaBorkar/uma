@@ -3,8 +3,8 @@
 The `server-central` test harness is gone. The production machine server lives
 in this app:
 
-- `src/lib/machines/service.ts` — device flow, machine sessions, heartbeats +
-  pressure→Signal, atomic claim, task logs/finish, reset fan-out.
+- `src/lib/machines/service.ts` — device flow, machine sessions, heartbeats,
+  atomic claim, task logs/finish, reset fan-out.
 - `src/lib/machines/frames.ts` — inbound WS frame dispatch (v1 validation,
   unknown `t` ignored).
 - `src/lib/machines/sockets.ts` — in-process `machineId → peers` registry
@@ -40,7 +40,7 @@ contract schemas from `@uma/orpc-contract`.
 
 1. `drizzle-kit push` against the dev DB (tables: `machines`,
    `device_codes`, `machine_sessions`, `machine_heartbeats`,
-   `machine_sandboxes`, `task_logs`, `machine_pressure_state`).
+   `machine_sandboxes`, `task_logs`).
 2. Run web with `E2E_SEED=1`.
 3. `cd apps/machine && bun run roundtrip --server http://127.0.0.1:3000`.
 
@@ -50,6 +50,3 @@ contract schemas from `@uma/orpc-contract`.
   the poller sees `access_denied`.
 - Claim is `UPDATE tasks … WHERE status='queued'` (409 on conflict) plus a
   `machine_sandboxes` upsert — no columns added to `tasks`.
-- Pressure samples live in `machine_pressure_state`; sustained over-threshold
-  windows insert `source='alert'` rows into `signals` (10min sustain/cooldown,
-  contract constants).

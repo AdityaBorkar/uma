@@ -6,7 +6,7 @@ Device-side agent that lets a user-owned machine run Tasks on the user's behalf.
 
 Single bounded context: **Machine Execution**. This repo owns enrollment, heartbeat, state convergence, sandbox lifecycle, and task execution on the device.
 
-The `uma` server (Tasks, Signals, Projects, machine registry) is an external upstream system, not a bounded context owned here. This repo conforms to its `v1` contract via `@uma/orpc-contract` (`../orpc-contract/`).
+The `uma` server (Tasks, Projects, machine registry) is an external upstream system, not a bounded context owned here. This repo conforms to its `v1` contract via `@uma/orpc-contract` (`../orpc-contract/`).
 
 ## Context Map
 
@@ -53,8 +53,8 @@ _Avoid_: task runner, job runner
 The terminal state of a Sandbox Execution: `completed`, `failed`, `cancelled`, `rejected` (the server refused the claim), or `refused` (Quota).
 _Avoid_: run result, exit status
 
-**Signal Scope**:
-Whether a machine-originated Signal belongs to one Project or is global.
+**Scope Hint**:
+Whether machine pressure metrics attribute to one Project (`projectId`) or are host-global (`null`).
 _Avoid_: alert target
 
 **Provider Key**:

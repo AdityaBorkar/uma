@@ -7,7 +7,7 @@ Welcome! UMA connects your machines, your tasks, and your web app so work flows 
 
 Think of it in four friendly pieces:
 
-- **Product web app** (`apps/web`) — where you triage signals, create tasks, and watch progress. Built with TanStack Start, oRPC, and Drizzle/PostgreSQL.
+- **Product web app** (`apps/web`) — where you create tasks and watch progress. Built with TanStack Start, oRPC, and Drizzle/PostgreSQL.
 - **Device agent** (`apps/machine`) — the `uma-machine` CLI and daemon that runs tasks safely inside microsandbox sandboxes and stays in touch over HTTPS + WebSocket.
 - **Wire contract** (`apps/orpc-contract`) — the frozen `v1` language machines and servers share, so upgrades never surprise you.
 - **Infra** (`apps/infra`) — the Pulumi program that provisions OCI, Cloudflare, and Docker.
@@ -25,7 +25,7 @@ Think of it in four friendly pieces:
     The 8 machine→server and 4 server→machine `v1` frames at `/api/machines/ws`, plus device flow and claim over HTTPS.
   </Card>
   <Card title="Server ↔ web contract" href="/contracts/server-web">
-    The oRPC router at `POST /api/rpc/*` your browser calls for tasks, signals, projects, documents, machines, and more.
+    The oRPC router at `POST /api/rpc/*` your browser calls for tasks, projects, documents, machines, and more.
   </Card>
 </Cards>
 

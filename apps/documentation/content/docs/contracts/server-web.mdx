@@ -1,13 +1,13 @@
 ---
 title: Server ↔ Web
-description: The API your browser calls — tasks, signals, projects, docs, and machines.
+description: The API your browser calls — tasks, projects, docs, and machines.
 ---
 
 This is the API your TanStack frontend talks to every day. The router lives in `apps/web/src/rpc/router.ts`, served by `RPCHandler` at `POST /api/rpc/*` (`apps/web/src/routes/api/rpc.$.ts`, prefix `/api/rpc`, context `{ headers }`). Browse it via OpenAPI at `/api/openapi` (`src/routes/api/openapi.$.ts`). The client lives in `src/lib/rpc.ts` (`createRouterClient` on the server, `RPCLink(/api/rpc)` + `createTanstackQueryUtils` as `rpc` in the browser). Diagram: [/visualize/contract-server-web](/visualize/contract-server-web).
 
-Auth first: every procedure runs `requireUser(headers)` and returns `UNAUTHORIZED` when signed out (`src/rpc/auth.ts`). Project and signal scoping checks ownership and returns `NOT_FOUND` on cross-project access (`src/rpc/scope.ts`). Lists use keyset pagination on `(sortAt, id)` descending (`paginate`, opaque `nextCursor`).
+Auth first: every procedure runs `requireUser(headers)` and returns `UNAUTHORIZED` when signed out (`src/rpc/auth.ts`). Project scoping checks ownership and returns `NOT_FOUND` on cross-project access (`src/rpc/scope.ts`). Lists use keyset pagination on `(sortAt, id)` descending (`paginate`, opaque `nextCursor`).
 
-> Good news: the machine server is fully implemented in web. `device.*` (`code`, `token`, plus web-only `approve`) and `machines.*` (`claim`, `checkState`, `heartbeatHistory`, `latestVersion`, `resetState`, `sandboxList`, plus browser-only `list`/`get`/`revoke`) are live in `src/rpc/procedures/device.ts` and `src/rpc/procedures/machines.ts` on the frozen contract schemas. The WebSocket lives at `/api/machines/ws` (`src/routes/api/machines/ws.ts`, registered in `vite.config.ts` — TanStack file routes are HTTP-only, so WS lives outside the file-route HTTP handlers). Manage machines at `/settings/machines`, approve devices at `/device`. Product domains (tasks/signals/projects/documents/connections) still mirror shapes from `apps/web/src/schemas/schema.ts`.
+> Good news: the machine server is fully implemented in web. `device.*` (`code`, `token`, plus web-only `approve`) and `machines.*` (`claim`, `checkState`, `heartbeatHistory`, `latestVersion`, `resetState`, `sandboxList`, plus browser-only `list`/`get`/`revoke`) are live in `src/rpc/procedures/device.ts` and `src/rpc/procedures/machines.ts` on the frozen contract schemas. The WebSocket lives at `/api/machines/ws` (`src/routes/api/machines/ws.ts`, registered in `vite.config.ts` — TanStack file routes are HTTP-only, so WS lives outside the file-route HTTP handlers). Manage machines at `/settings/machines`, approve devices at `/device`. Product domains (tasks/projects/documents/connections) still mirror shapes from `apps/web/src/schemas/schema.ts`.
 
 The binary itself uses plain `fetch` + `WebSocket` (no oRPC client), so it talks to raw shims with the same service + schemas: `POST /api/machines/device/code`, `POST /api/machines/device/token`, `POST /api/machines/claim`.
 
@@ -18,20 +18,10 @@ The binary itself uses plain `fetch` + `WebSocket` (no oRPC client), so it talks
 | `tasks.list` | `{ cursor?, limit 1–100 (default 20), q?, projectId?, status? }?` | `{ items, nextCursor }` |
 | `tasks.stats` | `{ projectId? }?` | `{ queued, running, completed, failed, cancelled }` |
 | `tasks.get` | `{ id }` | row, or `NOT_FOUND` |
-| `tasks.create` | `{ title 2–200, prompt up to 10k?, projectId?, signalId? }` | row (starts `queued`, `agent: cli`) |
+| `tasks.create` | `{ title 2–200, prompt up to 10k?, projectId? }` | row (starts `queued`, `agent: cli`) |
 | `tasks.updateStatus` | `{ id, status }` | row, or `NOT_FOUND`; only `queued→running\|cancelled`, `running→completed\|failed\|cancelled`, `failed→queued` else `BAD_REQUEST`; server stamps `startedAt`/`finishedAt` |
 
 Task lifecycle: `queued → running → completed|failed|cancelled`, with `failed → queued` for retries. The DB enforces `finishedAt` on terminal states with a `CHECK`.
-
-## `signals.*` (`src/rpc/procedures/signals.ts`)
-
-| Procedure | Input | You'll get |
-| --- | --- | --- |
-| `signals.list` | `{ cursor?, limit, q?, projectId?, severity?, status? }?` | joined `{ items, nextCursor }` |
-| `signals.stats` | `{ projectId? }?` | `{ new, triaged, dismissed }` |
-| `signals.get` | `{ id }` | row, or `NOT_FOUND` |
-| `signals.create` | `{ title 2–200, body up to 5k?, projectId?, severity = info, url up to 2k? }` | row (`source: manual`, `status: new`) |
-| `signals.update` | `{ id, title?, body?, projectId?\|null, severity?, status?, url?\|null }` (strict) | row; only `new→triaged\|dismissed`, `triaged→dismissed` else `BAD_REQUEST` |
 
 ## `projects.*` (`src/rpc/procedures/projects.ts`)
 
@@ -57,7 +47,7 @@ Slugs match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–60 chars. `githubRepoFullName` mat
 | `documents.remove` | `{ number }` | `{ ok: true }`; `BAD_REQUEST` unless `closed` |
 | `documents.comments.create` | `{ body 1–10k, documentNumber: int+ }` | row (+ `commented` event) |
 
-`kind: wiki|spec|bug_report|update|changelog|release|deployment|action_log`; `state: open|closed` (documents use **state**, tasks/signals/connections use **status** — see `apps/web/docs/CONTEXT.md`).
+`kind: wiki|spec|bug_report|update|changelog|release|deployment|action_log`; `state: open|closed` (documents use **state**, tasks/connections use **status** — see `apps/web/docs/CONTEXT.md`).
 
 ## `connections.*` (`src/rpc/procedures/connections.ts`)
 

@@ -94,48 +94,7 @@ export const ConnectionDisconnectInput = z.object({
 	provider: ConnectionProviderEnum,
 });
 
-// --- Signals & agentic tasks ---
-
-export const SIGNAL_SEVERITY_VALUES = ["info", "warning", "critical"] as const;
-export const SignalSeverityEnum = z.enum(SIGNAL_SEVERITY_VALUES);
-export type SignalSeverity = z.infer<typeof SignalSeverityEnum>;
-
-export const SIGNAL_STATUS_VALUES = ["new", "triaged", "dismissed"] as const;
-export const SignalStatusEnum = z.enum(SIGNAL_STATUS_VALUES);
-export type SignalStatus = z.infer<typeof SignalStatusEnum>;
-
-// Lenient url on purpose: manual capture may paste partial refs — no .url().
-export const SignalCreateInput = z.object({
-	body: z.string().max(5000, "Max 5000 characters").optional(),
-	projectId: z.string().optional(),
-	severity: SignalSeverityEnum.default("info"),
-	title: z
-		.string()
-		.min(2, "Must be at least 2 characters")
-		.max(200, "Max 200 characters"),
-	url: z.string().max(2000, "Max 2000 characters").optional(),
-});
-
-export const SignalUpdateInput = z.strictObject({
-	body: z.string().max(5000).optional(),
-	id: z.string(),
-	projectId: z.string().nullable().optional(),
-	severity: SignalSeverityEnum.optional(),
-	status: SignalStatusEnum.optional(),
-	title: z.string().min(2).max(200).optional(),
-	url: z.string().max(2000).nullable().optional(),
-});
-
-export const SignalListInput = z
-	.object({
-		cursor: z.string().optional(),
-		limit: z.number().int().min(1).max(100).default(20),
-		projectId: z.string().optional(),
-		q: z.string().optional(),
-		severity: SignalSeverityEnum.optional(),
-		status: SignalStatusEnum.optional(),
-	})
-	.optional();
+// --- Agentic tasks ---
 
 export const TASK_STATUS_VALUES = [
 	"queued",
@@ -151,7 +110,6 @@ export const TaskCreateInput = z.object({
 	agent: z.string().min(1).max(64).optional(),
 	projectId: z.string().optional(),
 	prompt: z.string().max(10_000, "Max 10000 characters").optional(),
-	signalId: z.string().optional(),
 	title: z
 		.string()
 		.min(2, "Must be at least 2 characters")
@@ -220,7 +178,9 @@ export function documentMetaSchema(kind: string) {
 	const base = z.record(z.string(), z.unknown());
 	switch (kind) {
 		case "bug_report":
-			return z.looseObject({ severity: SignalSeverityEnum.optional() });
+			return z.looseObject({
+				severity: z.enum(["info", "warning", "critical"]).optional(),
+			});
 		case "deployment":
 			return z.looseObject({ environment: z.string().max(100).optional() });
 		case "release":
@@ -248,7 +208,7 @@ export function documentMetaFields(kind: string): DocumentMetaField[] {
 				{
 					label: "Severity",
 					name: "severity",
-					options: [...SIGNAL_SEVERITY_VALUES],
+					options: ["info", "warning", "critical"],
 				},
 			];
 		case "deployment":

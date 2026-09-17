@@ -14,7 +14,6 @@ export const TaskCreateInputSchema = z.object({
 	agent: z.string().min(1).max(64).optional(),
 	projectId: z.string().optional(),
 	prompt: z.string().max(10_000, "Max 10000 characters").optional(),
-	signalId: z.string().optional(),
 	title: z
 		.string()
 		.min(2, "Must be at least 2 characters")

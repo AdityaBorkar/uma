@@ -5,7 +5,6 @@ import { db } from "#/lib/db.ts";
 import { slugify, slugifyProject } from "#/lib/slug.ts";
 import { documents } from "#/schemas/db/documents.ts";
 import { projects } from "#/schemas/db/projects.ts";
-import { signals } from "#/schemas/db/tasks.ts";
 
 /** Shared ownership + slug + keyset-pagination helpers for all oRPC procedures. */
 
@@ -17,17 +16,6 @@ export async function assertProjectOwned(projectId: string, userId: string) {
 		.limit(1);
 	if (!row) {
 		throw new ORPCError("NOT_FOUND", { message: "Project not found" });
-	}
-}
-
-export async function assertSignalOwned(signalId: string, userId: string) {
-	const [row] = await db
-		.select({ id: signals.id })
-		.from(signals)
-		.where(and(eq(signals.id, signalId), eq(signals.userId, userId)))
-		.limit(1);
-	if (!row) {
-		throw new ORPCError("NOT_FOUND", { message: "Signal not found" });
 	}
 }
 

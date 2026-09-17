@@ -2,7 +2,7 @@ import { Button } from "#/components/ui/button.tsx";
 
 /**
  * Standard form footer: Cancel (outline/ghost) + Submit.
- * Unifies TaskForm/SignalForm/ProjectForm (`flex justify-end gap-2 pt-2`,
+ * Unifies TaskForm/ProjectForm (`flex justify-end gap-2 pt-2`,
  * `loading ? "Saving…"`) with registry dialogs (`size="sm"`,
  * ghost Cancel + primary Save).
  */

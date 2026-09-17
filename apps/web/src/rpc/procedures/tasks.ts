@@ -9,21 +9,20 @@ import { implementer } from "#/rpc/contract.ts";
 import {
 	afterCursor,
 	assertProjectOwned,
-	assertSignalOwned,
 	pageCursor,
 	paginate,
 } from "#/rpc/scope.ts";
 import { agents } from "#/schemas/db/agents.ts";
 import { taskLogs } from "#/schemas/db/machines.ts";
 import { projects } from "#/schemas/db/projects.ts";
-import { signals, tasks } from "#/schemas/db/tasks.ts";
+import { tasks } from "#/schemas/db/tasks.ts";
 import {
 	TaskCreateInput,
 	TaskListInput,
 	TaskUpdateStatusInput,
 } from "#/schemas/schema.ts";
 
-// TASK-4 transition map (docs/CONTEXT.md (Signal/Task) §5.2).
+// TASK-4 transition map (docs/CONTEXT.md (Task) §5.2).
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 	cancelled: [],
 	completed: [],
@@ -77,15 +76,12 @@ export const list = os
 				projectName: projects.name,
 				prompt: tasks.prompt,
 				queuedAt: tasks.queuedAt,
-				signalId: tasks.signalId,
-				signalTitle: signals.title,
 				startedAt: tasks.startedAt,
 				status: tasks.status,
 				title: tasks.title,
 				updatedAt: tasks.updatedAt,
 			})
 			.from(tasks)
-			.leftJoin(signals, eq(tasks.signalId, signals.id))
 			.leftJoin(projects, eq(tasks.projectId, projects.id))
 			.where(
 				and(
@@ -145,9 +141,6 @@ export const create = os
 	.handler(async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
-		if (input.signalId) {
-			await assertSignalOwned(input.signalId, user.id);
-		}
 		if (input.projectId) {
 			await assertProjectOwned(input.projectId, user.id);
 		}
@@ -178,7 +171,6 @@ export const create = os
 				projectId: input.projectId ?? null,
 				prompt: input.prompt ?? null,
 				queuedAt: new Date(),
-				signalId: input.signalId ?? null,
 				status: "queued",
 				title: input.title,
 				userId: user.id,

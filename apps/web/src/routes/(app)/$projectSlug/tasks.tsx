@@ -99,12 +99,6 @@ function TasksPage() {
 
 	const { options: projectOptions } = useProjectOptions();
 
-	const signalsQuery = useQuery(
-		rpc.signals.list.queryOptions({
-			input: { limit: 100, status: "new" },
-		}),
-	);
-
 	const agentsQuery = useQuery(
 		rpc.agents.list.queryOptions({ input: undefined }),
 	);
@@ -137,10 +131,6 @@ function TasksPage() {
 	);
 
 	const items = flattenPages(tasksQuery.data);
-	const signalOptions = (signalsQuery.data?.items ?? []).map((s) => ({
-		id: s.id,
-		title: s.title,
-	}));
 	const agentOptions = (agentsQuery.data ?? []).map((a) => ({
 		name: a.name,
 	}));
@@ -205,7 +195,7 @@ function TasksPage() {
 							Queue a task
 						</Button>
 					}
-					description="No tasks match. Queue a task directly, or triage a signal on the Signals page into ready work."
+					description="No tasks match. Queue a task to put an agent to work."
 					title="No tasks"
 				/>
 			) : (
@@ -247,12 +237,10 @@ function TasksPage() {
 							agent: values.agent,
 							projectId: values.projectId,
 							prompt: values.prompt || undefined,
-							signalId: values.signalId,
 							title: values.title,
 						});
 					}}
 					projects={projectOptions}
-					signals={signalOptions}
 				/>
 			</FormDialog>
 		</div>

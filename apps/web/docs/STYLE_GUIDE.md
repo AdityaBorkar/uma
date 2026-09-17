@@ -42,7 +42,7 @@ Main (mx-auto max-w-320 px-4 py-6 sm:px-6)
 ```
 
 Nav items are defined in `navItems`
-(`src/routes/(app)/$projectSlug/route.tsx` — 5 items: dashboard/documents/monitor/signals/tasks, no insights/updates/wiki by design) and `settingsNavItems`
+(`src/routes/(app)/$projectSlug/route.tsx` — 4 items: dashboard/documents/monitor/tasks, no insights/updates/wiki by design) and `settingsNavItems`
 (`src/routes/(app)/settings/route.tsx` — backed: account/analytics/evals/projects/machines/agents/prompt-templates/model-providers/version-source; dead/planned with no backing files: skills/mcp/subagents/web-search/browsers/computer-control), and passed to `<AppShell items={…}>`
 (`isSettings` for the settings shell). Scoped items are `/$projectSlug/…` and
 receive `params.projectSlug` from the current scope (or `"~"` for Multi-Project)
@@ -142,7 +142,7 @@ Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
 ## Components
 
 ### Button (`src/components/ui/button.tsx`)
-- **Variants:** `primary` (white `#ededed` bg + black text, creation actions only: *New project/document/signal/task*), `default` (gray `#1a1a1a` border), `outline` (black + border, most actions), `ghost` (text), `destructive` (red — errors only), `link` (foreground underline, not blue), `secondary` (alias to default)
+- **Variants:** `primary` (white `#ededed` bg + black text, creation actions only: *New project/document/task*), `default` (gray `#1a1a1a` border), `outline` (black + border, most actions), `ghost` (text), `destructive` (red — errors only), `link` (foreground underline, not blue), `secondary` (alias to default)
 - **Sizes:** `default h-8 px-4 text-sm`, `sm h-7 gap-1.5 px-3 text-xs`, `icon size-8`, `icon-sm size-7` (+ undocumented `lg`, `icon-lg size-9` in `button-variants.ts`)
 - **Rules:** green only for *New …*; bulk actions use `outline` gray.
 
@@ -155,7 +155,7 @@ Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
 ### Badge / Label / StateLabel (`src/components/ui/badge.tsx`, `src/components/badges.ts`)
 - **Label** (free-form tags): `variant="outline"` pill `rounded-full px-2.5 py-0.5 text-xs` with subtle border.
 - **StateLabel** (issue-like): open green `#0e1f14 / #46a758`, closed neutral gray via `stateBadgeClass()`; warning amber, danger red. `done`/`info` variants are neutral gray — no purple, no blue. Running tasks are gray, not blue.
-- **Helpers:** `stateBadgeClass(state)`, `severityBadgeClass(severity)`, `taskBadgeClass(status)` in `src/components/badges.ts` return class strings — apply via `className` on `<Badge variant="outline">`.
+- **Helpers:** `stateBadgeClass(state)`, `taskBadgeClass(status)` in `src/components/badges.ts` return class strings — apply via `className` on `<Badge variant="outline">`.
 
 ```tsx
 <Badge className={stateBadgeClass(doc.state)} variant="outline">{doc.state}</Badge>
@@ -184,7 +184,7 @@ Do: use `font-semibold` for titles; don’t use `font-bold` or Fraunces/Manrope.
 
 ## Icons
 
-Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/core-free-icons`, adapted to component API in `src/components/icons.tsx`) despite `components.json: iconLibrary tabler`. Size `size-4.25` in nav/buttons, `size-4` in meta. Workspace nav uses `LayoutDashboard/BookOpen/Radar/Radio/SquareKanban` (no `FolderKanban/RadioTower/Bot` Octicon mapping).
+Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/core-free-icons`, adapted to component API in `src/components/icons.tsx`) despite `components.json: iconLibrary tabler`. Size `size-4.25` in nav/buttons, `size-4` in meta. Workspace nav uses `LayoutDashboard/BookOpen/Radar/SquareKanban` (no `FolderKanban/RadioTower/Bot` Octicon mapping).
 
 ## Deviations (code wins — fix code or accept)
 
@@ -198,7 +198,7 @@ Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/cor
 - **Do** put filters in `CardContent bg-muted/50`.
 - **Do** use `UnderlineNav` (`border-b-2 border-underline`) for kind/state tabs.
 - **Don’t** use `shadow-sm`, `rounded-xl`, `bg-primary` black, zinc tokens (zinc ban holds — no `zinc-` hits), blue/purple accents, or add light-mode branches (`dark:` variants, `light` color-scheme).
-- **Don’t** create per-page `severityBadgeClass` clones — use `badges.ts`.
+- **Don’t** create per-page badge-class clones — use `badges.ts`.
 - **Don’t** add a second sidebar or a second top nav: `AppShell` renders exactly one shell per viewport — `AppSidebar` (desktop) and the mobile selector bar + `UnderlineNav` (mobile) are the only shells, swapped at `md:`, never shown together.
 
 ## Checklist (new page)

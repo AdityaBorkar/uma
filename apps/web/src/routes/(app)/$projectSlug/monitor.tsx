@@ -23,7 +23,7 @@ function RouteComponent() {
 		<div className="space-y-6">
 			<PageHeader description={subtitle} title="Monitor" />
 			<PlaceholderCard>
-				Monitor view coming soon — signals and task health will appear here.
+				Monitor view coming soon — task health will appear here.
 			</PlaceholderCard>
 		</div>
 	);

@@ -1,5 +1,5 @@
-// Wall-clock age/duration formatting for signals and tasks (dashboard,
-// signals, tasks pages). Deliberately coarse — these are glanceable labels,
+// Wall-clock age/duration formatting for tasks (dashboard,
+// tasks pages). Deliberately coarse — these are glanceable labels,
 // not measurements.
 
 /** "just now" | "3m" | "2h" | "4d" | "3w" since `from` until now (or `to`). */

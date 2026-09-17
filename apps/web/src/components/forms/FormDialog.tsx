@@ -12,7 +12,7 @@ import { cn } from "#/lib/utils.ts";
 /**
  * Standard dialog shell: Dialog > DialogContent (p-0) > DialogHeader
  * (px-4 py-3) > scrollable body (dialog-body px-4 py-4).
- * Unifies tasks/signals dialogs (previously missing padding/scroll) with
+ * Unifies task dialogs (previously missing padding/scroll) with
  * AppShell CreateProjectDialog and all settings registry dialogs.
  */
 export function FormDialog({

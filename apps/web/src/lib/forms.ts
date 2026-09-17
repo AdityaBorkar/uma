@@ -59,7 +59,7 @@ export function trimOrUndefined(value: string): string | undefined {
  * Minimal Zod form state: values + per-field errors + validate/handleSubmit.
  * Replaces the identical `useState<Values> + useState<errors> +
  * validate() via safeParse + handleSubmit(preventDefault…)` triplets in
- * TaskForm/SignalForm/ProjectForm and the `set(key, value)` helpers in
+ * TaskForm/ProjectForm and the `set(key, value)` helpers in
  * registry dialogs.
  */
 export function useZodForm<TValues extends object>(initial: TValues) {

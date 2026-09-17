@@ -4,7 +4,7 @@ import { Label } from "#/components/ui/label.tsx";
 
 /**
  * Single form field wrapper: Label + control + hint/error.
- * Replaces ~15x `div.space-y-2` blocks across TaskForm, SignalForm,
+ * Replaces ~15x `div.space-y-2` blocks across TaskForm,
  * ProjectForm, NewDocumentDialog and MetadataForm.
  */
 export function FormField({

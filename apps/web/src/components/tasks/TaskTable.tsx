@@ -21,8 +21,6 @@ interface TaskRow {
 	projectId: string | null;
 	projectName: string | null;
 	queuedAt: string | Date;
-	signalId: string | null;
-	signalTitle: string | null;
 	startedAt: string | Date | null;
 	status: "queued" | "running" | "completed" | "failed" | "cancelled";
 	title: string;
@@ -53,7 +51,6 @@ export function TaskTable({ items, onStatusChange, isPending }: Props) {
 			<DataTableHeader>
 				<DataTableHead className="w-24 text-xs">Status</DataTableHead>
 				<DataTableHead className="text-xs">Task</DataTableHead>
-				<DataTableHead className="w-28 text-xs">Origin</DataTableHead>
 				<DataTableHead className="w-32 text-xs">Project</DataTableHead>
 				<DataTableHead className="w-24 text-xs">Queued</DataTableHead>
 				<DataTableHead className="w-24 text-xs">Duration</DataTableHead>
@@ -71,15 +68,6 @@ export function TaskTable({ items, onStatusChange, isPending }: Props) {
 							subtitle={`agent: ${t.agent}`}
 							title={t.title}
 						/>
-						<DataTableMetaCell>
-							{t.signalId ? (
-								<span className="truncate" title={t.signalTitle ?? ""}>
-									signal
-								</span>
-							) : (
-								"direct"
-							)}
-						</DataTableMetaCell>
 						<DataTableMetaCell>{fallbackText(t.projectName)}</DataTableMetaCell>
 						<DataTableAgoCell value={t.queuedAt} />
 						<DataTableMetaCell>{durationLabel(t)}</DataTableMetaCell>

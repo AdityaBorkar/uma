@@ -20,7 +20,7 @@ flowchart TD
 2. **Stay in touch** (`apps/machine/src/daemon.ts`) — the daemon connects with backoff, sends a persist-first heartbeat every tick, and reaps old stopped sandboxes. See [/cli/daemon](/cli/daemon) and [/machine/heartbeat](/machine/heartbeat).
 3. **Run work** (`apps/machine/src/execution.ts`) — on `assign`, the machine reserves a sandbox, atomically claims the task (`POST /api/machines/claim`, `409` means someone else won), starts the sandbox, binds git, streams redacted logs in 256 KB chunks, then reports `task-done` and stops. See [/machine/execution-pipeline](/machine/execution-pipeline).
 4. **Stay converged** — the server can send `reset-config`, and the machine converges config then acks each key (plus `sync-ack` for `"*"`). See [/machine/reset-config](/machine/reset-config).
-5. **Watch in the browser** (`apps/web`) — triage a Signal, create a Task (`queued`), watch it go `running → completed | failed` as `log` / `task-done` frames arrive over `/api/machines/ws`. Enroll devices at `/device`, manage machines at `/settings/machines`. Web procedures: [/contracts/server-web](/contracts/server-web).
+5. **Watch in the browser** (`apps/web`) — create a Task (`queued`), watch it go `running → completed | failed` as `log` / `task-done` frames arrive over `/api/machines/ws`. Enroll devices at `/device`, manage machines at `/settings/machines`. Web procedures: [/contracts/server-web](/contracts/server-web).
 6. **Stay compatible** — if the machine is too old, the server sends `UPGRADE_REQUIRED` and the daemon exits `3`. See [/contracts/versioning](/contracts/versioning).
 
 ## Where code lives

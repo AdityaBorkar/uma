@@ -69,27 +69,8 @@ _Avoid_: selected project, active project
 
 ### Inbound & execution
 
-**Signal**:
-An inbound item (manual, GitHub, CI, or alert) that merits attention. A
-signal arrives and ages; it is **not committed work** until triaged into a
-task. Scoped to a user and optionally a project.
-_Avoid_: potential issue, inbound request
-
-**Signal Status**:
-The lifecycle of a signal: `new | triaged | dismissed` (`src/schemas/db/tasks.ts`). `triaged` means converted to a task (`triagedAt` set); `dismissed` is an explicit discard.
-_Avoid_: state (reserved for Documents only; tasks/signals/connections use `status` columns)
-
-**Triaged**:
-The transition of a signal to `triaged` status when converted into a task. The moment inbound becomes committed work.
-_Avoid_: handled, assigned, processed
-
-**Severity**:
-The urgency of a signal: `info | warning | critical`. Advisory — it informs
-triage priority, never execution order. Also reused in `bug_report` document `meta.severity`.
-_Avoid_: priority, level
-
 **Task**:
-A unit of agent-executable work, usually derived from a triaged signal, run
+A unit of agent-executable work, run
 through a server-guarded lifecycle (`queued → running → completed | failed |
 cancelled`). A task is scoped to a user and optionally a project.
 _Avoid_: job, work item
@@ -104,7 +85,7 @@ _Avoid_: state (documents-only; the task column is named `status`)
 
 **Connection**:
 A user's linked external account (e.g., GitHub) that the tool uses to ingest
-external data such as signals.
+external data.
 _Avoid_: integration
 
 **Provider**:
@@ -140,8 +121,8 @@ _Avoid_: properties, fields, metadata blob
 
 **State**:
 The issue-style lifecycle of a Document: `open` or `closed` (`closedAt` set on close). Closing is a
-decision, not a deletion. Reopening is `closed→open`. Only Documents use `state`; tasks/signals/connections use `status` columns.
-_Avoid_: status (reserved for tasks/signals/connections)
+decision, not a deletion. Reopening is `closed→open`. Only Documents use `state`; tasks/connections use `status` columns.
+_Avoid_: status (reserved for tasks/connections)
 
 **Label**:
 A free-form, user-scoped tag on a Document used for grouping and filtering. Array of `≤20` strings, each `1..50` chars. Enforced in Zod (`src/schemas/schema.ts`), not by DB `CHECK`.
@@ -198,5 +179,5 @@ The version-control and source-hosting systems a project builds from (Git / Juju
 _Avoid_: repo host, vcs
 
 **Monitor**:
-The per-scope live status view (`/{projectSlug}/monitor`). Placeholder in v1 — signals and task health will appear here.
+The per-scope live status view (`/{projectSlug}/monitor`). Placeholder in v1 — task health will appear here.
 _Avoid_: dashboard, activity feed

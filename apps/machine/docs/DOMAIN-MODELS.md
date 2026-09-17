@@ -1,6 +1,6 @@
 # Domain Models — uma-machine (Machine Execution context)
 
-Single aggregate family on the device. Server owns Task lifecycle, Signal triage, Projects; here Task is an external reference (`AssignFrame.taskId`), Heartbeat is an outbound event (grill 2026-09-10).
+Single aggregate family on the device. Server owns Task lifecycle, Projects; here Task is an external reference (`AssignFrame.taskId`), Heartbeat is an outbound event (grill 2026-09-10).
 
 Source anchors: `../../orpc-contract/src/` (contract), `src/sandboxes/sandbox.ts`, `src/execution/execution.ts`, `src/daemon/heartbeat.ts`, `src/utils/db.ts` + `src/schemas/db/index.ts`, `src/config/mod.ts`, `src/config/sync.ts`, `src/execution/git-binding.ts`.
 
@@ -43,7 +43,7 @@ Stateless operations spanning entities.
 
 - **Sandbox Execution** (`src/execution/execution.ts`): `ExecutionEngine` — `quota snapshot + Sandbox.create` under an engine-scoped admission lock (server limits from `assign.limits`) `→ claimTask → start → ensureBinding → execStream → task-done → stop`; emits every v1 frame through the `emit` passed to `executeTask` and returns a typed Execution Outcome (`completed | failed | cancelled | rejected{server|unreachable} | refused`). Any non-`ok` claim or pre-terminal failure frees the sandbox; success leaves it idle `stopped` for TTL reap. Cancel routes through in-flight state; an unconfigured agent fails closed.
 - **SyncOrchestrator** (`src/config/sync.ts`, `src/daemon/daemon.ts`): ordered `resetAll`, persist-then-ack (receipts first, then per-key `reset-ack`, then `sync-ack` for `keys:"*"` on the daemon path; CLI `performSync` persists receipts only, no ws acks).
-- **PressureEvaluator** (`evaluateScopeHint` in `src/daemon/heartbeat.ts`): pure and clock-free; breach = `cpu>90 || disk>90`; attributable when one sandbox `>60%` of host usage → scoped hint else `null`. Server applies sustain (10min) + cooldown (10min). `sandboxMetricsForPressure` joins `task.id`/`project.id` labels so scoped hints work when the SDK exposes metrics.
+- **PressureEvaluator** (`evaluateScopeHint` in `src/daemon/heartbeat.ts`): pure and clock-free; breach = `cpu>90 || disk>90`; attributable when one sandbox `>60%` of host usage → scoped hint else `null`. The hint is stored on the server heartbeat row; no automated action is derived from it. `sandboxMetricsForPressure` joins `task.id`/`project.id` labels so scoped hints work when the SDK exposes metrics.
 - **GitBinding** (`src/execution/git-binding.ts`): `clone --filter=blob:none` if absent else `fetch + checkout -B task/<short>` pinned to `commit`.
 
 ## Domain Event
@@ -60,7 +60,7 @@ Outbound facts, persisted before send (send failure ≠ loss).
 
 Higher-level rules with trade-offs.
 
-- **Pressure policy**: disk>90% or cpu>90% sustained 10min → server Signal; 60% attribution decides scoped (`projectId`) vs global (`null`); 10min cooldown per scope (`../../orpc-contract/src/constants.ts`).
+- **Pressure policy**: disk>90% or cpu>90% reported via the heartbeat `scopeHint`; 60% attribution decides scoped (`projectId`) vs global (`null`) (`../../orpc-contract/src/constants.ts`). No server-side alerting is derived from it.
 - **Retention policy**: `heartbeats` 30d raw + vacuum only when rows were actually deleted (steady state ≈ one vacuum at the retention boundary, no rollup v1, ~86k rows max); `sandbox_events` + `config_receipts` 90d; `log_buffer` 7d (`src/utils/db.ts`, `src/schemas/db/index.ts`).
 - **Quota policy**: effective = server override ?? `limits.json` install defaults (`2×/5× GB RAM`); agent enforces locally, server wins on conflict (`src/daemon/heartbeat.ts`).
 - **Secret policy**: full-keys push only; fingerprint-only check; `--secret NAME@HOST` refs only (inline `NAME=VALUE@HOST` forbidden); redaction pre-send + server second pass (`src/config/providers.ts`, `src/execution/redact.ts`).

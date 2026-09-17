@@ -1,6 +1,6 @@
 /**
- * Status/severity badge class helpers shared across documents, signals, and
- * tasks. Black/white base — color only where visual indication is necessary
+ * Status badge class helpers shared across documents and tasks.
+ * Black/white base — color only where visual indication is necessary
  * (success/danger/warning). Text always accompanies color.
  */
 
@@ -9,17 +9,6 @@ export function stateBadgeClass(state: string): string {
 	return state === "open"
 		? "border-success-border/30 bg-success-bg text-success-fg"
 		: "border-border bg-muted text-muted-foreground";
-}
-
-export function severityBadgeClass(severity: string): string {
-	switch (severity) {
-		case "critical":
-			return "border-danger-fg/30 bg-danger-bg text-danger-fg";
-		case "warning":
-			return "border-attention-fg/30 bg-attention-bg text-attention-fg";
-		default:
-			return "";
-	}
 }
 
 export function taskBadgeClass(status: string): string {

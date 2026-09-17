@@ -4,9 +4,6 @@ import {
 	LOG_FRAME_CAP_BYTES,
 	MachineNameSchema,
 	needsUpgrade,
-	PRESSURE_COOLDOWN_S,
-	PRESSURE_SUSTAINED_S,
-	PRESSURE_THRESHOLD_PCT,
 	sessionToken,
 	userCode,
 } from "@uma/orpc-contract";
@@ -18,14 +15,12 @@ import { taskRuns } from "#/schemas/db/agents.ts";
 import {
 	deviceCodes,
 	machineHeartbeats,
-	machinePressureState,
 	machineSandboxes,
 	machineSessions,
 	machines,
 	taskLogs,
 } from "#/schemas/db/machines.ts";
-import { projects } from "#/schemas/db/projects.ts";
-import { signals, tasks } from "#/schemas/db/tasks.ts";
+import { tasks } from "#/schemas/db/tasks.ts";
 import {
 	allowedClients,
 	DEVICE_CODE_TTL_S,
@@ -319,88 +314,7 @@ export async function recordHeartbeat(
 			),
 		)
 		.catch(() => undefined);
-	await evaluatePressure(h, now.getTime()).catch(() => undefined);
 	return { upgradeRequired: needsUpgrade(h.cliVersion, MIN_CLI_VERSION) };
-}
-
-/**
- * Server-side pressure → Signal (scoped or global, 10min sustain + cooldown).
- * Ports the test-harness logic onto `machine_pressure_state` + `signals`.
- */
-async function evaluatePressure(
-	h: HeartbeatInput,
-	nowMs: number,
-): Promise<void> {
-	const threshold = PRESSURE_THRESHOLD_PCT;
-	const over = h.cpu > threshold || h.disk > threshold;
-	const scopeKey = h.scopeHint ?? "__global__";
-	const [row] = await db
-		.select()
-		.from(machinePressureState)
-		.where(
-			and(
-				eq(machinePressureState.machineId, h.machineId),
-				eq(machinePressureState.scopeKey, scopeKey),
-			),
-		)
-		.limit(1);
-	let samples = row?.samples ?? [];
-	if (over) samples = [...samples, { cpu: h.cpu, disk: h.disk, ts: nowMs }];
-	const cutoff = nowMs - PRESSURE_SUSTAINED_S * 1000;
-	samples = samples.filter((s) => s.ts >= cutoff);
-	const lastSignalAt = row?.lastSignalAt?.getTime() ?? 0;
-	let shouldSignal = false;
-	if (over && samples.length > 0) {
-		const first = samples[0];
-		const sustained =
-			first !== undefined && nowMs - first.ts >= PRESSURE_SUSTAINED_S * 1000;
-		const cooled = nowMs - lastSignalAt >= PRESSURE_COOLDOWN_S * 1000;
-		shouldSignal = sustained && cooled;
-	}
-	if (row) {
-		await db
-			.update(machinePressureState)
-			.set({
-				lastSignalAt: shouldSignal ? new Date(nowMs) : row.lastSignalAt,
-				samples,
-			})
-			.where(
-				and(
-					eq(machinePressureState.machineId, h.machineId),
-					eq(machinePressureState.scopeKey, scopeKey),
-				),
-			);
-	} else {
-		await db.insert(machinePressureState).values({
-			lastSignalAt: shouldSignal ? new Date(nowMs) : null,
-			machineId: h.machineId,
-			samples,
-			scopeKey,
-		});
-	}
-	if (!shouldSignal) return;
-	// scopeHint is a projectId only when the user owns that project.
-	let projectId: string | null = null;
-	if (h.scopeHint) {
-		const [p] = await db
-			.select({ id: projects.id })
-			.from(projects)
-			.where(
-				and(eq(projects.id, h.scopeHint), eq(projects.createdBy, h.userId)),
-			)
-			.limit(1);
-		if (p) projectId = p.id;
-	}
-	await db.insert(signals).values({
-		body: `machine pressure cpu=${h.cpu.toFixed(1)} disk=${h.disk.toFixed(1)}`,
-		id: crypto.randomUUID(),
-		projectId,
-		severity: h.disk > threshold ? "critical" : "warning",
-		source: "alert",
-		status: "new",
-		title: `Machine pressure on ${h.machineId.slice(0, 8)}`,
-		userId: h.userId,
-	});
 }
 
 export async function heartbeatHistory(

@@ -13,7 +13,7 @@ import { formatAgo } from "#/lib/age.ts";
 import { cn } from "#/lib/utils.ts";
 
 /**
- * Shared table shell. TaskTable and SignalTable shared the same
+ * Shared table shell. TaskTable shares the same
  * `Table > TableHeader > TableRow bg-muted/50` header, muted meta cells
  * with `?? "—"` fallback, `formatAgo()` dates and right-aligned
  * `size="sm"` action cells.

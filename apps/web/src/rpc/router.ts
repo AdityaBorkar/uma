@@ -6,7 +6,6 @@ import * as machines from "./procedures/machines.ts";
 import * as projects from "./procedures/projects.ts";
 import * as promptTemplates from "./procedures/promptTemplates.ts";
 import * as runs from "./procedures/runs.ts";
-import * as signals from "./procedures/signals.ts";
 import * as subagents from "./procedures/subagents.ts";
 import * as tasks from "./procedures/tasks.ts";
 
@@ -32,7 +31,6 @@ export default {
 	projects,
 	promptTemplates,
 	runs,
-	signals,
 	subagents,
 	tasks: {
 		create: tasks.create,

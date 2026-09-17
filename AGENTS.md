@@ -33,7 +33,7 @@ Bun monorepo: product web app (`Planner Q3`), device agent (`uma-machine`), repo
 
 - Imports use explicit `.ts`/`.tsx` extensions and `verbatimModuleSyntax` is on (use `import type`). `apps/web` and `apps/infra` resolve `#/*` to `src/*`; `apps/machine` uses relative paths.
 - App env vars are declared once in `apps/infra/utils/extract-env.ts`. When adding one, also update `apps/web/src/env.ts` (validation) and `apps/web/Dockerfile` (`ARG` only for `PUBLIC_*` build vars; secrets are runtime-only). Values come from Pulumi stack config; never commit `.env` files or real secrets.
-- Use the domain terms from the CONTEXT docs — e.g. documents use `state`, while tasks/signals/connections use `status`; each doc has an "avoid" list.
+- Use the domain terms from the CONTEXT docs — e.g. documents use `state`, while tasks/connections use `status`; each doc has an "avoid" list.
 
 ## Known wiring drift (verify before trusting)
 

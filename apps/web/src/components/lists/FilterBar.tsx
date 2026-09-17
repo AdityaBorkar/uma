@@ -20,7 +20,7 @@ export interface FilterSelectSpec {
 }
 
 /**
- * Shared filter bar. Card variant matches tasks/signals/documents
+ * Shared filter bar. Card variant matches tasks/documents
  * (`Card > CardContent bg-muted/50 flex-col sm:flex-row` + search Input#q
  * + N selects). Bare variant matches registry pages (skills/mcp/subagents/
  * prompt-templates: `flex gap-3 > max-w-sm search`).

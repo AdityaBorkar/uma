@@ -24,8 +24,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{ content: "dark", name: "color-scheme" },
 			{ title: "Planner" },
 			{
-				content:
-					"Planner — projects, documents, signals and tasks in one workspace.",
+				content: "Planner — projects, documents and tasks in one workspace.",
 				name: "description",
 			},
 		],

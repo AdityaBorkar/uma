@@ -16,7 +16,6 @@ export * from "./primitives.ts";
 export * from "./projects.ts";
 export * from "./runs.ts";
 export * from "./server-frames.ts";
-export * from "./signals.ts";
 export * from "./task-logs.ts";
 export * from "./tasks.ts";
 export * from "./ws.ts";

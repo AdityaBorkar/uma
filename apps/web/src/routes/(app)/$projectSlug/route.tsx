@@ -6,7 +6,6 @@ import {
 	BookOpen,
 	LayoutDashboard,
 	Radar,
-	Radio,
 	SquareKanban,
 } from "#/components/icons.tsx";
 import { AppShell } from "#/components/layout/AppShell.tsx";
@@ -28,7 +27,6 @@ const navItems = [
 	{ icon: LayoutDashboard, label: "Dashboard", to: "/$projectSlug/dashboard" },
 	{ icon: BookOpen, label: "Documents", to: "/$projectSlug/documents" },
 	{ icon: Radar, label: "Monitor", to: "/$projectSlug/monitor" },
-	{ icon: Radio, label: "Signals", to: "/$projectSlug/signals" },
 	{ icon: SquareKanban, label: "Tasks", to: "/$projectSlug/tasks" },
 ] as const;
 

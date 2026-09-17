@@ -20,7 +20,7 @@ export const Route = createFileRoute("/(app)/settings/projects/new")({
 		meta: [
 			{ title: "New project — Planner" },
 			{
-				content: "Create a project to group documents, signals and tasks.",
+				content: "Create a project to group documents and tasks.",
 				name: "description",
 			},
 		],

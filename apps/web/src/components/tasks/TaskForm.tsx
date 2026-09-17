@@ -10,12 +10,6 @@ interface Values {
 	agent: string;
 	projectId: string;
 	prompt: string;
-	signalId: string;
-	title: string;
-}
-
-interface SignalOption {
-	id: string;
 	title: string;
 }
 
@@ -25,26 +19,21 @@ interface AgentOption {
 
 interface Props {
 	agents?: AgentOption[];
-	defaultSignalId?: string;
 	loading?: boolean;
 	onCancel?: () => void;
 	onSubmit: (values: {
 		agent: string | undefined;
 		projectId: string | undefined;
 		prompt: string | undefined;
-		signalId: string | undefined;
 		title: string;
 	}) => Promise<void> | void;
 	projects?: ProjectOption[];
-	signals?: SignalOption[];
 	submitLabel?: string;
 }
 
 export function TaskForm({
 	agents,
 	projects,
-	signals,
-	defaultSignalId,
 	onSubmit,
 	onCancel,
 	submitLabel = "Queue task",
@@ -54,7 +43,6 @@ export function TaskForm({
 		agent: "",
 		projectId: "",
 		prompt: "",
-		signalId: defaultSignalId ?? "",
 		title: "",
 	});
 
@@ -63,7 +51,6 @@ export function TaskForm({
 			agent: v.agent || undefined,
 			projectId: v.projectId || undefined,
 			prompt: v.prompt || undefined,
-			signalId: v.signalId || undefined,
 			title: v.title,
 		};
 	}
@@ -94,20 +81,6 @@ export function TaskForm({
 				/>
 			</FormField>
 			<div className="grid grid-cols-2 gap-4">
-				<FormField id="signalId" label="Origin signal">
-					<Select
-						id="signalId"
-						onChange={(e) => set("signalId", e.target.value)}
-						value={values.signalId}
-					>
-						<option value="">Direct (no signal)</option>
-						{(signals ?? []).map((sig) => (
-							<option key={sig.id} value={sig.id}>
-								{sig.title}
-							</option>
-						))}
-					</Select>
-				</FormField>
 				<FormField id="projectId" label="Project">
 					<Select
 						id="projectId"
@@ -122,21 +95,21 @@ export function TaskForm({
 						))}
 					</Select>
 				</FormField>
+				<FormField error={errors.agent} id="agent" label="Agent">
+					<Select
+						id="agent"
+						onChange={(e) => set("agent", e.target.value)}
+						value={values.agent}
+					>
+						<option value="">Default (cli)</option>
+						{(agents ?? []).map((a) => (
+							<option key={a.name} value={a.name}>
+								{a.name}
+							</option>
+						))}
+					</Select>
+				</FormField>
 			</div>
-			<FormField error={errors.agent} id="agent" label="Agent">
-				<Select
-					id="agent"
-					onChange={(e) => set("agent", e.target.value)}
-					value={values.agent}
-				>
-					<option value="">Default (cli)</option>
-					{(agents ?? []).map((a) => (
-						<option key={a.name} value={a.name}>
-							{a.name}
-						</option>
-					))}
-				</Select>
-			</FormField>
 			<FormFooter
 				loading={loading}
 				onCancel={onCancel}

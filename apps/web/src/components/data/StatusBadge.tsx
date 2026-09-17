@@ -1,8 +1,4 @@
-import {
-	severityBadgeClass,
-	stateBadgeClass,
-	taskBadgeClass,
-} from "#/components/badges.ts";
+import { stateBadgeClass, taskBadgeClass } from "#/components/badges.ts";
 import { Badge } from "#/components/ui/badge.tsx";
 
 /**
@@ -28,19 +24,6 @@ export function DocStateBadge({ state }: { state: string }) {
 	return (
 		<Badge className={stateBadgeClass(state)} variant="outline">
 			{state}
-		</Badge>
-	);
-}
-
-/** Signal severity badge. Guide-compliant: outline + helper class. */
-export function SeverityBadge({
-	severity,
-}: {
-	severity: "info" | "warning" | "critical";
-}) {
-	return (
-		<Badge className={severityBadgeClass(severity)} variant="outline">
-			{severity}
 		</Badge>
 	);
 }

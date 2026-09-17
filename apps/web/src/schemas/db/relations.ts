@@ -127,10 +127,6 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.projects.id,
 			to: r.machineSandboxes.projectId,
 		}),
-		signals: r.many.signals({
-			from: r.projects.id,
-			to: r.signals.projectId,
-		}),
 		tasks: r.many.tasks({
 			from: r.projects.id,
 			to: r.tasks.projectId,
@@ -140,20 +136,6 @@ export const relations = defineRelations(schema, (r) => ({
 		owner: r.one.user({
 			from: r.promptTemplates.userId,
 			to: r.user.id,
-		}),
-	},
-	signals: {
-		owner: r.one.user({
-			from: r.signals.userId,
-			to: r.user.id,
-		}),
-		project: r.one.projects({
-			from: r.signals.projectId,
-			to: r.projects.id,
-		}),
-		tasks: r.many.tasks({
-			from: r.signals.id,
-			to: r.tasks.signalId,
 		}),
 	},
 	subagents: {
@@ -206,10 +188,6 @@ export const relations = defineRelations(schema, (r) => ({
 		sandboxes: r.many.machineSandboxes({
 			from: r.tasks.id,
 			to: r.machineSandboxes.taskId,
-		}),
-		signal: r.one.signals({
-			from: r.tasks.signalId,
-			to: r.signals.id,
 		}),
 	},
 	workspaceSettings: {

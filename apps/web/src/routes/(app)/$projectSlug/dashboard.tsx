@@ -26,8 +26,7 @@ export const Route = createFileRoute("/(app)/$projectSlug/dashboard")({
 		meta: [
 			{ title: "Dashboard — Planner" },
 			{
-				content:
-					"Running and queued tasks plus new signals waiting for triage.",
+				content: "Running and queued tasks in this scope.",
 				name: "description",
 			},
 		],
@@ -140,7 +139,6 @@ function TaskListCard({
 }
 
 function DashboardPage() {
-	const ws = useWorkspace();
 	const projectId = useWorkspaceProjectId();
 	const subtitle = useScopeSubtitle(
 		"work in flight and waiting · refreshes every 15s.",
@@ -164,12 +162,6 @@ function DashboardPage() {
 		}),
 		refetchInterval: 15_000,
 	});
-	const signalStatsQuery = useQuery({
-		...rpc.signals.stats.queryOptions({
-			input: projectId ? { projectId } : undefined,
-		}),
-		refetchInterval: 15_000,
-	});
 
 	const running = [...(runningQuery.data?.items ?? [])].sort(
 		(a, b) =>
@@ -182,37 +174,10 @@ function DashboardPage() {
 
 	const runningCount = taskStatsQuery.data?.running ?? 0;
 	const queuedCount = taskStatsQuery.data?.queued ?? 0;
-	const newSignals = signalStatsQuery.data?.new ?? 0;
-	const newSignalsLabel = signalStatsQuery.isPending ? "…" : String(newSignals);
 
 	return (
 		<div className="space-y-6">
 			<PageHeader description={subtitle} title="Dashboard" />
-
-			<Card className="rounded-md border">
-				<CardContent className="flex items-center justify-between py-3">
-					<div>
-						<p className="font-semibold text-sm">New signals</p>
-						<p className="text-muted-foreground text-xs">
-							Issues waiting to be triaged into tasks
-						</p>
-					</div>
-					<div className="flex items-center gap-3">
-						<span className="font-semibold text-2xl tabular-nums">
-							{newSignalsLabel}
-						</span>
-						<Button asChild={true} size="sm" variant="outline">
-							<Link
-								params={{ projectSlug: ws.projectSlug }}
-								search={{ status: "new" }}
-								to="/$projectSlug/signals"
-							>
-								Review
-							</Link>
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
 
 			<div className="grid gap-4 lg:grid-cols-2">
 				<TaskListCard
@@ -229,7 +194,7 @@ function DashboardPage() {
 				<TaskListCard
 					description="Accepted work waiting to start — FIFO"
 					emptyCta="Open Tasks"
-					emptyHint="The queue is empty. Queue a task or triage a signal into one."
+					emptyHint="The queue is empty. Queue a task to put an agent to work."
 					isError={queuedQuery.isError}
 					isLoading={queuedQuery.isPending}
 					onRetry={() => void queuedQuery.refetch()}

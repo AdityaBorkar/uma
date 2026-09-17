@@ -171,26 +171,3 @@ export const taskLogs = pgTable(
 	},
 	(table) => [index("task_logs_task_created_idx").on(table.taskId)],
 );
-
-export const machinePressureState = pgTable(
-	"machine_pressure_state",
-	{
-		lastSignalAt: timestamp("last_signal_at"),
-		machineId: text("machine_id").notNull(),
-		samples: jsonb("samples")
-			.$type<{ ts: number; cpu: number; disk: number }[]>()
-			.notNull()
-			.default([]),
-		scopeKey: text("scope_key").notNull(),
-		updatedAt: timestamp("updated_at")
-			.$onUpdate(() => new Date())
-			.notNull()
-			.defaultNow(),
-	},
-	(table) => [
-		index("machine_pressure_state_machine_scope_uidx").on(
-			table.machineId,
-			table.scopeKey,
-		),
-	],
-);

@@ -15,7 +15,7 @@ Bun monorepo: product web app, device agent, frozen wire contract, and Pulumi in
 
 Two bounded contexts, one contract:
 
-- **Planner Q3 (apps/web)** owns Projects, Documents, Signals, Tasks, Connections. Upstream for Tasks/Signals consumed by devices.
+- **Planner Q3 (apps/web)** owns Projects, Documents, Tasks, Connections. Upstream for Tasks consumed by devices.
 - **Machine Execution (apps/machine, downstream / conformist)** owns enrollment, heartbeat, sandbox lifecycle, task execution. Conforms to the frozen `v1` contract; server wins on conflict (`assign.limits`, `reset-config`, `tasks.claim` 409, `UPGRADE_REQUIRED` on major).
 
 ## Env / infra pointers

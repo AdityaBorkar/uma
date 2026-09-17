@@ -15,7 +15,6 @@ import {
 	PageHeader,
 	useWorkspaceProjectId,
 } from "#/components/lists/shared.tsx";
-import { UnderlineTabs } from "#/components/lists/UnderlineTabs.tsx";
 import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
@@ -31,8 +30,9 @@ import { useWorkspace } from "#/components/workspace.tsx";
 import { formatAgo } from "#/lib/age.ts";
 import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
+import { cn } from "#/lib/utils.ts";
 import {
-	DOCUMENT_KINDS,
+	type DocumentKind,
 	DocumentKindEnum,
 	DocumentStateEnum,
 	kindLabel,
@@ -40,11 +40,21 @@ import {
 import { useUrlSearchInput } from "#/stores/filters.ts";
 
 interface DocumentsSearch {
-	kind?: (typeof DOCUMENT_KINDS)[number]["value"];
+	kind?: DocumentKind;
 	label?: string;
 	q?: string;
 	state?: "open" | "closed";
 }
+
+const DOCUMENT_GROUPS: Array<{
+	label: string;
+	value: DocumentKind | undefined;
+}> = [
+	{ label: "All documents", value: undefined },
+	{ label: "Wiki", value: "wiki" },
+	{ label: "Specification", value: "spec" },
+	{ label: "Bug Reports", value: "bug_report" },
+];
 
 export const Route = createFileRoute("/(app)/$projectSlug/documents/")({
 	component: DocumentsPage,
@@ -52,7 +62,7 @@ export const Route = createFileRoute("/(app)/$projectSlug/documents/")({
 		meta: [
 			{ title: "Documents — Planner" },
 			{
-				content: "Browse wiki pages, specs, bug reports and changelogs.",
+				content: "Browse wiki pages, specs and bug reports.",
 				name: "description",
 			},
 		],
@@ -115,184 +125,211 @@ function DocumentsPage() {
 						New document
 					</Button>
 				}
-				description="Wiki pages, specs, bug reports and changelogs."
+				description="Wiki pages, specs and bug reports."
 				title="Documents"
 			/>
 
-			<UnderlineTabs
-				activeValue={search.kind}
-				onSelect={(kind) => setSearch({ kind })}
-				tabs={[
-					{ label: "All", value: undefined },
-					...DOCUMENT_KINDS.map((k) => ({ label: k.label, value: k.value })),
-				]}
-			/>
-
-			<FilterBar
-				actions={
-					<Button
-						onClick={() => setShowFilters((v) => !v)}
-						size="sm"
-						variant="outline"
-					>
-						{search.label ? `Label: ${search.label}` : "Label"}
-					</Button>
-				}
-				filters={[
-					{
-						id: "stateFilter",
-						label: "State",
-						onChange: (value) => {
-							const state = DocumentStateEnum.safeParse(value);
-							setSearch({ state: state.success ? state.data : undefined });
-						},
-						options: [
-							{ label: "All", value: "" },
-							{ label: "open", value: "open" },
-							{ label: "closed", value: "closed" },
-						],
-						value: search.state ?? "",
-						width: "sm",
-					},
-				]}
-				search={{
-					onChange: setQInput,
-					placeholder: "Filter by title or body",
-					value: qInput,
-				}}
-			/>
-			{showFilters ? (
-				<Card>
-					<CardContent>
-						<div className="flex flex-wrap gap-2">
-							{["wiki", "spec", "urgent", "api", "bug"].map((label) => (
-								<Badge
-									className={
-										search.label === label
-											? "cursor-pointer border-accent-fg"
-											: "cursor-pointer"
-									}
-									key={label}
-									onClick={() =>
-										setSearch({
-											label: search.label === label ? undefined : label,
-										})
-									}
-									variant="outline"
-								>
-									{label}
-								</Badge>
-							))}
-							<p className="w-full text-muted-foreground text-xs">
-								Labels are free-form — these are shortcuts.
-							</p>
+			<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+				<nav aria-label="Document groups" className="w-full shrink-0 lg:w-60">
+					<Card className="overflow-hidden p-0">
+						<div className="border-b bg-muted/50 px-4 py-2 font-semibold text-muted-foreground text-xs">
+							Groups
 						</div>
-					</CardContent>
-				</Card>
-			) : null}
-
-			{docsQuery.isPending ? (
-				<ListLoadingCard label="Loading documents…" />
-			) : docsQuery.isError ? (
-				<ListErrorAlert
-					error={docsQuery.error}
-					onRetry={() => void docsQuery.refetch()}
-					title="Failed to load documents"
-				/>
-			) : items.length === 0 ? (
-				<ListEmptyCard
-					action={
-						<Button
-							className="mt-4"
-							onClick={() => setCreateOpen(true)}
-							variant="primary"
-						>
-							Create the first document
-						</Button>
-					}
-					description="No documents yet. Everything you write lives here — start with a wiki page or a specification."
-					title="No documents"
-				/>
-			) : (
-				<ListResultCard
-					summary={
-						<>
-							<span className="font-semibold">{items.length} documents</span>
-							<span className="text-muted-foreground">
-								· {search.kind ? kindLabel(search.kind) : "all kinds"}
-							</span>
-							<span className="ml-auto text-muted-foreground">
-								{search.state ?? "all states"}
-							</span>
-						</>
-					}
-				>
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead className="w-12">#</TableHead>
-								<TableHead>Title</TableHead>
-								<TableHead className="w-28">Kind</TableHead>
-								<TableHead className="w-24">State</TableHead>
-								<TableHead className="w-40">Labels</TableHead>
-								<TableHead className="w-28">Project</TableHead>
-								<TableHead className="w-24">Updated</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{items.map((doc) => (
-								<TableRow key={doc.id}>
-									<TableCell className="text-muted-foreground text-xs">
-										#{doc.number}
-									</TableCell>
-									<TableCell>
-										<Link
-											className="font-medium text-sm hover:text-accent-fg hover:underline"
-											params={{
-												number: String(doc.number),
-												projectSlug: ws.projectSlug,
-											}}
-											to="/$projectSlug/documents/$number"
+						<ul className="flex flex-row gap-1 overflow-x-auto p-2 scrollbar-none lg:flex-col">
+							{DOCUMENT_GROUPS.map((group) => {
+								const active = search.kind === group.value;
+								return (
+									<li className="shrink-0 lg:shrink" key={group.label}>
+										<button
+											aria-current={active ? "page" : undefined}
+											className={cn(
+												"w-auto whitespace-nowrap rounded-md px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 lg:w-full",
+												active
+													? "bg-muted font-semibold text-foreground"
+													: "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+											)}
+											onClick={() => setSearch({ kind: group.value })}
+											type="button"
 										>
-											{doc.title}
-										</Link>
-									</TableCell>
-									<TableCell className="text-muted-foreground text-sm">
-										{kindLabel(doc.kind)}
-									</TableCell>
-									<TableCell>
-										<DocStateBadge state={doc.state} />
-									</TableCell>
-									<TableCell>
-										<div className="flex flex-wrap gap-1">
-											{doc.labels.slice(0, 3).map((label) => (
-												<Badge
-													className="px-1.5 py-0 text-micro"
-													key={label}
-													variant="outline"
-												>
-													{label}
-												</Badge>
-											))}
-										</div>
-									</TableCell>
-									<TableCell className="text-muted-foreground text-sm">
-										{doc.projectName ?? "—"}
-									</TableCell>
-									<TableCell className="text-muted-foreground text-sm">
-										{formatAgo(doc.updatedAt)}
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-					<ListMore
-						hasMore={docsQuery.hasNextPage}
-						onClick={() => void docsQuery.fetchNextPage()}
-						pending={docsQuery.isFetchingNextPage}
+											{group.label}
+										</button>
+									</li>
+								);
+							})}
+						</ul>
+					</Card>
+				</nav>
+
+				<div className="min-w-0 flex-1 space-y-4">
+					<FilterBar
+						actions={
+							<Button
+								onClick={() => setShowFilters((v) => !v)}
+								size="sm"
+								variant="outline"
+							>
+								{search.label ? `Label: ${search.label}` : "Label"}
+							</Button>
+						}
+						filters={[
+							{
+								id: "stateFilter",
+								label: "State",
+								onChange: (value) => {
+									const state = DocumentStateEnum.safeParse(value);
+									setSearch({ state: state.success ? state.data : undefined });
+								},
+								options: [
+									{ label: "All", value: "" },
+									{ label: "open", value: "open" },
+									{ label: "closed", value: "closed" },
+								],
+								value: search.state ?? "",
+								width: "sm",
+							},
+						]}
+						search={{
+							onChange: setQInput,
+							placeholder: "Filter by title or body",
+							value: qInput,
+						}}
 					/>
-				</ListResultCard>
-			)}
+					{showFilters ? (
+						<Card>
+							<CardContent>
+								<div className="flex flex-wrap gap-2">
+									{["wiki", "spec", "urgent", "api", "bug"].map((label) => (
+										<Badge
+											className={
+												search.label === label
+													? "cursor-pointer border-accent-fg"
+													: "cursor-pointer"
+											}
+											key={label}
+											onClick={() =>
+												setSearch({
+													label: search.label === label ? undefined : label,
+												})
+											}
+											variant="outline"
+										>
+											{label}
+										</Badge>
+									))}
+									<p className="w-full text-muted-foreground text-xs">
+										Labels are free-form — these are shortcuts.
+									</p>
+								</div>
+							</CardContent>
+						</Card>
+					) : null}
+
+					{docsQuery.isPending ? (
+						<ListLoadingCard label="Loading documents…" />
+					) : docsQuery.isError ? (
+						<ListErrorAlert
+							error={docsQuery.error}
+							onRetry={() => void docsQuery.refetch()}
+							title="Failed to load documents"
+						/>
+					) : items.length === 0 ? (
+						<ListEmptyCard
+							action={
+								<Button
+									className="mt-4"
+									onClick={() => setCreateOpen(true)}
+									variant="primary"
+								>
+									Create the first document
+								</Button>
+							}
+							description="No documents yet. Everything you write lives here — start with a wiki page or a specification."
+							title="No documents"
+						/>
+					) : (
+						<ListResultCard
+							summary={
+								<>
+									<span className="font-semibold">
+										{items.length} documents
+									</span>
+									<span className="text-muted-foreground">
+										· {search.kind ? kindLabel(search.kind) : "all kinds"}
+									</span>
+									<span className="ml-auto text-muted-foreground">
+										{search.state ?? "all states"}
+									</span>
+								</>
+							}
+						>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead className="w-12">#</TableHead>
+										<TableHead>Title</TableHead>
+										<TableHead className="w-28">Kind</TableHead>
+										<TableHead className="w-24">State</TableHead>
+										<TableHead className="w-40">Labels</TableHead>
+										<TableHead className="w-28">Project</TableHead>
+										<TableHead className="w-24">Updated</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{items.map((doc) => (
+										<TableRow key={doc.id}>
+											<TableCell className="text-muted-foreground text-xs">
+												#{doc.number}
+											</TableCell>
+											<TableCell>
+												<Link
+													className="font-medium text-sm hover:text-accent-fg hover:underline"
+													params={{
+														number: String(doc.number),
+														projectSlug: ws.projectSlug,
+													}}
+													to="/$projectSlug/documents/$number"
+												>
+													{doc.title}
+												</Link>
+											</TableCell>
+											<TableCell className="text-muted-foreground text-sm">
+												{kindLabel(doc.kind)}
+											</TableCell>
+											<TableCell>
+												<DocStateBadge state={doc.state} />
+											</TableCell>
+											<TableCell>
+												<div className="flex flex-wrap gap-1">
+													{doc.labels.slice(0, 3).map((label) => (
+														<Badge
+															className="px-1.5 py-0 text-micro"
+															key={label}
+															variant="outline"
+														>
+															{label}
+														</Badge>
+													))}
+												</div>
+											</TableCell>
+											<TableCell className="text-muted-foreground text-sm">
+												{doc.projectName ?? "—"}
+											</TableCell>
+											<TableCell className="text-muted-foreground text-sm">
+												{formatAgo(doc.updatedAt)}
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+							<ListMore
+								hasMore={docsQuery.hasNextPage}
+								onClick={() => void docsQuery.fetchNextPage()}
+								pending={docsQuery.isFetchingNextPage}
+							/>
+						</ListResultCard>
+					)}
+				</div>
+			</div>
 
 			<NewDocumentDialog onOpenChange={setCreateOpen} open={createOpen} />
 		</div>
