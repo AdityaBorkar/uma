@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
 	}),
 	validateSearch: (
 		search: Record<string, unknown>,
-	): { redirect: string; error?: string } => ({
+	): { redirect: string; error?: string | undefined } => ({
 		error: typeof search.error === "string" ? search.error : undefined,
 		redirect:
 			typeof search.redirect === "string" && search.redirect.length > 0

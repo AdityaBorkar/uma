@@ -1,7 +1,10 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
-import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import {
+	createTanstackQueryUtils,
+	type RouterUtils,
+} from "@orpc/tanstack-query";
 import type { QueryKey } from "@tanstack/react-query";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -37,7 +40,7 @@ const getORPCClient = createIsomorphicFn()
 
 const client: RouterClient<typeof router> = getORPCClient();
 
-export const rpc = createTanstackQueryUtils(client);
+export const rpc: RouterUtils<typeof client> = createTanstackQueryUtils(client);
 
 /**
  * The procedure path from a `rpc.x.y.key()`. oRPC's `key()` is a full match

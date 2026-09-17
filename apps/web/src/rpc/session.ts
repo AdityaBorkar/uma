@@ -3,10 +3,10 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { env } from "#/env.ts";
 
-interface SessionUser {
+export interface SessionUser {
 	email: string;
 	id: string;
-	image?: string | null;
+	image?: string | null | undefined;
 	name: string;
 }
 

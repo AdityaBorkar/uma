@@ -45,7 +45,7 @@ const host = vps
 const provider = new docker.Provider(
 	"docker",
 	{ host, sshOpts },
-	{ dependsOn: vps ? [vps.instance] : undefined },
+	{ ...(vps ? { dependsOn: [vps.instance] } : {}) },
 );
 
 const network = new docker.Network(

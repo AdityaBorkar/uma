@@ -11,7 +11,7 @@ import PostHogProvider from "../components/provider.tsx";
 // biome-ignore lint/correctness/noUnresolvedImports: the css import is resolved at build time
 import css from "../styles.css?url";
 
-interface MyRouterContext {
+export interface MyRouterContext {
 	queryClient: QueryClient;
 }
 

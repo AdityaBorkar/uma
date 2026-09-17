@@ -83,10 +83,13 @@ export function appBuildArgs(
 	envValues: Record<string, pulumi.Input<string>>,
 ): Record<string, pulumi.Input<string>> {
 	return Object.fromEntries(
-		APP_ENV_VARS.filter(({ build }) => build).map(({ name }) => [
-			name,
-			envValues[name],
-		]),
+		APP_ENV_VARS.filter(({ build }) => build).map(({ name }) => {
+			const value = envValues[name];
+			if (value === undefined) {
+				throw new Error(`Missing env value for ${name}`);
+			}
+			return [name, value];
+		}),
 	);
 }
 

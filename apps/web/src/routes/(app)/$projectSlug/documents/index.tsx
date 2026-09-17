@@ -46,11 +46,11 @@ import {
 } from "#/stores/command-palette.ts";
 import { useUrlSearchInput } from "#/stores/filters.ts";
 
-interface DocumentsSearch {
-	kind?: DocumentKind;
-	label?: string;
-	q?: string;
-	state?: "open" | "closed";
+export interface DocumentsSearch {
+	kind?: DocumentKind | undefined;
+	label?: string | undefined;
+	q?: string | undefined;
+	state?: "open" | "closed" | undefined;
 }
 
 const DOCUMENT_GROUPS: Array<{

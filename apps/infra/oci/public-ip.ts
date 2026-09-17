@@ -17,12 +17,13 @@ export function attachReservedPublicIp({
 	});
 
 	const vnicId = vnicAttachments.apply((attachments) => {
-		if (attachments.length === 0) {
+		const first = attachments[0];
+		if (!first) {
 			throw new Error(
 				"Instance has no VNIC attachment yet — re-run `pulumi up` to finish assigning the reserved public IP",
 			);
 		}
-		return attachments[0].vnicId;
+		return first.vnicId;
 	});
 
 	const { privateIps } = oci.core.getPrivateIpsOutput({ vnicId });

@@ -24,7 +24,7 @@ import {
 	useWorkspaceProjectId,
 } from "#/components/lists/shared.tsx";
 import { TaskForm } from "#/components/tasks/TaskForm.tsx";
-import { TaskTable } from "#/components/tasks/TaskTable.tsx";
+import { type TaskRow, TaskTable } from "#/components/tasks/TaskTable.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { flattenPages } from "#/lib/lists.ts";
 import { rpc } from "#/lib/rpc.ts";
@@ -39,9 +39,64 @@ import {
 	optimisticTaskStatus,
 } from "#/stores/invalidation.ts";
 
-interface TasksSearch {
-	q?: string;
-	status?: TaskStatus;
+export interface TasksSearch {
+	q?: string | undefined;
+	status?: TaskStatus | undefined;
+}
+
+function asStringOrNull(value: unknown): string | null {
+	return typeof value === "string" ? value : null;
+}
+
+function asDate(value: unknown): string | Date | null {
+	return typeof value === "string" || value instanceof Date ? value : null;
+}
+
+function toTaskRow(item: Record<string, unknown>): TaskRow | null {
+	if (typeof item.id !== "string" || typeof item.title !== "string") {
+		return null;
+	}
+	const status = TaskStatusEnum.safeParse(item.status);
+	if (!status.success) {
+		return null;
+	}
+	const queuedAt = asDate(item.queuedAt);
+	if (queuedAt === null) {
+		return null;
+	}
+	const startedAt =
+		item.startedAt === null || item.startedAt === undefined
+			? null
+			: asDate(item.startedAt);
+	if (
+		item.startedAt !== null &&
+		item.startedAt !== undefined &&
+		startedAt === null
+	) {
+		return null;
+	}
+	const finishedAt =
+		item.finishedAt === null || item.finishedAt === undefined
+			? null
+			: asDate(item.finishedAt);
+	if (
+		item.finishedAt !== null &&
+		item.finishedAt !== undefined &&
+		finishedAt === null
+	) {
+		return null;
+	}
+	return {
+		agent: typeof item.agent === "string" ? item.agent : "cli",
+		finishedAt,
+		id: item.id,
+		projectId: asStringOrNull(item.projectId),
+		projectName: asStringOrNull(item.projectName),
+		queuedAt,
+		startedAt,
+		status: status.data,
+		title: item.title,
+	};
 }
 
 export const Route = createFileRoute("/(app)/$projectSlug/tasks")({
@@ -144,7 +199,9 @@ function TasksPage() {
 		}),
 	);
 
-	const items = flattenPages(tasksQuery.data);
+	const items = flattenPages(tasksQuery.data)
+		.map((item) => toTaskRow(item as Record<string, unknown>))
+		.filter((row): row is TaskRow => row !== null);
 	const agentOptions = (agentsQuery.data ?? []).map((a) => ({
 		name: a.name,
 	}));

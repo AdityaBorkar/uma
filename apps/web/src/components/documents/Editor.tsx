@@ -52,7 +52,7 @@ export function DocumentEditor({
 	];
 
 	const editor = useEditor({
-		content: initialHtml || undefined,
+		content: initialHtml,
 		editorProps: {
 			attributes: {
 				class:

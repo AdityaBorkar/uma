@@ -33,6 +33,50 @@ export const Route = createFileRoute("/(app)/settings/machines")({
 	}),
 });
 
+interface MachineRow {
+	cliVersion: string | null;
+	id: string;
+	lastSeenAt: string | Date | null;
+	name: string;
+	status: string;
+}
+
+function toMachineRow(item: Record<string, unknown>): MachineRow | null {
+	if (typeof item.id !== "string") {
+		return null;
+	}
+	if (typeof item.name !== "string") {
+		return null;
+	}
+	if (typeof item.status !== "string") {
+		return null;
+	}
+	const cliVersion =
+		typeof item.cliVersion === "string" ? item.cliVersion : null;
+	const lastSeenRaw = item.lastSeenAt;
+	const lastSeenAt =
+		lastSeenRaw === null || lastSeenRaw === undefined || lastSeenRaw === ""
+			? null
+			: typeof lastSeenRaw === "string" || lastSeenRaw instanceof Date
+				? lastSeenRaw
+				: null;
+	if (
+		lastSeenRaw !== null &&
+		lastSeenRaw !== undefined &&
+		lastSeenRaw !== "" &&
+		lastSeenAt === null
+	) {
+		return null;
+	}
+	return {
+		cliVersion,
+		id: item.id,
+		lastSeenAt,
+		name: item.name,
+		status: item.status,
+	};
+}
+
 function MachinesPage() {
 	const queryClient = useQueryClient();
 	const machinesQuery = useQuery(rpc.machines.list.queryOptions());
@@ -42,7 +86,9 @@ function MachinesPage() {
 		}),
 	);
 
-	const items = machinesQuery.data ?? [];
+	const items = (machinesQuery.data ?? [])
+		.map((item) => toMachineRow(item as Record<string, unknown>))
+		.filter((row): row is MachineRow => row !== null);
 
 	return (
 		<div className="space-y-4">

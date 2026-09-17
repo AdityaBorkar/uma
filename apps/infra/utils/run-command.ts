@@ -53,6 +53,9 @@ try {
 		cancel("Operation cancelled.");
 		process.exit(0);
 	}
+	if (typeof passphrase !== "string") {
+		throw new Error("Pulumi config passphrase prompt was cancelled.");
+	}
 
 	const spin = spinner();
 	spin.start(`Reading config for stack "${options.stack}"`);

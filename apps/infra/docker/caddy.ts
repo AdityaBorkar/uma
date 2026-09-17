@@ -86,7 +86,7 @@ ${site} {
 				},
 			],
 		},
-		{ dependsOn, provider },
+		{ ...(dependsOn === undefined ? {} : { dependsOn }), provider },
 	);
 
 	return { container };

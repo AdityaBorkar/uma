@@ -43,6 +43,58 @@ interface TaskRow {
 	title: string;
 }
 
+function asStringOrNull(value: unknown): string | null {
+	return typeof value === "string" ? value : null;
+}
+
+function asDate(value: unknown): string | Date | null {
+	return typeof value === "string" || value instanceof Date ? value : null;
+}
+
+function toTaskRow(item: Record<string, unknown>): TaskRow | null {
+	if (typeof item.id !== "string" || typeof item.title !== "string") {
+		return null;
+	}
+	const queuedAt = asDate(item.queuedAt);
+	if (queuedAt === null) {
+		return null;
+	}
+	const startedRaw = item.startedAt;
+	const startedAt =
+		startedRaw === null || startedRaw === undefined ? null : asDate(startedRaw);
+	if (startedRaw !== null && startedRaw !== undefined && startedAt === null) {
+		return null;
+	}
+	if (typeof item.status !== "string") {
+		return null;
+	}
+	return {
+		id: item.id,
+		projectId: asStringOrNull(item.projectId),
+		projectName: asStringOrNull(item.projectName),
+		queuedAt,
+		startedAt,
+		status: item.status,
+		title: item.title,
+	};
+}
+
+function toTaskRows(
+	items: Array<Record<string, unknown>> | undefined,
+): TaskRow[] {
+	if (!items) {
+		return [];
+	}
+	const rows: TaskRow[] = [];
+	for (const item of items) {
+		const row = toTaskRow(item);
+		if (row) {
+			rows.push(row);
+		}
+	}
+	return rows;
+}
+
 function TaskListCard({
 	description,
 	isLoading,
@@ -163,12 +215,12 @@ function DashboardPage() {
 		refetchInterval: 15_000,
 	});
 
-	const running = [...(runningQuery.data?.items ?? [])].sort(
+	const running = [...toTaskRows(runningQuery.data?.items)].sort(
 		(a, b) =>
 			new Date(a.startedAt ?? a.queuedAt).getTime() -
 			new Date(b.startedAt ?? b.queuedAt).getTime(),
 	);
-	const queued = [...(queuedQuery.data?.items ?? [])].sort(
+	const queued = [...toTaskRows(queuedQuery.data?.items)].sort(
 		(a, b) => new Date(a.queuedAt).getTime() - new Date(b.queuedAt).getTime(),
 	);
 

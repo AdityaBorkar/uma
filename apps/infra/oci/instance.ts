@@ -42,7 +42,13 @@ export function createInstance({ subnet }: { subnet: oci.core.Subnet }) {
 			sortBy: "TIMECREATED",
 			sortOrder: "DESC",
 		})
-		.apply((images) => images.images[0]);
+		.apply((images) => {
+			const selected = images.images[0];
+			if (!selected) {
+				throw new Error("No Ubuntu image found for VM.Standard.A1.Flex");
+			}
+			return selected;
+		});
 
 	const instance = new oci.core.Instance(
 		"vps-instance",
