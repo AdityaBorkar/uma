@@ -1,6 +1,6 @@
 # orpc-contract — frozen v1 wire contract
 
-Single source of truth for machine↔server wire shapes. Imported by `apps/machine` via relative path (`../orpc-contract/src/index.ts`). This package never imports from `apps/machine/src`.
+Single source of truth for machine↔server wire shapes. Imported by `apps/machine` and `apps/web` as `@uma/orpc-contract` (workspace dep: `apps/machine/package.json:18`, `apps/web/package.json:51`). This package never imports from `apps/machine/src`.
 
 ## Layout
 
@@ -10,8 +10,9 @@ Single source of truth for machine↔server wire shapes. Imported by `apps/machi
 - `src/schemas/server-frames.ts` — server→machine frames. See `FRAMES.md`.
 - `src/schemas/device.ts` — HTTPS/oRPC shapes: device-code flow (`DeviceCode*`, `DeviceToken*`, `DeviceTokenError`) and `TaskClaimRequest`, `DriftEntry`, `Receipt`.
 - `src/schemas/` — API I/O schemas for the contract routers: web-domain inputs (mirroring `apps/web/src/schemas/schema.ts`), loose row/page/stats outputs, machine HTTPS responses (`TaskClaimResponse`, `LatestVersionResponse`, …), WS channel I/O (`WsSendAck`, `WsSubscribeInput`), shared primitives (`primitives.ts`), and WS frames (`machine-frames.ts`, `server-frames.ts`). Split per domain: `common.ts` (DbRecord/page/stats/id/remove envelopes), `projects.ts`, `connections.ts`, `tasks.ts`, `documents.ts` (incl. comments), `machines.ts`, `agents.ts`, `runs.ts`, `task-logs.ts`, `ws.ts`; re-exported via `schemas/index.ts`.
-- `src/contracts/api.ts` — `apiContract`: `oc` router (from `@orpc/contract`) over the schemas above. Namespaces `tasks/projects/documents/connections` mirror `apps/web/src/rpc/router.ts`; `device`/`machines` cover machine enrollment + claim/version/history **plus** the browser registry (`machines.list/get/revoke/heartbeatList`, `device.approve`); `agents`/`runs` cover the coding-agent registry and task-run tracking. Implement with `implement(apiContract)` from `@orpc/server`. Every procedure carries `openapi({ method, path, ... })` metadata (from `@orpc/openapi`) so the same contract serves RPC **and** REST: `RPCHandler` at `/api/rpc` (unchanged) plus `OpenAPIHandler` and OpenAPI-spec generation. See "REST endpoints" below.
+- `src/contracts/api.ts` — `apiContract`: `oc` router (from `@orpc/contract`) over the schemas above. Namespaces `tasks/projects/documents/connections` overlap `apps/web/src/rpc/router.ts:1-45` (web also mounts `promptTemplates`, `subagents` with no contract equivalent); `device`/`machines` cover machine enrollment + claim/version/history **plus** the browser registry (`machines.list/get/revoke/heartbeatList`, `device.approve`); `agents`/`runs` cover the coding-agent registry and task-run tracking. Web adopts it incrementally via `implement(apiContract)` (`apps/web/src/rpc/contract.ts:9-14`: only `agents`, `runs`, browser registry, task logs) — rest still plain `os`. Every procedure carries `openapi({ method, path, ... })` metadata (from `@orpc/openapi`) so the same contract serves RPC **and** REST: `RPCHandler` at `/api/rpc` (unchanged) plus `OpenAPIHandler` and OpenAPI-spec generation. See "REST endpoints" below.
 - `src/contracts/ws.ts` — WS messages contract (frozen v1): `wsMessagesContract` is the raw-frame registry (`path`, `protocol`, per-`t` schemas for both directions); `wsContract` models the same channel as `oc` procedures (`machines.send` for machine→server frames, `machines.stream` as an `asyncIteratorObject(ServerFrameSchema)` for server→machine). Transport stays raw JSON frames, not an oRPC envelope.
+- `src/ids.ts` — wire-visible ID factories (`rand`/`deviceCode`/`userCode`/`sessionToken`; prefixes/lengths/formats frozen, `src/ids.ts:3-5`).
 - `src/contracts/index.ts` + `src/index.ts` — barrel re-exports: schemas and contracts are both exported from the package root.
 - `src/utils.ts` — pure helpers: `branchForTask`, `effectiveLimits`, `quotaDefaultsFromRam`, `compareVersions` / `needsUpgrade`.
 - `src/index.ts` — barrel re-export only.
@@ -73,13 +74,13 @@ device operations are actions whose paths mirror the procedure name.
 Notes for implementers:
 
 - Path-param names match input-schema keys (`{id}`, `{provider}`, `{slug}`,
-  `{number}`, `{documentNumber}`); oRPC compact mapping merges path params
+  `{number}`, `{documentNumber}`, `{machineId}`, `{taskId}` — see `src/contracts/api.ts:79-84`); oRPC compact mapping merges path params
   with the query (GET/DELETE) or body (POST/PATCH).
 - Numeric params (`{number}`, `?limit=`) arrive as strings over HTTP. Serve
   the REST transport with `SmartCoercionHandlerPlugin` (plus
   `ZodToJsonSchemaConverter` from `@orpc/zod`) so they coerce to numbers.
-- Static routes (`/tasks/stats`, `/connections/providers`,
-  `/projects/by-slug/{slug}`) coexist with dynamic siblings (`/tasks/{id}`,
+- Static routes (`/tasks/stats`, `/runs/stats`, `/connections/providers`,
+  `/projects/by-slug/{slug}` — see `src/contracts/api.ts:85-88`) coexist with dynamic siblings (`/tasks/{id}`,
   …); values never collide in practice (UUIDs vs literals, `github|google`
   vs `providers`).
 - Generate the spec with `OpenAPIGenerator` from `@orpc/openapi` (converters:
@@ -87,7 +88,7 @@ Notes for implementers:
 
 ## Freeze policy
 
-- `protocol: "v1"` is required on every ws frame. Unknown inbound `t` is logged and ignored (`parseServerFrame` returns `null`, never throws); unknown outbound is never sent (`validateMachineFrame` / `assertMachineFrame` on send).
+- `protocol: "v1"` is required on every ws frame. Unknown inbound `t` is logged and ignored (`parseServerFrame` returns `null`, never throws); unknown outbound is never sent (`validateMachineFrame` in `src/schemas/machine-frames.ts:129`, wrapped by machine-side `assertMachineFrame` in `apps/machine/src/execution/protocol.ts:15` on send).
 - `null` `projectId` is the wire encoding of global Scope, not an unbound sandbox.
 - Log chunks are capped at 256KB UTF-8 bytes measured with `TextEncoder` (byte length, not UTF-16 length), so multibyte text is capped exactly.
 - Any wire-frame change requires a major version bump and `UPGRADE_REQUIRED` handling. See `VERSIONING.md`.

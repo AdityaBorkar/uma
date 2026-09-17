@@ -15,13 +15,13 @@ All ws frames are JSON with `protocol: "v1"`. Machine→server frames also carry
 | `claim-ack` | Result of the atomic `tasks.claim` step | `taskId`, `sandboxId` (min 1; quota-refusal path carries a generated placeholder id since no sandbox is created), `ok`, `error?` (`QUOTA_EXCEEDED` or free string) |
 | `quota-exceeded` | Local quota refusal, no exec | `taskId`, `limits`, `usage` |
 
-Validation: `MachineFrameSchema` (discriminated union on `t`); outbound enforced via `validateMachineFrame` / `assertMachineFrame` on every send.
+Validation: `MachineFrameSchema` (discriminated union on `t`); outbound enforced via `validateMachineFrame` (`src/schemas/machine-frames.ts:129`) wrapped by machine-side `assertMachineFrame` (`apps/machine/src/execution/protocol.ts:15`) on every send.
 
 ## Server → machine (`src/schemas/server-frames.ts`)
 
 | `t` | Purpose | Key fields |
 |---|---|---|
-| `assign` | Run one Task in one sandbox | `taskId`, `projectId` (`string \| null`), `prompt`, `repoUrl`, `branch?`, `commit?`, `freshStart?`, `limits?` (partial `Limits` override) |
+| `assign` | Run one Task in one sandbox | `taskId`, `projectId` (`string \| null`), `prompt`, `repoUrl?` (optional, defaults `""` per `src/schemas/server-frames.ts:14`), `branch?`, `commit?`, `freshStart?`, `limits?` (partial `Limits` override) |
 | `cancel` | Stop the in-flight run for a Task | `taskId` |
 | `reset-config` | Converge config keys toward desired state | `jobId`, `keys` (`string[] \| "*"`, where `"*"` maps to the ordered sync path plus `sync-ack`), `version`, `payload?` (`limits?`, `templates?`, provider `keys?`) |
 | `UPGRADE_REQUIRED` | Major-version gate | `minVersion`, `reason?` → agent exits `3` |
@@ -30,7 +30,7 @@ Parsing: `parseServerFrame` returns `ServerFrame | null`; unknown `t` maps to `n
 
 ## Primitives (`src/schemas/primitives.ts`)
 
-- `Limits` (`maxRunning/maxTotal` required, `cpu/ram` optional), `QuotaUsage` (`running/total`), `HostMetrics` (`cpu/ram/disk` 0–100, `pids`).
+- `Limits` (`maxRunning/maxTotal` required, `cpu/ram` optional), `QuotaUsage` (`running/total`), `HostMetrics` (`cpu/ram/disk` 0–100, `pids: number[]` of PIDs ≥1 per `src/schemas/primitives.ts:19-24`).
 - `SandboxInfo` (`id`, `status: created | running | stopped | destroyed`, `taskId: string | null`, `projectId: string | null`). `taskId: null` only occurs for foreign/unlabeled sandboxes seen via list; the agent never creates unbound sandboxes.
 - `MachineName` (slug-like lowercase 1–64, not in `RESERVED_MACHINE_NAMES`), `ConnectionStatus` (`enrolled | connected | disconnected | revoked`).
 

@@ -48,15 +48,14 @@ Make the URL the source of truth for workspace scope.
 - **Management stays unscoped** under `/settings/*` (`/settings/projects`,
   `/settings/account`, `/settings/evals`,
   `/settings/projects/new`, `/settings/projects/$projectId`) — per-user,
-  not per-project (plan 005 §3.1, option **A**). `settings/insights.tsx`
-  redirects to `/~/insights`.
+  not per-project (plan 005 §3.1, option **A**).
 - **Hard redirects, not wrappers**: the flat legacy routes were never kept as
   302 wrappers. Bare `/{slug}` redirects to `/{slug}/dashboard`
   (`(app)/$projectSlug/index.tsx`); `/wiki` redirects to
   `/documents?kind=wiki`; unknown slugs render an in-shell "Project not found"
   alert with a link to `/settings/projects`.
 
-> **Post-implementation delta (2026-09-09, refreshed 2026-09-10, prompt-templates rename 2026-09-12, signals removal 2026-09-17):** the `/wiki → documents?kind=wiki` redirect and `insights/updates` pages no longer exist — workspace nav is 4 items (`navItems`: dashboard/documents/monitor/tasks; `signals` removed with its `signals.*` API, `signals` table, and task `signalId` link). `monitor` is a placeholder route. Settings nav now includes backed pages `account/analytics/evals/projects/machines/agents/prompt-templates/model-providers/version-source` plus dead/planned entries (`skills/mcp/subagents/web-search/browsers/computer-control`) with no backing files; `/settings/commands` redirects to `/settings/prompt-templates` and `promptTemplates.*` replaces the `commands.*` oRPC namespace; `analytics`/`evals` are explicit placeholders. `connections`/`insights` settings pages are gone (Connections remain as oRPC `connections.*` + `/api/connections.*` callbacks with no settings UI). `routeTree.gen.ts` is generated (`bun run gen:routes`); do not hand-edit.
+> **Post-implementation delta (2026-09-09, refreshed 2026-09-10, prompt-templates rename 2026-09-12, signals removal 2026-09-17, releases/automations 2026-09-17):** the `/wiki → documents?kind=wiki` redirect and `insights/updates` pages no longer exist — workspace nav is 5 items (`navItems` in `src/routes/(app)/$projectSlug/route.tsx:27-33`: dashboard/documents/releases/monitor/tasks; `signals` removed with its `signals.*` API, `signals` table, and task `signalId` link; `automations.tsx` is a placeholder orphan not in nav). `monitor` is a placeholder route. Settings nav (`src/routes/(app)/settings/route.tsx:26-57`) now includes backed pages `account/analytics/evals/projects/machines/agents/skills/mcp-servers/prompt-templates/subagents/model-providers/version-source` plus unbacked `web-search/browsers/computer-control` with no files; `/settings/commands` redirects to `/settings/prompt-templates` (`src/routes/(app)/settings/commands.tsx:3-8`) and `promptTemplates.*` replaces the `commands.*` oRPC namespace; `analytics`/`evals` are explicit placeholders. `connections`/`insights` settings pages are gone (Connections remain as oRPC `connections.*` + `/api/connections.*` callbacks with no settings UI). `routeTree.gen.ts` is generated (`bun run gen:routes`); do not hand-edit.
 
 ## Deviations from plan 005
 
@@ -76,10 +75,7 @@ Make the URL the source of truth for workspace scope.
   human-readable (`/adistack/documents/42`) and stable across copy/paste.
 - `projects.slug` is mutable — renaming changes the URL and the old slug 404s
   in v1 (no history/redirect table yet).
-- Settings/nav caution: unscoped `to` strings `/projects`, `/connections`,
-  `/account`, `/evals` in the nav arrays (`navItems` in `(app)/$projectSlug/route.tsx` and `settingsNavItems`
-  in `(app)/settings/route.tsx`) still
-  have **no backing file routes** — the real pages live under `/settings/*`.
+- Settings/nav caution: current nav arrays use `/$projectSlug/…` (`$projectSlug/route.tsx:27-33`) and `/settings/…` (`settings/route.tsx:26-57`); bare unscoped `to` strings `/projects, /connections, /account, /evals` do not appear in nav — the real pages live under `/settings/*`.
 - `~` can never be a project slug (reserved), and TanStack Router's literal
   precedence keeps room to split a literal `(app)/~` tree later without
   migration.

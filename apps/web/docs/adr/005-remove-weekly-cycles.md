@@ -23,8 +23,8 @@ destructive removal.
 Remove the weekly-cycles concept from every layer of the application:
 
 - **Drop the tables** `weekly_cycles`, `cycle_contributors`, and the
-  `cycle_status` enum. `drizzle.config.ts` and `src/db/schema.ts` no longer
-  reference `src/db/schema/cycles.ts` (file deleted).
+  `cycle_status` enum. `drizzle.config.ts` and `src/schemas/db/` no longer
+  reference cycles (historical path `src/db/schema.ts` / `src/db/schema/cycles.ts`, file deleted).
 - **Drop the `cycleId` columns** from `documents` and `tasks` (and their
   `weekly_cycles` foreign keys), including all reads/writes in the
   `documents.*` and `tasks.*` procedures and their Zod schemas.

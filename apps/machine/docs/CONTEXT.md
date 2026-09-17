@@ -6,13 +6,13 @@ Device-side agent that lets a user-owned machine run Tasks on the user's behalf.
 
 Single bounded context: **Machine Execution**. This repo owns enrollment, heartbeat, state convergence, sandbox lifecycle, and task execution on the device.
 
-The `uma` server (Tasks, Projects, machine registry) is an external upstream system, not a bounded context owned here. This repo conforms to its `v1` contract via `@uma/orpc-contract` (`../orpc-contract/`).
+The `uma` server (Tasks, Projects, machine registry) is an external upstream system, not a bounded context owned here. This repo conforms to its `v1` contract via `@uma/orpc-contract` (workspace dep, filesystem at `../orpc-contract/`).
 
 ## Context Map
 
 - **Machine Execution (this repo, downstream / conformist)** → **uma Server (external upstream, sole owner)**:
   Consumes `machines.*` + `/api/machines/ws` as frozen `v1` JSON frames (`../orpc-contract/src/schemas/machine-frames.ts`, `../orpc-contract/src/schemas/server-frames.ts`).
-  ACL = `src/daemon/ws-client.ts` + `parseServerFrame` / `validateMachineFrame` (unknown `t` logged + ignored, never sent).
+  ACL = `src/daemon/ws-client.ts` + `parseServerFrame` / machine-side `assertMachineFrame` wrapping `validateMachineFrame` (`src/execution/protocol.ts:15`) (unknown `t` logged + ignored, never sent).
 - Server wins on conflict: `assign.limits` / `reset-config` override local `limits.json`; `tasks.claim` `409` is authoritative; `UPGRADE_REQUIRED` on major forces reinstall.
 
 ## Language
@@ -95,6 +95,6 @@ _Avoid_: limit (verb), throttle
 
 - Strict binding: `SandboxInfoSchema` (`../orpc-contract/src/schemas/primitives.ts`) allows `taskId: string | null` and `projectId: string | null`, and the `sandbox list` command prints `global` for null. Per grill 2026-09-10 the domain invariant is strict (exactly one Task, exactly one Scope; `null` projectId is the wire encoding of global Scope, not an unbound sandbox). `taskId: null` only occurs for foreign/unlabeled sandboxes seen via list. Idle `stopped` sandboxes awaiting TTL reap remain bound to their last Task. Do not create unbound sandboxes.
 - Pressure attribution: `sandboxMetricsForPressure` joins `task.id`/`project.id` labels, but the SDK is the only driver exposing metrics — CLI/mock report `[]`, so scoped hints degrade to host-global there.
-- Unsent contract frames: `check-ack` is defined but never sent (contract-only). `validateMachineFrame` is now enforced on every outbound `send` via `assertMachineFrame`. Buffered logs replay via `resendBufferedLogs` (peek → send → delete-through, at-least-once).
+- Unsent contract frames: `check-ack` is defined but never sent (contract-only). `validateMachineFrame` (`apps/orpc-contract/src/schemas/machine-frames.ts:129`) is enforced on every outbound `send` via machine-side `assertMachineFrame` (`src/execution/protocol.ts:15`). Buffered logs replay via `resendBufferedLogs` (peek → send → delete-through, at-least-once).
 - Quota refusal shape: the quota-path `claim-ack` carries a generated placeholder `sandboxId` (no sandbox is created), satisfying `ClaimAckFrameSchema(min(1))`.
-- Planned-not-implemented policy (historical remote-machine plan §11, file no longer in tree): per-Task `--net/--no-net`, refusing `reset` while a sandbox is `running`, and Ubuntu pre-pull inside `enroll` (pre-pull lives in `install.sh` today; `programs.reset` only probes).
+- Planned-not-implemented policy (historical remote-machine plan §11, file no longer in tree): per-Task `--net/--no-net`, refusing `reset` while a sandbox is `running`, and Ubuntu pre-pull inside `enroll` (no `install.sh` in repo; `enroll()` at `src/enrollment/enroll.ts:208-228` does no pre-pull; `programs.reset` only probes).

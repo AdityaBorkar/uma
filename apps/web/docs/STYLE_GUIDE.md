@@ -43,8 +43,8 @@ Main (mx-auto max-w-320 px-4 py-6 sm:px-6)
 ```
 
 Nav items are defined in `navItems`
-(`src/routes/(app)/$projectSlug/route.tsx` — 4 items: dashboard/documents/monitor/tasks, no insights/updates/wiki by design) and `settingsNavItems`
-(`src/routes/(app)/settings/route.tsx` — backed: account/analytics/evals/projects/machines/agents/prompt-templates/model-providers/version-source; dead/planned with no backing files: skills/mcp/subagents/web-search/browsers/computer-control), and passed to `<AppShell items={…}>`
+(`src/routes/(app)/$projectSlug/route.tsx:27-33` — 5 items: dashboard/documents/releases/monitor/tasks; `automations.tsx:7-29` is a placeholder orphan not in nav) and `settingsNavItems`
+(`src/routes/(app)/settings/route.tsx:26-57` — backed: account/analytics/evals/projects/machines/agents/skills/mcp-servers/prompt-templates/subagents/model-providers/version-source; no backing files: web-search/browsers/computer-control; `commands.tsx:3-8` redirects), and passed to `<AppShell items={…}>`
 (`isSettings` for the settings shell). Scoped items are `/$projectSlug/…` and
 receive `params.projectSlug` from the current scope (or `"~"` for Multi-Project)
 via `currentScope`. `monitor` is a backed route but renders a placeholder
@@ -262,13 +262,13 @@ this theme's tokens.
 
 ## Icons
 
-Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/core-free-icons`, adapted to component API in `src/components/icons.tsx`) despite `components.json: iconLibrary tabler`. Size `size-4.25` in nav/buttons, `size-4` in meta. Workspace nav uses `LayoutDashboard/BookOpen/Radar/SquareKanban` (no `FolderKanban/RadioTower/Bot` Octicon mapping).
+Hugeicons free stroke-rounded as committed (`@hugeicons/react` + `@hugeicons/core-free-icons`, adapted to component API in `src/components/icons.tsx`) despite `components.json: iconLibrary tabler`. Size `size-4.25` in nav/buttons, `size-4` in meta. Workspace nav uses `LayoutDashboard/BookOpen/Rocket/Radar/SquareKanban` (`src/routes/(app)/$projectSlug/route.tsx:5-11`).
 
 ## Deviations (code wins — fix code or accept)
 
 - Dark-only is intentional: `src/routes/__root.tsx` renders `<body className="dark">` with `color-scheme: dark` and identical `:root`/`.dark` tokens. Do not add light-mode branches.
 - Sidebar: no brand P-mark, no chat actions, and no avatar/user footer.
-- Badge: `src/components/documents/DocumentHeader.tsx` uses `<Badge variant="secondary">`, not the guide's `variant="outline"` + `className` helper pattern.
+- Badge: `src/components/documents/DocumentHeader.tsx:4,74-79` uses `DocStateBadge` + `<Badge variant="outline">` — matches the guide. No `variant="secondary"` remains in that file.
 
 ## Do / Don’t
 

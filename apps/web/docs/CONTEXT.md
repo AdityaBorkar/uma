@@ -137,7 +137,7 @@ _Avoid_: id (the uuid stays internal)
 The per-user, URL-safe, unique identifier of a Document, derived from the
 title via `slugify` and `UNIQUE(createdBy, slug)`. Mirrored from the
 frontmatter; routing does **not** depend on it — Documents are addressed by
-their sequential `number` (`/documents/$number`).
+their sequential `number` under scope (`/$projectSlug/documents/$number` per `src/routes/(app)/$projectSlug/documents/$number.tsx:28`).
 _Avoid_: url, path
 
 **Event**:
@@ -147,7 +147,7 @@ _Avoid_: activity, log
 ### Devices & automation
 
 **Machine**:
-A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; backed by the `machines` table (`machines.list/get/revoke`, plus `machines.heartbeatList` for recent heartbeats).
+A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; backed by the `machines` table (`machines.list/get/revoke/heartbeatList` plus `checkState/claim/heartbeatHistory/latestVersion/resetState/sandboxList` per `src/rpc/router.ts:17-30`, `src/rpc/procedures/machines.ts:33,53,57,73,88,97`).
 _Avoid_: worker, node, runner
 
 **Agent**:
@@ -159,7 +159,7 @@ A user-owned reusable prompt run as `/name` in the TUI, with `$ARGUMENTS` / `$1.
 _Avoid_: command, slash command
 
 **Run**:
-One execution attempt of a Task on a Machine (`task_runs`): opened as a side effect of the atomic claim (`queued → running`, recording agent + machine + sandbox) and closed when the Task finishes. Browser clients read runs (`runs.list/get/stats`); writes are owned by the claim/finish paths so runs never disagree with Task status. Task logs (`tasks.logs.list`) stream per run via the WS `log` frame.
+One execution attempt of a Task on a Machine (`task_runs` per `src/schemas/db/agents.ts:79-80`, opened by claim per `src/lib/machines/service.ts:388-397`): opened as a side effect of the atomic claim (`queued → running`, recording agent + machine + sandbox) and closed by `finishTask` only for `completed|failed` (`src/lib/machines/service.ts:427-432,453-468`) — `running→cancelled` via `tasks.updateStatus` (`src/rpc/procedures/tasks.ts:25-32`) leaves its run `running`. Browser clients read runs (`runs.list/get/stats`); writes are owned by the claim/finish paths. Task logs (`tasks.logs.list`, `src/schemas/db/machines.ts:158-173`, `src/schemas/schema.ts:475-479`) are per-task (`taskId`), not per-run — `task_logs` has no run linkage.
 _Avoid_: job, execution
 
 **Model Provider**:

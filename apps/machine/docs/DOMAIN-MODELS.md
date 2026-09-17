@@ -2,7 +2,7 @@
 
 Single aggregate family on the device. Server owns Task lifecycle, Projects; here Task is an external reference (`AssignFrame.taskId`), Heartbeat is an outbound event (grill 2026-09-10).
 
-Source anchors: `../../orpc-contract/src/` (contract), `src/sandboxes/sandbox.ts`, `src/execution/execution.ts`, `src/daemon/heartbeat.ts`, `src/utils/db.ts` + `src/schemas/db/index.ts`, `src/config/mod.ts`, `src/config/sync.ts`, `src/execution/git-binding.ts`.
+Source anchors: `@uma/orpc-contract` (`apps/orpc-contract/src/`, filesystem `../../orpc-contract/src/`), `src/sandboxes/sandbox.ts`, `src/execution/execution.ts`, `src/daemon/heartbeat.ts`, `src/utils/db.ts` + `src/schemas/db/index.ts`, `src/config/mod.ts`, `src/config/sync.ts`, `src/execution/git-binding.ts`.
 
 ## Entity
 
@@ -62,7 +62,7 @@ Higher-level rules with trade-offs.
 
 - **Pressure policy**: disk>90% or cpu>90% reported via the heartbeat `scopeHint`; 60% attribution decides scoped (`projectId`) vs global (`null`) (`../../orpc-contract/src/constants.ts`). No server-side alerting is derived from it.
 - **Retention policy**: `heartbeats` 30d raw + vacuum only when rows were actually deleted (steady state ≈ one vacuum at the retention boundary, no rollup v1, ~86k rows max); `sandbox_events` + `config_receipts` 90d; `log_buffer` 7d (`src/utils/db.ts`, `src/schemas/db/index.ts`).
-- **Quota policy**: effective = server override ?? `limits.json` install defaults (`2×/5× GB RAM`); agent enforces locally, server wins on conflict (`src/daemon/heartbeat.ts`).
+- **Quota policy**: effective = server override ?? `limits.json` install defaults (`2×/5× GB RAM`); agent enforces locally, server wins on conflict. Single resolver `resolveLimits` in `src/enrollment/limits.ts:22-44` (heartbeat only reports `quotaUsage`).
 - **Secret policy**: full-keys push only; fingerprint-only check; `--secret NAME@HOST` refs only (inline `NAME=VALUE@HOST` forbidden); redaction pre-send + server second pass (`src/config/providers.ts`, `src/execution/redact.ts`).
 
 ## Specification
@@ -91,7 +91,7 @@ SQLite via `drizzle-orm` + `bun:sqlite` (`src/utils/db.ts` + `src/schemas/db/ind
 - **ProviderKeyStore**: `setProviderKey / getProviderKeys / getProviderSecret` (secret never logged).
 - **LogBuffer**: `bufferLog / peekLogBuffer / deleteLogBufferThrough / drainLogBuffer / bufferedLogCount` (rowid-ordered, at-least-once replay, 7d prune).
 
-Schema source of truth is `src/schemas/db/index.ts` (tables) with open/migrate in `src/utils/client.ts` (`withDb` owns open/close). There are no migration files: `SCHEMA_STATEMENTS` in `src/schemas/db/index.ts` is applied additively on every writable open (`CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`) — legacy pre-drizzle `state.db` files upgrade in place, and nothing destructive is ever emitted (`migrate()` in `src/utils/db.ts` applies to a state.db manually).
+Schema source of truth is `src/schemas/db/index.ts` (tables) with open/migrate in `src/utils/client.ts` (`withDb` owns open/close). There are no migration files: `SCHEMA_STATEMENTS` in `src/schemas/db/index.ts` is applied additively on every writable open (`CREATE TABLE IF NOT EXISTS` / `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`) — legacy pre-drizzle `state.db` files upgrade in place, and nothing destructive is ever emitted (`migrate()` in `src/utils/client.ts:102-109`, re-exported by `src/utils/db.ts:38`).
 
 ## Domain Primitive
 
@@ -126,7 +126,7 @@ Executable form of invariants (code → rule).
 - R2 Create-then-claim; any non-`ok` claim is authoritative → destroy unclaimed sandbox (`src/execution/execution.ts`). No explicit connected-gate — offline claim fails closed the same way.
 - R3 Server `limits` override `limits.json`; agent reports `quotaUsage` every heartbeat (`src/daemon/heartbeat.ts`).
 - R4 Heartbeat persist-then-send; `history` queryable after restart (`src/daemon/heartbeat.ts`, `src/daemon/daemon.ts`).
-- R5 `UPGRADE_REQUIRED` on major → log + exit `3` (systemd backs off; user re-runs `install.sh`) (`src/daemon/daemon.ts`).
+- R5 `UPGRADE_REQUIRED` on major → log + exit `3` (systemd backs off) (`src/daemon/daemon.ts`).
 - R6 `prune:false` default (`performSync` forces it; `parsePruneFlag` defaults false). Refusing `reset` while a sandbox is `running` is historical plan policy (remote-machine plan §11, file no longer in tree), not implemented — `resetAll` does not inspect sandbox state today.
 - R7 Sandbox names ≤128 UTF-8 bytes; machine names slug-like + not reserved (`src/sandboxes/sandbox.ts`, `../../orpc-contract/src/schemas/primitives.ts`).
 - R8 No configured agent (`UMA_AGENT_BIN` or `--agent`) → Sandbox Execution fails closed (system log + `task-done failed`); the `sh` echo stub runs only when explicitly selected (`src/execution/execution.ts`).

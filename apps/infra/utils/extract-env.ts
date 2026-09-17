@@ -5,8 +5,8 @@
  * environment variables. Every var the app reads (see `src/env.ts`) is
  * declared here exactly once; `appEnvValues` (consumed by
  * `infra/docker/app.ts`) derives both the Docker build args and the runtime
- * container envs from this manifest, and `scripts/check-env.ts` verifies the
- * Dockerfile build args and the `src/env.ts` validation keys against it.
+ * container envs from this manifest (historical verifier `scripts/check-env.ts`
+ * does not exist; only `mdx-editor.roundtrip.ts`, `seed.ts` under `apps/web/scripts/`).
  *
  * `extractEnv` flattens Pulumi stack config into a plain `name -> value` map.
  * Its consumer is `infra/utils/run-command.ts`, which parses
