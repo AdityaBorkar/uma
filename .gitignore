@@ -15,3 +15,5 @@ tsconfig.tsbuildinfo
 .DS_Store
 
 .agents/skills/
+
+.do-not-touch-ai
