@@ -1,24 +1,35 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
-import { createRouterClient } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import type { QueryKey } from "@tanstack/react-query";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import type router from "@uma/server/src/rpc/router.ts";
 
-import router from "#/rpc/router.ts";
+import { env, publicServerUrl } from "#/env.ts";
 
+/**
+ * oRPC client for the control plane (`apps/server`).
+ *
+ * `url` stays the same-origin path; `origin` selects the control plane:
+ * browsers use the public origin (`PUBLIC_SERVER_URL`, undefined = same
+ * origin via Caddy `/api/*`), SSR uses the internal origin with the inbound
+ * request headers (cookies) forwarded per request. There is no in-process
+ * router anymore — every call is HTTP.
+ */
 const getORPCClient = createIsomorphicFn()
-	.server(() =>
-		createRouterClient(router, {
-			context: () => ({
-				headers: getRequestHeaders(),
-			}),
-		}),
-	)
+	.server((): RouterClient<typeof router> => {
+		const link = new RPCLink({
+			headers: () => getRequestHeaders(),
+			origin: env.CONTROL_PLANE_URL,
+			url: "/api/rpc",
+		});
+		return createORPCClient(link);
+	})
 	.client((): RouterClient<typeof router> => {
 		const link = new RPCLink({
+			origin: publicServerUrl || undefined,
 			url: "/api/rpc",
 		});
 		return createORPCClient(link);

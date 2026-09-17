@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { apiUrl } from "#/env.ts";
 import type { DetectedModel } from "#/lib/model-providers/types.ts";
 
 export type DetectStatus = "idle" | "detecting" | "detected" | "error";
@@ -22,7 +23,9 @@ export function useModelDetect() {
 		setError("");
 		try {
 			const res = await fetch(
-				`/api/model-providers/detect?baseUrl=${encodeURIComponent(baseUrl.trim())}`,
+				apiUrl(
+					`/api/model-providers/detect?baseUrl=${encodeURIComponent(baseUrl.trim())}`,
+				),
 			);
 			const data = (await res.json()) as {
 				count?: number;

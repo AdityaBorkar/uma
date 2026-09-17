@@ -24,6 +24,7 @@ import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { Select } from "#/components/ui/select.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
+import { apiUrl } from "#/env.ts";
 import { VERSION_PIN_ERROR } from "#/lib/forms.ts";
 import { useFilteredByQuery } from "#/lib/lists.ts";
 import {
@@ -63,7 +64,7 @@ type LatestResult =
 
 async function fetchLatest(pkg: string): Promise<LatestResult> {
 	const res = await fetch(
-		`/api/mcp/versions?package=${encodeURIComponent(pkg)}`,
+		apiUrl(`/api/mcp/versions?package=${encodeURIComponent(pkg)}`),
 	);
 	const data = (await res.json()) as { error?: string; latest?: string };
 	if (!res.ok || typeof data.latest !== "string") {

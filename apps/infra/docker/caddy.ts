@@ -7,11 +7,13 @@ export function caddyContainer(
 	{
 		network,
 		provider,
-		app,
+		server,
+		web,
 	}: {
 		network: docker.Network;
 		provider: docker.Provider;
-		app: { container: docker.Container; port: pulumi.Input<number> };
+		server: { container: docker.Container; port: pulumi.Input<number> };
+		web: { container: docker.Container; port: pulumi.Input<number> };
 	},
 	{
 		dependsOn,
@@ -19,7 +21,8 @@ export function caddyContainer(
 		dependsOn?: pulumi.Input<pulumi.Resource>[];
 	},
 ) {
-	const upstream = pulumi.interpolate`${app.container.name}:${app.port}`;
+	const webUpstream = pulumi.interpolate`${web.container.name}:${web.port}`;
+	const serverUpstream = pulumi.interpolate`${server.container.name}:${server.port}`;
 	const appConfig = new pulumi.Config("app");
 
 	const domain = appConfig.require("PUBLIC_WEB_DOMAIN");
@@ -32,7 +35,14 @@ export function caddyContainer(
 
 	const caddyfile = pulumi.interpolate`# Managed by Pulumi
 ${site} {
-	reverse_proxy ${upstream}
+	# Control plane (oRPC, auth, machine wire incl. WS, OAuth callbacks).
+	handle /api/* {
+		reverse_proxy ${serverUpstream}
+	}
+	# Product UI (TanStack Start).
+	handle {
+		reverse_proxy ${webUpstream}
+	}
 }
 `;
 

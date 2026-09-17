@@ -1,10 +1,18 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+/**
+ * Web (UI) environment.
+ *
+ * - `PUBLIC_*` are build-time client vars (baked by Vite; need a Dockerfile
+ *   `ARG` each — see `scripts/check-env.ts`).
+ * - `CONTROL_PLANE_URL` is runtime-only: the absolute internal origin the web
+ *   SSR server uses to reach the control plane (`apps/server`). Browsers use
+ *   `PUBLIC_SERVER_URL` (empty = same origin, proxied via Caddy `/api/*`).
+ */
 export const env = createEnv({
 	client: {
-		// PUBLIC_POSTHOG_HOST: z.url(),
-		// PUBLIC_POSTHOG_KEY: z.string().min(1),
+		PUBLIC_SERVER_URL: z.string().optional(),
 		PUBLIC_WEB_DOMAIN: z.string().min(1),
 		PUBLIC_WEB_PORT: z.coerce.number().min(1024),
 		PUBLIC_WEB_SSL: z.stringbool(),
@@ -13,21 +21,20 @@ export const env = createEnv({
 	emptyStringAsUndefined: true,
 	runtimeEnv: typeof window === "undefined" ? process.env : import.meta.env,
 	server: {
-		AUTH_SECRET: z.string().min(1),
-		DB_HOST: z.string().min(1),
-		DB_PASSWORD: z.string().min(1),
-		DB_PORT: z.coerce.number().min(1024),
-		DB_SSL: z.stringbool(),
-		DB_USER: z.string().min(1),
-		E2E_SEED: z.stringbool().default(false),
-		GITHUB_CLIENT_ID: z.string().min(1),
-		GITHUB_CLIENT_SECRET: z.string().min(1),
-		GOOGLE_CLIENT_ID: z.string().min(1),
-		GOOGLE_CLIENT_SECRET: z.string().min(1),
-		MACHINE_CLIENT_ALLOWLIST: z.string().optional(),
+		CONTROL_PLANE_URL: z.string().min(1).default("http://127.0.0.1:4000"),
 	},
 });
 
-export const dbUrl = `postgres://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/control_plane?${env.DB_SSL ? "sslmode=require" : ""}`;
-
+/** Public user-facing origin (this UI). */
 export const serverUrl = `${env.PUBLIC_WEB_SSL ? "https" : "http"}://${env.PUBLIC_WEB_DOMAIN}:${env.PUBLIC_WEB_PORT}`;
+
+/**
+ * Browser control-plane base (`""` = same origin). Server-only callers must
+ * use `env.CONTROL_PLANE_URL` instead (SSR has no origin for relative URLs).
+ */
+export const publicServerUrl = env.PUBLIC_SERVER_URL?.replace(/\/+$/, "") ?? "";
+
+/** Prefix a control-plane path with the browser base (`/api/…`). */
+export function apiUrl(path: `/${string}`): string {
+	return `${publicServerUrl}${path}`;
+}

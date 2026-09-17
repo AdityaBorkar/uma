@@ -5,7 +5,7 @@ export const PROJECT_SLUG_MAX = 60;
 export const PROJECT_SLUG_MIN = 2;
 
 // Closed-set vocabulary lives here as `as const` tuples: Zod enums, Postgres
-// enums (`src/schemas/db/*`), UI option lists, and client form validation all
+// enums (`apps/server/src/db/*`), UI option lists, and client form validation all
 // derive from these, so adding a value is a one-file edit.
 export const PROJECT_STATUS_VALUES = [
 	"active",

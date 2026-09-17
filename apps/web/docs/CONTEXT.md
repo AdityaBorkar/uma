@@ -34,7 +34,7 @@ Renaming updates the slug; the old slug 404s (no redirect history, v1).
 _Avoid_: workspace, url, path
 
 **Project Status**:
-The lifecycle of a project: `active | on_hold | completed` (`src/schemas/db/projects.ts`). Default `active`.
+The lifecycle of a project: `active | on_hold | completed` (`apps/server/src/db/projects.ts`). Default `active`.
 _Avoid_: state
 
 **Definition of Done (DoD)**:
@@ -77,7 +77,7 @@ _Avoid_: job, work item
 
 **Task Status**:
 The server-guarded lifecycle of a task: `queued → running → completed | failed | cancelled`
-(`failed → queued` on retry). Stored in the `status` column (`src/schemas/db/tasks.ts`).
+(`failed → queued` on retry). Stored in the `status` column (`apps/server/src/db/tasks.ts`).
 `finishedAt` is set exactly when status is terminal (`completed|failed|cancelled`), enforced by DB `CHECK`, never by the client.
 _Avoid_: state (documents-only; the task column is named `status`)
 
@@ -95,7 +95,7 @@ _Avoid_: connection
 
 **Connection State**:
 The lifecycle of a connection: `connected | disconnected | expired | error`.
-Stored in the `status` column (`src/schemas/db/connections.ts`); `expired` and `error` both require re-auth.
+Stored in the `status` column (`apps/server/src/db/connections.ts`); `expired` and `error` both require re-auth.
 _Avoid_: state (documents-only; the column is named `status`)
 
 ### Documents
@@ -103,7 +103,7 @@ _Avoid_: state (documents-only; the column is named `status`)
 **Document**:
 The single unit of written content in the product. Owned by one user,
 identified by a per-user sequential `number`, carrying a `kind`, an MDX body,
-and typed frontmatter (`src/schemas/db/documents.ts`, `src/schemas/schema.ts`).
+and typed frontmatter (`apps/server/src/db/documents.ts`, `src/schemas/schema.ts`).
 A document equals a GitHub issue and equals an MDX file with frontmatter.
 _Avoid_: page, note, ticket, article
 
@@ -147,7 +147,7 @@ _Avoid_: activity, log
 ### Devices & automation
 
 **Machine**:
-A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; backed by the `machines` table (`machines.list/get/revoke/heartbeatList` plus `checkState/claim/heartbeatHistory/latestVersion/resetState/sandboxList` per `src/rpc/router.ts:17-30`, `src/rpc/procedures/machines.ts:33,53,57,73,88,97`).
+A user-owned device enrolled to run Tasks on the user's behalf (device-code flow; Bearer token). Surfaced in settings as a list with name, connection state, and last heartbeat; backed by the `machines` table (`machines.list/get/revoke/heartbeatList` plus `checkState/claim/heartbeatHistory/latestVersion/resetState/sandboxList` per `apps/server/src/rpc/router.ts:17-30`, `apps/server/src/rpc/procedures/machines.ts`).
 _Avoid_: worker, node, runner
 
 **Agent**:
@@ -159,7 +159,7 @@ A user-owned reusable prompt run as `/name` in the TUI, with `$ARGUMENTS` / `$1.
 _Avoid_: command, slash command
 
 **Run**:
-One execution attempt of a Task on a Machine (`task_runs` per `src/schemas/db/agents.ts:79-80`, opened by claim per `src/lib/machines/service.ts:388-397`): opened as a side effect of the atomic claim (`queued → running`, recording agent + machine + sandbox) and closed by `finishTask` only for `completed|failed` (`src/lib/machines/service.ts:427-432,453-468`) — `running→cancelled` via `tasks.updateStatus` (`src/rpc/procedures/tasks.ts:25-32`) leaves its run `running`. Browser clients read runs (`runs.list/get/stats`); writes are owned by the claim/finish paths. Task logs (`tasks.logs.list`, `src/schemas/db/machines.ts:158-173`, `src/schemas/schema.ts:475-479`) are per-task (`taskId`), not per-run — `task_logs` has no run linkage.
+One execution attempt of a Task on a Machine (`task_runs` per `apps/server/src/db/agents.ts:79-80`, opened by claim per `apps/server/src/machines/tasks.ts`): opened as a side effect of the atomic claim (`queued → running`, recording agent + machine + sandbox) and closed by `finishTask` only for `completed|failed` (`apps/server/src/machines/tasks.ts`) — `running→cancelled` via `tasks.updateStatus` (`apps/server/src/rpc/procedures/tasks.ts`) leaves its run `running`. Browser clients read runs (`runs.list/get/stats`); writes are owned by the claim/finish paths. Task logs (`tasks.logs.list`, `apps/server/src/db/machines.ts`, `apps/server/src/schemas/schema.ts`) are per-task (`taskId`), not per-run — `task_logs` has no run linkage.
 _Avoid_: job, execution
 
 **Model Provider**:

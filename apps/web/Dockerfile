@@ -25,11 +25,13 @@ COPY . .
 ARG PUBLIC_WEB_DOMAIN
 ARG PUBLIC_WEB_PORT
 ARG PUBLIC_WEB_SSL
+ARG PUBLIC_SERVER_URL
 ARG PUBLIC_POSTHOG_KEY
 ARG PUBLIC_POSTHOG_HOST
 ENV PUBLIC_WEB_DOMAIN=$PUBLIC_WEB_DOMAIN \
     PUBLIC_WEB_PORT=$PUBLIC_WEB_PORT \
     PUBLIC_WEB_SSL=$PUBLIC_WEB_SSL \
+    PUBLIC_SERVER_URL=$PUBLIC_SERVER_URL \
     PUBLIC_POSTHOG_KEY=$PUBLIC_POSTHOG_KEY \
     PUBLIC_POSTHOG_HOST=$PUBLIC_POSTHOG_HOST
 # The runtime stage runs under Bun, so build the Bun Nitro preset (required
@@ -38,6 +40,10 @@ ENV PUBLIC_WEB_DOMAIN=$PUBLIC_WEB_DOMAIN \
 ENV NITRO_PRESET=bun
 
 # Build the web workspace from its own directory (context is the repo root).
+# The UI talks to the control plane (`apps/server`) over HTTP: browsers use
+# PUBLIC_SERVER_URL (empty = same origin, Caddy routes `/api/*` to the
+# server), SSR uses runtime-only CONTROL_PLANE_URL (derived in
+# apps/infra/docker/web.ts, never a build arg).
 WORKDIR /app/apps/web
 RUN bun run build
 

@@ -1,6 +1,6 @@
 # AGENTS.md — apps/orpc-contract
 
-Frozen `v1` machine↔server wire contract. Consumed as `@uma/orpc-contract` (workspace dep) by `apps/machine` and `apps/web`. This package never imports from either app. Policy in `docs/` (`FRAMES.md` frame catalog, `VERSIONING.md` freeze/upgrade runbook).
+Frozen `v1` machine↔server wire contract. Consumed as `@uma/orpc-contract` (workspace dep) by `apps/machine` and `apps/server` (`apps/web` uses it for types only). This package never imports from either app. Policy in `docs/` (`FRAMES.md` frame catalog, `VERSIONING.md` freeze/upgrade runbook).
 
 ## Commands (run in `apps/orpc-contract`)
 

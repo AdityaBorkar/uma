@@ -10,11 +10,15 @@ import { resolve } from "node:path";
 // manifest build var must be PUBLIC_*; every env.ts client var must be in the
 // manifest; manifest build vars absent from env.ts must be optional (their
 // validation is commented out, injected only when configured).
+// The control plane (`apps/server`) takes no build args by design — all
+// server config (including the mirrored PUBLIC_WEB_* origin vars) is runtime
+// env, so apps/server/Dockerfile must not declare an ARG block.
 
 const WEB_DIR = resolve(import.meta.dir, "..");
 const ROOT_DIR = resolve(WEB_DIR, "..", "..");
 
 const DOCKERFILE = resolve(WEB_DIR, "Dockerfile");
+const SERVER_DOCKERFILE = resolve(ROOT_DIR, "apps/server/Dockerfile");
 const MANIFEST = resolve(ROOT_DIR, "apps/infra/utils/extract-env.ts");
 const ENV_TS = resolve(WEB_DIR, "src/env.ts");
 
@@ -59,12 +63,18 @@ function diff(a: Set<string>, b: Set<string>): string[] {
 
 function main(): void {
 	const docker = dockerArgs(readFileSync(DOCKERFILE, "utf8"));
+	const serverDocker = dockerArgs(readFileSync(SERVER_DOCKERFILE, "utf8"));
 	const { build, optionalBuild } = manifestBuildVars(
 		readFileSync(MANIFEST, "utf8"),
 	);
 	const client = envClientVars(readFileSync(ENV_TS, "utf8"));
 
 	const errors: string[] = [];
+	if (serverDocker.size > 0) {
+		errors.push(
+			`server Dockerfile must take no build args (runtime-only env): ${[...serverDocker].sort().join(", ")}`,
+		);
+	}
 	for (const name of diff(build, docker)) {
 		errors.push(
 			`manifest build var missing from Dockerfile ARG block: ${name}`,

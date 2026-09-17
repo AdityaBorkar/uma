@@ -22,6 +22,7 @@ import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { useToast } from "#/components/ui/toaster.tsx";
+import { apiUrl } from "#/env.ts";
 import { VERSION_PIN_ERROR } from "#/lib/forms.ts";
 import { useFilteredByQuery } from "#/lib/lists.ts";
 import {
@@ -66,7 +67,7 @@ type VerifyResult =
 
 async function verifySource(source: string): Promise<VerifyResult> {
 	const res = await fetch(
-		`/api/skills/verify?source=${encodeURIComponent(source)}`,
+		apiUrl(`/api/skills/verify?source=${encodeURIComponent(source)}`),
 	);
 	const data = (await res.json()) as {
 		count?: number;

@@ -1,0 +1,36 @@
+{
+	"name": "@uma/server",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"db:push": "bun run:dev -- drizzle-kit push",
+		"db:studio": "bun run:dev -- drizzle-kit studio",
+		"dev": "bun run src/index.ts",
+		"gen:auth-schema": "bun run:dev -- bunx auth generate --config src/auth/server.ts --output src/db/auth.gen.ts",
+		"run:dev": "bun ../infra/utils/run-command.ts --verbose --stack dev",
+		"start": "bun run src/index.ts"
+	},
+	"dependencies": {
+		"@better-auth/drizzle-adapter": "1.7.3",
+		"@orpc/json-schema": "2.0.0-beta.34",
+		"@orpc/openapi": "2.0.0-beta.34",
+		"@orpc/server": "2.0.0-beta.34",
+		"@orpc/zod": "2.0.0-beta.34",
+		"@t3-oss/env-core": "^0.13.11",
+		"@tanstack/store": "^0.11.1",
+		"@uma/orpc-contract": "workspace:*",
+		"better-auth": "^1.7.3",
+		"drizzle-orm": "catalog:",
+		"gray-matter": "^4.0.3",
+		"pg": "^8.23.0",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@types/bun": "catalog:",
+		"@types/node": "^26.5.0",
+		"@types/pg": "^8.23.1",
+		"drizzle-kit": "catalog:",
+		"tsx": "^4.23.13",
+		"typescript": "catalog:"
+	}
+}

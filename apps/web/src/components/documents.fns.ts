@@ -3,26 +3,31 @@
  * fields the editor needs, the server-rendered HTML, the project name, and
  * the event timeline — the client never sees compiler output or unsanitized
  * markup, and the page never refetches the same document through a second
- * data path. Same structure as `session.ts`: server imports at module scope
- * are fine — handler bodies are stripped from the client bundle.
+ * data path.
+ *
+ * Document data comes from the control plane (`apps/server`) over oRPC HTTP;
+ * MDX rendering stays local (no DB, presentation-only).
  */
 
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
+import type { RouterClient } from "@orpc/server";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import type router from "@uma/server/src/rpc/router.ts";
 
 import {
 	MdxRenderError,
 	renderBody,
 	splitFrontmatter,
 } from "#/components/mdx.server.ts";
-import { getAuthSession } from "#/lib/auth/server.ts";
-import { getDocumentEvents, getOwnedDocument } from "#/lib/documents.server.ts";
+import { env } from "#/env.ts";
 import { DocumentNumberInput } from "#/schemas/schema.ts";
 
 export interface RenderedDocument {
 	closedAt: string | null;
 	createdAt: string;
-	error?: string;
+	error?: string | undefined;
 	frontmatter: Record<string, FrontmatterValue>;
 	html: string | null;
 	kind: string;
@@ -68,6 +73,11 @@ function toJson(value: unknown): FrontmatterValue {
 	return JSON.parse(JSON.stringify(value ?? null)) as FrontmatterValue;
 }
 
+/** oRPC HTTP serializes Dates to ISO strings; accept both shapes. */
+function iso(value: Date | string): string {
+	return typeof value === "string" ? value : value.toISOString();
+}
+
 async function renderDocument(body: string): Promise<{
 	error?: string;
 	frontmatter: Record<string, FrontmatterValue>;
@@ -95,24 +105,23 @@ async function renderDocument(body: string): Promise<{
 export const loadDocument = createServerFn({ method: "GET" })
 	.validator((input: unknown) => DocumentNumberInput.parse(input))
 	.handler(async ({ data }): Promise<DocumentPage> => {
-		const session = await getAuthSession(getRequestHeaders());
-		if (!session?.user) {
-			throw new Error("Not authenticated");
-		}
-		const { doc, projectName } = await getOwnedDocument(
-			data.number,
-			session.user.id,
-		);
-		const [rendered, events] = await Promise.all([
-			renderDocument(doc.body),
-			getDocumentEvents(doc.id),
+		const link = new RPCLink({
+			headers: () => getRequestHeaders(),
+			origin: env.CONTROL_PLANE_URL,
+			url: "/api/rpc",
+		});
+		const api = createORPCClient<RouterClient<typeof router>>(link);
+		const [doc, eventRows] = await Promise.all([
+			api.documents.get({ number: data.number }),
+			api.documents.events({ number: data.number }),
 		]);
+		const [rendered] = await Promise.all([renderDocument(doc.body)]);
 
 		return {
 			document: {
 				body: doc.body,
-				closedAt: doc.closedAt?.toISOString() ?? null,
-				createdAt: doc.createdAt.toISOString(),
+				closedAt: doc.closedAt ? iso(doc.closedAt) : null,
+				createdAt: iso(doc.createdAt),
 				error: rendered.error,
 				frontmatter: rendered.frontmatter,
 				html: rendered.html,
@@ -121,15 +130,17 @@ export const loadDocument = createServerFn({ method: "GET" })
 				meta: toJson(doc.meta) as Record<string, FrontmatterValue>,
 				number: doc.number,
 				projectId: doc.projectId,
-				projectName,
+				projectName: doc.projectName,
 				slug: doc.slug,
 				state: doc.state,
 				title: doc.title,
-				updatedAt: doc.updatedAt.toISOString(),
+				updatedAt: iso(doc.updatedAt),
 			},
-			events: events.map((event) => ({
-				...event,
-				createdAt: event.createdAt.toISOString(),
+			events: eventRows.map((event) => ({
+				actorId: event.actorId,
+				createdAt: iso(event.createdAt),
+				id: event.id,
+				kind: event.kind,
 				payload: toJson(event.payload) as Record<string, FrontmatterValue>,
 			})),
 		};

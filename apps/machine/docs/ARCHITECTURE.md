@@ -20,7 +20,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 
 - Runtime deps (`package.json`): `zod` (validation), `microsandbox` SDK (in-process sandbox API), plus CLI/store/util deps (`cac`, `cli-table3`, `drizzle-orm`, `env-paths`, `es-toolkit`, `fast-redact`, `ms`, `nanoid`, `p-retry`, `picocolors`, `semver`, `write-file-atomic`, `zod-validation-error`). Dev: `@types/*`, `typescript`, `zod-to-json-schema`.
 - System packages (never bundled): `msb` runtime (resolved via `MSB_PATH`/`UMA_MSB_BIN`), pinned `UBUNTU_IMAGE=docker.io/library/ubuntu:24.04` (`apps/orpc-contract/src/constants.ts:2`), fixed `1c/1G` + `2x` max.
-- Contract package: `@uma/orpc-contract` workspace dep (frozen v1: `index.ts` barrel + `constants.ts`, `ids.ts`, `schemas/`, `contracts/`, `utils.ts`; e.g. `src/execution/execution.ts:1-7`, `src/sandboxes/msb/sdk.ts:1-8`). The machine server lives in `apps/web` (`src/lib/machines/`, `device.*`/`machines.*` oRPC procedures, `/api/machines/ws` Nitro websocket); the contract package never imports from either app.
+- Contract package: `@uma/orpc-contract` workspace dep (frozen v1: `index.ts` barrel + `constants.ts`, `ids.ts`, `schemas/`, `contracts/`, `utils.ts`; e.g. `src/execution/execution.ts:1-7`, `src/sandboxes/msb/sdk.ts:1-8`). The machine server lives in `apps/server` (`src/machines/`, `device.*`/`machines.*` oRPC procedures, `/api/machines/ws` Bun websocket); the contract package never imports from either app.
 
 ## Component
 

@@ -1,0 +1,8 @@
+{
+	"compilerOptions": {
+		"declarationDir": "../../.local/types/server",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"types": ["bun"]
+	},
+	"extends": "../../tsconfig.json"
+}

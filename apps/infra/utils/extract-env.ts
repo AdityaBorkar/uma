@@ -1,14 +1,16 @@
 /**
  * Environment-variable wiring for the Pulumi layer, in one place.
  *
- * `APP_ENV_VARS` is the single source of truth for the app container's
- * environment variables. Every var the app reads (see
- * `apps/web/src/env.ts`) is declared here exactly once; `appEnvValues`
- * (consumed by `apps/infra/docker/app.ts`) derives both the Docker build
+ * `APP_ENV_VARS` is the single source of truth for container environment
+ * variables. Every var the containers read is declared here exactly once:
+ * server vars are validated in `apps/server/src/env.ts`, web vars in
+ * `apps/web/src/env.ts`. `appEnvValues` (consumed by
+ * `apps/infra/docker/server.ts` / `web.ts`) derives both the Docker build
  * args and the runtime container envs from this manifest. The build-arg
- * block in `apps/web/Dockerfile` must list every `build: true` var;
- * `bun run check:env` in `apps/web` (`scripts/check-env.ts`) verifies the
- * three files stay in sync.
+ * block in `apps/web/Dockerfile` must list every `build: true` var
+ * (the server image takes no build args — all server config is runtime
+ * env); `bun run check:env` in `apps/web` (`scripts/check-env.ts`)
+ * verifies the three files stay in sync.
  *
  * `extractEnv` flattens Pulumi stack config into a plain `name -> value` map.
  * Its consumer is `apps/infra/utils/run-command.ts`, which parses
@@ -40,14 +42,22 @@ export type AppEnvVar = {
 };
 
 export const APP_ENV_VARS: AppEnvVar[] = [
-	// Client vars (src/env.ts `client`) — baked into the bundle at build time.
+	// Client vars (apps/web/src/env.ts `client`) — baked into the bundle at
+	// build time. `PUBLIC_SERVER_URL` is empty for same-origin (Caddy routes
+	// `/api/*` to the control plane); set it only for split-origin deploys.
 	{ build: true, name: "PUBLIC_WEB_DOMAIN", source: "app" },
 	{ build: true, name: "PUBLIC_WEB_PORT", source: "app" },
 	{ build: true, name: "PUBLIC_WEB_SSL", source: "app" },
-	// Optional in src/env.ts (commented out); injected only when configured.
+	{ build: true, name: "PUBLIC_SERVER_URL", optional: true, source: "app" },
+	// Optional in apps/web/src/env.ts (commented out); injected only when configured.
 	{ build: true, name: "PUBLIC_POSTHOG_KEY", optional: true, source: "app" },
 	{ build: true, name: "PUBLIC_POSTHOG_HOST", optional: true, source: "app" },
-	// Server vars (src/env.ts `server`) — runtime only, never build args.
+	// Web SSR origin for the control plane (apps/web/src/env.ts `server`,
+	// runtime-only). Always derived: the internal server container URL in
+	// deployed stacks, `http://127.0.0.1:4000` by default in local dev
+	// (see the `CONTROL_PLANE_URL` default in apps/web/src/env.ts).
+	{ name: "CONTROL_PLANE_URL", source: "derived" },
+	// Server vars (apps/server/src/env.ts) — runtime only, never build args.
 	{ name: "AUTH_SECRET", secret: true, source: "app" },
 	{ name: "GOOGLE_CLIENT_ID", secret: true, source: "app" },
 	{ name: "GOOGLE_CLIENT_SECRET", secret: true, source: "app" },
@@ -56,6 +66,7 @@ export const APP_ENV_VARS: AppEnvVar[] = [
 	// Optional machine-server vars (dev defaults apply when unset).
 	{ name: "MACHINE_CLIENT_ALLOWLIST", optional: true, source: "app" },
 	{ name: "E2E_SEED", optional: true, source: "app" },
+	{ name: "CORS_EXTRA_ORIGINS", optional: true, source: "app" },
 	{ name: "DB_USER", secret: true, source: "postgres" },
 	{ name: "DB_PASSWORD", secret: true, source: "postgres" },
 	// Derived by the infra layer, not read from Pulumi config.
@@ -86,6 +97,26 @@ export function appRuntimeEnvs(
 	return APP_ENV_VARS.map(
 		({ name }) => pulumi.interpolate`${name}=${envValues[name]}`,
 	);
+}
+
+/**
+ * Runtime `envs` for the web (UI) container. The web bundle never sees
+ * secrets: only the `PUBLIC_*` build vars plus the derived
+ * `CONTROL_PLANE_URL` (internal control-plane origin for SSR) are injected.
+ * The control plane (`server.ts`) gets the full `appRuntimeEnvs` set.
+ */
+export function webRuntimeEnvs(
+	envValues: Record<string, pulumi.Input<string>>,
+	derived: Record<string, pulumi.Input<string>> = {},
+): pulumi.Input<string>[] {
+	const names = [
+		...APP_ENV_VARS.filter(({ build }) => build).map(({ name }) => name),
+		"CONTROL_PLANE_URL",
+	];
+	return names.map((name) => {
+		const value = derived[name] ?? envValues[name];
+		return pulumi.interpolate`${name}=${value}`;
+	});
 }
 
 export interface ConfigValue {

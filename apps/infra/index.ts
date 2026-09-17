@@ -2,11 +2,12 @@ import * as docker from "@pulumi/docker";
 import { all, getStack, interpolate, output } from "@pulumi/pulumi";
 
 import { configureDns } from "./cloudflare/dns.ts";
-import { appContainer } from "./docker/app.ts";
 import { caddyContainer } from "./docker/caddy.ts";
 import { postgresContainer } from "./docker/postgres.ts";
+import { serverContainer } from "./docker/server.ts";
 import { GROUP_LABELS } from "./docker/utils.ts";
 import { waitForDocker } from "./docker/wait-for-docker.ts";
+import { webContainer } from "./docker/web.ts";
 import { createInstance } from "./oci/instance.ts";
 import { createNetwork } from "./oci/networking.ts";
 import { attachReservedPublicIp } from "./oci/public-ip.ts";
@@ -60,13 +61,22 @@ const postgres = postgresContainer({ network, provider });
 
 // TODO: Run Database Migrations
 
-let appMetrics: Awaited<ReturnType<typeof appContainer>>["metrics"] | undefined;
+let webMetrics: Awaited<ReturnType<typeof webContainer>>["metrics"] | undefined;
+let serverMetrics:
+	| Awaited<ReturnType<typeof serverContainer>>["metrics"]
+	| undefined;
 
 if (vps) {
-	const app = await appContainer({ network, postgres, provider });
-	appMetrics = app.metrics;
+	const server = await serverContainer({ network, postgres, provider });
+	serverMetrics = server.metrics;
 
-	caddyContainer({ app, network, provider }, { dependsOn: [app.container] });
+	const web = await webContainer({ network, provider, server });
+	webMetrics = web.metrics;
+
+	caddyContainer(
+		{ network, provider, server, web },
+		{ dependsOn: [web.container, server.container] },
+	);
 }
 
 // --- DNS RECORDS ---
@@ -81,7 +91,8 @@ if (vps) {
 // --- METRICS (stack outputs) ---
 
 export const metrics = {
-	app: appMetrics ?? null,
 	postgres: postgres.metrics,
+	server: serverMetrics ?? null,
 	totalMs: Date.now() - runStartedAt,
+	web: webMetrics ?? null,
 };

@@ -1,20 +1,28 @@
 # AGENTS.md
 
-Bun monorepo: product web app (`Planner Q3`), device agent (`uma-machine`),
-repo CLI (`uma`), Astro docs site, frozen wire contract, and Pulumi infra.
+Bun monorepo: product web app (`Planner Q3`), control-plane server,
+device agent (`uma-machine`), repo CLI (`uma`), Astro docs site, frozen
+wire contract, and Pulumi infra.
 Start from `docs/README.md` — it is the maintained repo map, context map
 (Planner Q3 upstream, Machine Execution downstream/conformist),
 and wiring-drift list.
 
 ## Architecture
 
-- `apps/web` — product app: TanStack Start (React 19, file-based routes
-  in `src/routes/`), oRPC API, Drizzle/PostgreSQL, better-auth. Read
-  `apps/web/docs/CONTEXT.md` ("avoid" terms) and `docs/STYLE_GUIDE.md`
-  before changing behavior/UI; decisions in `docs/adr/`.
+- `apps/web` — product UI: TanStack Start (React 19, file-based routes
+  in `src/routes/`). No server code, no DB access — every data call goes
+  over HTTP to the control plane (`apps/server`) via oRPC (`src/lib/rpc.ts`)
+  or `apiUrl("/api/…")`. Read `apps/web/docs/CONTEXT.md` ("avoid" terms)
+  and `docs/STYLE_GUIDE.md` before changing behavior/UI; decisions in
+  `docs/adr/`.
+- `apps/server` — control plane (`@uma/server`, `Bun.serve` on `:4000` in
+  dev): oRPC API (`/api/rpc`, `/api/openapi`), better-auth
+  (`/api/auth/*`), machine wire (`/api/machines/*` + WS), OAuth callbacks,
+  debug/seed helpers. Owns Drizzle/PostgreSQL schemas (`src/db/`). Read
+  `apps/server/AGENTS.md`; wire freeze in `apps/orpc-contract/docs/`.
 - `apps/machine` — `uma-machine`: CLI + daemon running Tasks in microsandbox
-  sandboxes (Bun + SQLite). Server side lives in `apps/web`
-  (`src/lib/machines/`, `device.*`/`machines.*` procedures, `/api/machines/ws`).
+  sandboxes (Bun + SQLite). Server side lives in `apps/server`
+  (`src/machines/`, `device.*`/`machines.*` procedures, `/api/machines/ws`).
   Read `docs/ARCHITECTURE.md`, `CONTEXT.md`, `DOMAIN-MODELS.md`.
 - `apps/orpc-contract` — frozen `v1` machine↔server wire frames, consumed as
   `@uma/orpc-contract` (workspace dep). Policy in `docs/` (`FRAMES.md`,
@@ -44,8 +52,8 @@ for the app you are changing; this file is the cross-app index.
   `apps/infra/utils/run-command.ts`).
 - Generated files — never hand-edit, regenerate instead:
   - `apps/web/src/routeTree.gen.ts` via `bun run gen:routes` in `apps/web`
-  - `apps/web/src/schemas/db/auth.gen.ts` via `bun run gen:auth-schema`
-    (needs Pulumi `dev` env, like `dev` does)
+  - `apps/server/src/db/auth.gen.ts` via `bun run gen:auth-schema` in
+    `apps/server` (needs Pulumi `dev` env, like `dev` does)
   - `apps/machine/docs/wire-schema.json` via `bun run docs:wire`
 
 ## Commands

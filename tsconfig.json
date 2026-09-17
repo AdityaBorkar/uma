@@ -51,6 +51,7 @@
 		{ "path": "./apps/infra" },
 		{ "path": "./apps/machine" },
 		{ "path": "./apps/orpc-contract" },
+		{ "path": "./apps/server" },
 		{ "path": "./apps/web" }
 	]
 }

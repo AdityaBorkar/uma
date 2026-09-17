@@ -8,7 +8,7 @@ Device-side single-binary agent (Bun + SQLite + microsandbox). Single bounded co
 - Sandbox tests need no `msb` system runtime: they use the mock driver (`MSB_MOCK=1` / `UMA_MSB_MOCK=1`; mock paths constructor-injectable on `MsbMockDriver`).
 - `bun run src/index.ts <cmd>` — run the CLI without building (`enroll|daemon|check|reset|sync|history|sandbox|run|version`).
 - `bun run dev` — same as above via script alias.
-- `bun run roundtrip` — end-to-end smoke test vs the web dev server (default `--server http://127.0.0.1:3000`).
+- `bun run roundtrip` — end-to-end smoke test vs the control plane (default `--server http://127.0.0.1:3000`, the web dev origin which proxies `/api/*` to the server; point it at `http://127.0.0.1:4000` to hit the control plane directly).
 - `bun run build` — compiled single binary → `.output/uma-machine`.
 - `bun run docs:wire` — regenerate `docs/wire-schema.json` from the frozen contract (never hand-edit).
 - Typecheck: `bunx tsc --noEmit` (in this dir). Lint/format from root: `bun run check:lint` / `bun run format`.
