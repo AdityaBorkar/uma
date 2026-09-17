@@ -1,0 +1,63 @@
+"use client";
+
+// beui.dev/components/motion/button
+
+import {
+	motion,
+	useMotionValue,
+	useReducedMotion,
+	useSpring,
+} from "motion/react";
+import { type ReactNode, useRef } from "react";
+
+import { SPRING_MOUSE } from "#/lib/ease.ts";
+import { useHoverCapable } from "#/lib/hooks/use-hover-capable.ts";
+import { cn } from "#/lib/utils.ts";
+
+export interface MagneticProps {
+	children: ReactNode;
+	// exactOptionalPropertyTypes: allow explicit undefined passthrough.
+	className?: string | undefined;
+	strength?: number;
+}
+
+export function Magnetic({
+	children,
+	strength = 0.35,
+	className,
+}: MagneticProps) {
+	const ref = useRef<HTMLDivElement>(null);
+	const reduce = useReducedMotion();
+	const canHover = useHoverCapable();
+	// Decorative cursor-follow: skip on touch (phantom hover) and reduced motion.
+	const enabled = !reduce && canHover;
+	const x = useMotionValue(0);
+	const y = useMotionValue(0);
+	const sx = useSpring(x, SPRING_MOUSE);
+	const sy = useSpring(y, SPRING_MOUSE);
+
+	const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+		const el = ref.current;
+		if (!el || !enabled) return;
+		const rect = el.getBoundingClientRect();
+		x.set((e.clientX - rect.left - rect.width / 2) * strength);
+		y.set((e.clientY - rect.top - rect.height / 2) * strength);
+	};
+
+	const onLeave = () => {
+		x.set(0);
+		y.set(0);
+	};
+
+	return (
+		<motion.div
+			className={cn("inline-block", className)}
+			onMouseLeave={onLeave}
+			onMouseMove={onMove}
+			ref={ref}
+			style={{ x: sx, y: sy }}
+		>
+			{children}
+		</motion.div>
+	);
+}
