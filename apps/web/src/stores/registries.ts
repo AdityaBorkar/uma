@@ -1,79 +1,42 @@
 import { useSelector } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
 
 import {
+	createListRegistry,
+	createPersistentStore,
+} from "#/lib/local-store.ts";
+import {
 	type InstalledMcpEntry,
-	loadStore as loadMcp,
-	EMPTY_STORE as MCP_EMPTY,
-	type McpStore,
-	parseStore as parseMcp,
-	saveStore as saveMcp,
+	InstalledMcpEntrySchema,
+	STORAGE_KEY as MCP_KEY,
+	McpStoreSchema,
 } from "#/lib/mcp/mcp.ts";
 import {
 	type CustomModel,
 	type CustomProvider,
 	type DetectedModel,
-	loadStore as loadProviders,
-	type ModelProviderStore,
-	EMPTY_STORE as PROVIDERS_EMPTY,
+	ModelProviderStoreSchema,
+	STORAGE_KEY as PROVIDERS_KEY,
 	type ProviderAccount,
-	parseStore as parseProviders,
-	saveStore as saveProviders,
 } from "#/lib/model-providers/types.ts";
 import {
 	type InstalledSkillEntry,
-	loadStore as loadSkills,
-	parseStore as parseSkills,
-	EMPTY_STORE as SKILLS_EMPTY,
-	type SkillsStore,
-	saveStore as saveSkills,
+	InstalledSkillEntrySchema,
+	STORAGE_KEY as SKILLS_KEY,
+	SkillsStoreSchema,
 } from "#/lib/skills/skills.ts";
-import { onStorageKey } from "./persist.ts";
 
-/* ------------------------------------------------------------------ */
-/* MCP servers                                                         */
-/* ------------------------------------------------------------------ */
+/* MCP servers */
 
-export const mcpStore = new Store<McpStore>(MCP_EMPTY);
+const mcpRegistry = createListRegistry<InstalledMcpEntry>(
+	MCP_KEY,
+	InstalledMcpEntrySchema,
+);
 
-export function hydrateMcpStore() {
-	if (typeof window === "undefined") return;
-	if (mcpStore.state.items.length > 0) return;
-	try {
-		const next = loadMcp();
-		if (next.items.length > 0) mcpStore.setState(() => next);
-	} catch {
-		// ignore — keep empty
-	}
-}
-
-if (typeof window !== "undefined") {
-	mcpStore.subscribe((v) => saveMcp(v));
-	onStorageKey("uma:mcp-servers:v1", (raw) => {
-		if (raw === null) return;
-		try {
-			mcpStore.setState(() => parseMcp(raw));
-		} catch {
-			// ignore malformed cross-tab payloads
-		}
-	});
-}
-
-export function addMcpItem(item: InstalledMcpEntry) {
-	mcpStore.setState((prev) => ({ items: [...prev.items, item] }));
-}
-
-export function removeMcpItem(id: string) {
-	mcpStore.setState((prev) => ({
-		items: prev.items.filter((i) => i.id !== id),
-	}));
-}
-
-export function updateMcpItem(id: string, patch: Partial<InstalledMcpEntry>) {
-	mcpStore.setState((prev) => ({
-		items: prev.items.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-	}));
-}
+export const mcpStore = mcpRegistry.store;
+export const hydrateMcpStore = mcpRegistry.hydrateStore;
+export const addMcpItem = mcpRegistry.addItem;
+export const removeMcpItem = mcpRegistry.removeItem;
+export const updateMcpItem = mcpRegistry.updateItem;
 
 export function useMcpStore() {
 	const store = useSelector(mcpStore, (s) => s);
@@ -89,53 +52,18 @@ export function useMcpItems(): InstalledMcpEntry[] {
 	return useSelector(mcpStore, (s) => s.items);
 }
 
-/* ------------------------------------------------------------------ */
-/* Skills                                                              */
-/* ------------------------------------------------------------------ */
+/* Skills */
 
-export const skillsStore = new Store<SkillsStore>(SKILLS_EMPTY);
+const skillsRegistry = createListRegistry<InstalledSkillEntry>(
+	SKILLS_KEY,
+	InstalledSkillEntrySchema,
+);
 
-export function hydrateSkillsStore() {
-	if (typeof window === "undefined") return;
-	if (skillsStore.state.items.length > 0) return;
-	try {
-		const next = loadSkills();
-		if (next.items.length > 0) skillsStore.setState(() => next);
-	} catch {
-		// ignore
-	}
-}
-
-if (typeof window !== "undefined") {
-	skillsStore.subscribe((v) => saveSkills(v));
-	onStorageKey("uma:skills:v1", (raw) => {
-		if (raw === null) return;
-		try {
-			skillsStore.setState(() => parseSkills(raw));
-		} catch {
-			// ignore
-		}
-	});
-}
-
-export function addSkillItem(item: InstalledSkillEntry) {
-	skillsStore.setState((prev) => ({ items: [...prev.items, item] }));
-}
-
-export function removeSkillItem(id: string) {
-	skillsStore.setState((prev) => ({
-		items: prev.items.filter((i) => i.id !== id),
-	}));
-}
-
-export function updateSkillItem(
-	id: string,
-	patch: Partial<InstalledSkillEntry>,
-) {
-	skillsStore.setState((prev) => ({
-		items: prev.items.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-	}));
-}
+export const skillsStore = skillsRegistry.store;
+export const hydrateSkillsStore = skillsRegistry.hydrateStore;
+export const addSkillItem = skillsRegistry.addItem;
+export const removeSkillItem = skillsRegistry.removeItem;
+export const updateSkillItem = skillsRegistry.updateItem;
 
 export function useSkillsStore() {
 	const store = useSelector(skillsStore, (s) => s);
@@ -151,74 +79,62 @@ export function useSkillItems(): InstalledSkillEntry[] {
 	return useSelector(skillsStore, (s) => s.items);
 }
 
-/* ------------------------------------------------------------------ */
-/* Model providers (accounts + manual models + custom providers)       */
-/* ------------------------------------------------------------------ */
+/* Model providers */
 
-export const providerStore = new Store<ModelProviderStore>(PROVIDERS_EMPTY);
+import { defineLocalStore } from "#/lib/local-store.ts";
 
-export function hydrateProviderStore() {
-	if (typeof window === "undefined") return;
-	const s = providerStore.state;
-	if (s.accounts.length + s.models.length + s.providers.length > 0) return;
-	try {
-		const next = loadProviders();
-		if (next.accounts.length + next.models.length + next.providers.length > 0) {
-			providerStore.setState(() => next);
-		}
-	} catch {
-		// ignore
-	}
+const providersDef = defineLocalStore(PROVIDERS_KEY, ModelProviderStoreSchema, {
+	accounts: [],
+	models: [],
+	providers: [],
+});
+
+const providersPersistent = createPersistentStore(providersDef);
+
+export const providerStore = providersPersistent.store;
+
+export function hydrateProviderStore(): void {
+	providersPersistent.hydrate(
+		(s) => s.accounts.length + s.models.length + s.providers.length === 0,
+	);
 }
 
-if (typeof window !== "undefined") {
-	providerStore.subscribe((v) => saveProviders(v));
-	onStorageKey("uma:model-providers:v1", (raw) => {
-		if (raw === null) return;
-		try {
-			providerStore.setState(() => parseProviders(raw));
-		} catch {
-			// ignore
-		}
-	});
-}
-
-export function addProvider(provider: CustomProvider) {
+export function addProvider(provider: CustomProvider): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		providers: [...prev.providers, provider],
 	}));
 }
 
-export function addProviderModel(model: CustomModel) {
+export function addProviderModel(model: CustomModel): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		models: [...prev.models, model],
 	}));
 }
 
-export function addProviderAccount(account: ProviderAccount) {
+export function addProviderAccount(account: ProviderAccount): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		accounts: [...prev.accounts, account],
 	}));
 }
 
-export function removeProviderAccount(id: string) {
+export function removeProviderAccount(id: string): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		accounts: prev.accounts.filter((a) => a.id !== id),
 	}));
 }
 
-export function removeProviderModel(customId: string) {
+export function removeProviderModel(customId: string): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		models: prev.models.filter((m) => m.customId !== customId),
 	}));
 }
 
-export function removeProvider(id: string) {
+export function removeProvider(id: string): void {
 	providerStore.setState((prev) => {
 		const provider = prev.providers.find((p) => p.id === id);
 		return {
@@ -236,7 +152,7 @@ export function removeProvider(id: string) {
 export function updateProviderAccount(
 	id: string,
 	patch: Omit<ProviderAccount, "createdAt" | "id">,
-) {
+): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		accounts: prev.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)),
@@ -247,7 +163,7 @@ export function updateDetectedModel(
 	providerId: string,
 	modelId: string,
 	patch: DetectedModel,
-) {
+): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		providers: prev.providers.map((p) =>
@@ -264,7 +180,7 @@ export function updateDetectedModel(
 export function updateManualModel(
 	customId: string,
 	patch: Omit<CustomModel, "customId">,
-) {
+): void {
 	providerStore.setState((prev) => ({
 		...prev,
 		models: prev.models.map((m) =>
@@ -276,7 +192,7 @@ export function updateManualModel(
 export function updateProvider(
 	id: string,
 	patch: { baseUrl: string; models?: DetectedModel[]; name: string },
-) {
+): void {
 	providerStore.setState((prev) => {
 		const existing = prev.providers.find((p) => p.id === id);
 		const renamed = existing && existing.name !== patch.name;
@@ -322,8 +238,11 @@ export function useProviderStore() {
 	};
 }
 
-export function hydrateAllRegistries() {
+export function hydrateAllRegistries(): void {
 	hydrateMcpStore();
 	hydrateSkillsStore();
 	hydrateProviderStore();
 }
+
+// Re-export schemas for callers that need validation without a second import.
+export { McpStoreSchema, SkillsStoreSchema };

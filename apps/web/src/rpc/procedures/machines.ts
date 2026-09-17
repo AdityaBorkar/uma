@@ -1,16 +1,5 @@
-import { ORPCError, os } from "@orpc/server";
-import {
-	CheckStateResponseSchema,
-	HeartbeatHistoryResponseSchema,
-	LatestVersionResponseSchema,
-	ResetStateRequestSchema,
-	ResetStateResponseSchema,
-	SandboxListResponseSchema,
-	TaskClaimRequestSchema,
-	TaskClaimResponseSchema,
-} from "@uma/orpc-contract";
+import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
 
 import { db } from "#/lib/db.ts";
 import {
@@ -25,16 +14,14 @@ import { implementer } from "#/rpc/contract.ts";
 import { machines } from "#/schemas/db/machines.ts";
 
 /**
- * Machine-facing procedures (apiContract `machines.*`).
- * Auth is the machine Bearer session from the device flow — not the browser
- * cookie session. Inputs/outputs are the frozen contract schemas.
+ * Machine-facing procedures (apiContract `machines.*`, contract-first).
+ * Machine-auth uses the Bearer session from the device flow;
+ * browser procedures use the cookie session. Inputs/outputs are the
+ * frozen contract schemas.
  */
 
-export const claim = os
-	.input(TaskClaimRequestSchema)
-	.output(TaskClaimResponseSchema)
-	.errors({ CONFLICT: {} })
-	.handler(async ({ input, context, errors }) => {
+export const claim = implementer.machines.claim.handler(
+	async ({ input, context, errors }) => {
 		const ctx = context as RpcContext;
 		const sess = await requireMachine(ctx.headers);
 		if (input.machineId !== sess.machineId) {
@@ -48,15 +35,15 @@ export const claim = os
 		);
 		if (!ok) throw errors.CONFLICT();
 		return { ok: true as const, startedAt: Date.now() };
-	});
+	},
+);
 
-export const latestVersion = os
-	.output(LatestVersionResponseSchema)
-	.handler(async () => latestVersionService());
+export const latestVersion = implementer.machines.latestVersion.handler(
+	async () => latestVersionService(),
+);
 
-export const heartbeatHistoryProc = os
-	.output(HeartbeatHistoryResponseSchema)
-	.handler(async ({ context }) => {
+export const heartbeatHistoryProc =
+	implementer.machines.heartbeatHistory.handler(async ({ context }) => {
 		const ctx = context as RpcContext;
 		const sess = await requireMachine(ctx.headers);
 		const rows = await heartbeatHistory(sess.machineId, sess.userId);
@@ -70,9 +57,8 @@ export const heartbeatHistoryProc = os
 		};
 	});
 
-export const sandboxListProc = os
-	.output(SandboxListResponseSchema)
-	.handler(async ({ context }) => {
+export const sandboxListProc = implementer.machines.sandboxList.handler(
+	async ({ context }) => {
 		const ctx = context as RpcContext;
 		const sess = await requireMachine(ctx.headers);
 		const rows = await sandboxList(sess.machineId);
@@ -83,32 +69,32 @@ export const sandboxListProc = os
 					r.updatedAt instanceof Date ? r.updatedAt.toISOString() : r.updatedAt,
 			})),
 		};
-	});
+	},
+);
 
-export const checkState = os
-	.output(CheckStateResponseSchema)
-	.handler(async ({ context }) => {
+export const checkState = implementer.machines.checkState.handler(
+	async ({ context }) => {
 		const ctx = context as RpcContext;
 		await requireMachine(ctx.headers);
 		// No server-side desired-state store yet; convergence is WS-driven.
 		return { drift: [], version: "v1" };
-	});
+	},
+);
 
-export const resetStateProc = os
-	.input(ResetStateRequestSchema)
-	.output(ResetStateResponseSchema)
-	.handler(async ({ input, context }) => {
+export const resetStateProc = implementer.machines.resetState.handler(
+	async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const sess = await requireMachine(ctx.headers);
 		const res = await resetState(sess.machineId, {
 			keys: input.keys ?? "*",
 		});
 		return { jobId: res.jobId, keys: res.keys };
-	});
+	},
+);
 
-// --- Browser-side machine registry (web UI, not part of the wire contract) ---
+// --- Browser-side machine registry (web UI, contract-first) ---
 
-export const list = os.handler(async ({ context }) => {
+export const list = implementer.machines.list.handler(async ({ context }) => {
 	const ctx = context as RpcContext;
 	const user = await requireUser(ctx.headers);
 	return db
@@ -124,20 +110,19 @@ export const list = os.handler(async ({ context }) => {
 		.where(eq(machines.userId, user.id));
 });
 
-export const revoke = os
-	.input(z.object({ id: z.string().min(1) }))
-	.handler(async ({ input, context }) => {
+export const revoke = implementer.machines.revoke.handler(
+	async ({ input, context, errors }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const { revokeMachine } = await import("#/lib/machines/service.ts");
 		const ok = await revokeMachine(user.id, input.id);
-		if (!ok) throw new ORPCError("NOT_FOUND", { message: "Machine not found" });
+		if (!ok) throw errors.NOT_FOUND();
 		return { ok: true as const };
-	});
+	},
+);
 
-export const get = os
-	.input(z.object({ id: z.string().min(1) }))
-	.handler(async ({ input, context }) => {
+export const get = implementer.machines.get.handler(
+	async ({ input, context, errors }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const [row] = await db
@@ -145,10 +130,10 @@ export const get = os
 			.from(machines)
 			.where(and(eq(machines.id, input.id), eq(machines.userId, user.id)))
 			.limit(1);
-		if (!row)
-			throw new ORPCError("NOT_FOUND", { message: "Machine not found" });
+		if (!row) throw errors.NOT_FOUND();
 		return row;
-	});
+	},
+);
 
 /**
  * Browser-readable heartbeats for one owned machine (contract-first:

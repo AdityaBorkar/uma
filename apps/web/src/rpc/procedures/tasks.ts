@@ -1,7 +1,6 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError } from "@orpc/server";
 import { KNOWN_AGENT_NAMES } from "@uma/orpc-contract";
 import { and, desc, eq, ilike, type SQL, sql } from "drizzle-orm";
-import { z } from "zod";
 
 import { db } from "#/lib/db.ts";
 import { type RpcContext, requireUser } from "#/rpc/auth.ts";
@@ -16,11 +15,6 @@ import { agents } from "#/schemas/db/agents.ts";
 import { taskLogs } from "#/schemas/db/machines.ts";
 import { projects } from "#/schemas/db/projects.ts";
 import { tasks } from "#/schemas/db/tasks.ts";
-import {
-	TaskCreateInput,
-	TaskListInput,
-	TaskUpdateStatusInput,
-} from "#/schemas/schema.ts";
 
 // TASK-4 transition map (docs/CONTEXT.md (Task) §5.2).
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
@@ -33,9 +27,8 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
-export const list = os
-	.input(TaskListInput)
-	.handler(async ({ input, context }) => {
+export const list = implementer.tasks.list.handler(
+	async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const q = input?.q?.trim();
@@ -93,12 +86,12 @@ export const list = os
 			.limit(limit + 1);
 
 		const { items, nextCursor } = paginate(rows, limit, (last) => last.id);
-		return { items, nextCursor };
-	});
+		return { items, nextCursor: nextCursor ?? null };
+	},
+);
 
-export const stats = os
-	.input(z.object({ projectId: z.string().optional() }).optional())
-	.handler(async ({ context, input }) => {
+export const stats = implementer.tasks.stats.handler(
+	async ({ context, input }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const conditions: SQL[] = [eq(tasks.userId, user.id)];
@@ -118,11 +111,11 @@ export const stats = os
 			queued: byStatus.get("queued") ?? 0,
 			running: byStatus.get("running") ?? 0,
 		};
-	});
+	},
+);
 
-export const get = os
-	.input(z.object({ id: z.string() }))
-	.handler(async ({ input, context }) => {
+export const get = implementer.tasks.get.handler(
+	async ({ input, context, errors }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const [row] = await db
@@ -130,22 +123,18 @@ export const get = os
 			.from(tasks)
 			.where(and(eq(tasks.id, input.id), eq(tasks.userId, user.id)))
 			.limit(1);
-		if (!row) {
-			throw new ORPCError("NOT_FOUND", { message: "Task not found" });
-		}
+		if (!row) throw errors.NOT_FOUND();
 		return row;
-	});
+	},
+);
 
-export const create = os
-	.input(TaskCreateInput)
-	.handler(async ({ input, context }) => {
+export const create = implementer.tasks.create.handler(
+	async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		if (input.projectId) {
 			await assertProjectOwned(input.projectId, user.id);
 		}
-		// Agent pinning: `cli` is the legacy default; anything else must be a
-		// well-known agent or a name in the user's registry (`agents.*`).
 		const agent = input.agent?.trim() || "cli";
 		if (
 			agent !== "cli" &&
@@ -180,11 +169,11 @@ export const create = os
 			throw new ORPCError("INTERNAL_SERVER_ERROR");
 		}
 		return row;
-	});
+	},
+);
 
-export const updateStatus = os
-	.input(TaskUpdateStatusInput)
-	.handler(async ({ input, context }) => {
+export const updateStatus = implementer.tasks.updateStatus.handler(
+	async ({ input, context, errors }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
 		const [existing] = await db
@@ -192,9 +181,7 @@ export const updateStatus = os
 			.from(tasks)
 			.where(and(eq(tasks.id, input.id), eq(tasks.userId, user.id)))
 			.limit(1);
-		if (!existing) {
-			throw new ORPCError("NOT_FOUND", { message: "Task not found" });
-		}
+		if (!existing) throw errors.NOT_FOUND();
 		if (input.status === existing.status) {
 			return existing;
 		}
@@ -206,9 +193,6 @@ export const updateStatus = os
 			});
 		}
 
-		// Timestamps are server-stamped (TASK-5). The DB CHECK requires
-		// finished_at to be present exactly for terminal statuses, so a retry
-		// (failed → queued) must clear both stamps.
 		const patch: Partial<typeof tasks.$inferInsert> = {
 			status: input.status,
 		};
@@ -228,11 +212,10 @@ export const updateStatus = os
 			.set({ ...patch, updatedAt: new Date() })
 			.where(eq(tasks.id, input.id))
 			.returning();
-		if (!updated) {
-			throw new ORPCError("NOT_FOUND");
-		}
+		if (!updated) throw errors.NOT_FOUND();
 		return updated;
-	});
+	},
+);
 
 /**
  * Browser-readable task logs (contract-first: `apiContract tasks.logs.list`).

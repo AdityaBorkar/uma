@@ -172,8 +172,8 @@ this theme's tokens.
 | `SPRING_LAYOUT` | shared surfaces gliding (sidebar active, card height) |
 | `SPRING_PANEL` | overlay panels unfolding (dialog) |
 | `SPRING_SWAP` | content trading places (badge roll, button slots) |
-| `SPRING_MOUSE` | decorative cursor-follow only (magnetic, tilt) |
-| Tabs underline spring (`motion/tabs.tsx`, `UnderlineNav`) | glides that must settle without overshoot inside scroll rails |
+| `SPRING_MOUSE` | reserved (no current usage; re-add only with a caller) |
+| Tabs underline spring (`layout/UnderlineNav.tsx`) | glides that must settle without overshoot inside scroll rails |
 
 ### Timing (under 300ms default)
 
@@ -191,7 +191,7 @@ this theme's tokens.
 |---|---|---|
 | Button press | `ui/button.tsx` | `whileTap 0.97` + `SPRING_PRESS`; hover stays CSS |
 | Animated Sidebar active | `layout/AppSidebar.tsx` | one `layoutId` surface glides (`SPRING_LAYOUT`); hover stays an instant CSS wash; popup unfolds with blur rise; items stagger in |
-| Tabs underline | `layout/UnderlineNav.tsx`, `motion/tabs.tsx`, `lists/UnderlineTabs.tsx` | shared active underline glides on one layoutId, a muted hover underline glides on a second (shared-layout-bg language), both on the no-overshoot tabs spring inside a `layoutRoot` rail |
+| Tabs underline | `layout/UnderlineNav.tsx` | shared active underline glides on one layoutId, a muted hover underline glides on a second (shared-layout-bg language), both on the no-overshoot tabs spring inside a `layoutRoot` rail |
 | Center Morph Modal | `ui/dialog.tsx` | scrim fade + panel spring (`0.97→1`, `y 20→0`) + `layout` height morph; Esc closes, body scroll locks, `PresenceGate` releases interaction on exit start |
 | Animated Toast Stack | `ui/toaster.tsx` | blur-rise spawn, fast blur-slide exit, `layout` spring, swipe-to-dismiss (`|x|>72` or velocity); store API unchanged |
 | Animated Badge | `ui/badge.tsx` | shell `layout`-morphs width, content blur-rolls (`contentKey` available for counts) |
@@ -199,7 +199,6 @@ this theme's tokens.
 | Input shake | `ui/input.tsx`, `ui/textarea.tsx` | single shake on the transition into `aria-invalid`, never per render |
 | Alert reveal | `ui/alert.tsx` | fast lift + `layout` |
 | Card continuity | `ui/card.tsx` | `layout` height morph, no mount animation |
-| Tooltip / Tabs / Toast primitives | `motion/tooltip.tsx`, `motion/tabs.tsx`, `motion/*` | vended beUI sources; use directly for new floating/tab UI |
 
 ### Rules
 

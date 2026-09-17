@@ -1,4 +1,5 @@
 "use client";
+
 // beui.dev/components/motion/select
 //
 // Vendored beUI Select (gooey unfold variant). Local adaptations to this
@@ -9,7 +10,6 @@
 // - focus ring follows the repo pattern (ring-3 ring-ring/30)
 // - panel shadow dropped (border-over-shadow rule); item radius -> rounded-sm
 
-import { Check, ChevronDown } from "lucide-react";
 import {
 	motion,
 	type Transition,
@@ -29,6 +29,7 @@ import {
 	useState,
 } from "react";
 
+import { Check, ChevronDown } from "#/components/icons.tsx";
 import { EASE_OUT } from "#/lib/ease.ts";
 import { cn } from "#/lib/utils.ts";
 

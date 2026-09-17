@@ -7,47 +7,18 @@
  * - local:  `{ type: "local", command: ["npx", "-y", "pkg[@version]"], enabled }`
  * - remote: `{ type: "remote", url: "https://…/mcp", enabled }`
  *
- * Scope is intentionally local-only in v1 (browser `localStorage` via the
- * `McpStore` interface below), so a server-backed adapter can replace the
- * storage helpers later without touching the page — same pattern as
- * `#/lib/skills/skills.ts`.
- *
- * Version pins:
- * - local: appended to the npm package ref (`pkg@1.2.3`). Empty means
- *   floating latest. Latest is resolved via `GET /api/mcp/versions`.
- * - remote: stored as metadata only (there is no registry to resolve);
- *   upgrading means editing the pin by hand.
+ * Scope is intentionally local-only in v1 (browser `localStorage`).
  */
 
-export type McpKind = "local" | "remote";
-export type McpRuntime = "npx" | "bunx" | "uvx";
+import { z } from "zod";
 
-export interface InstalledMcpEntry {
-	enabled: boolean;
-	/** Unique row id (crypto.randomUUID). */
-	id: string;
-	installedAt: string;
-	kind: McpKind;
-	lastCheckedAt: string | null;
-	/** Last resolved `latest` from the npm registry (local only). */
-	latestVersion: string | null;
-	/** Unique opencode `mcp` key, e.g. `mcp_everything`. */
-	name: string;
-	/** npm package for local servers (empty for remote). */
-	package: string;
-	/** Launcher for local servers. */
-	runtime: McpRuntime;
-	/** Server URL for remote servers (empty for local). */
-	url: string;
-	/** Optional version pin (tag/range). Empty means floating latest. */
-	version: string | null;
-}
+import { defineLocalStore } from "#/lib/local-store.ts";
 
-export interface McpStore {
-	items: InstalledMcpEntry[];
-}
+export const McpKindSchema = z.enum(["local", "remote"]);
+export type McpKind = z.infer<typeof McpKindSchema>;
 
-export const STORAGE_KEY = "uma:mcp-servers:v1";
+export const McpRuntimeSchema = z.enum(["npx", "bunx", "uvx"]);
+export type McpRuntime = z.infer<typeof McpRuntimeSchema>;
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 const PACKAGE_RE = /^(?:@[A-Za-z0-9_.-]+\/)?[A-Za-z0-9_.-]+$/;
@@ -86,6 +57,80 @@ export function isSafeMcpUrl(url: string): boolean {
 
 export function isValidMcpRuntime(value: string): value is McpRuntime {
 	return value === "npx" || value === "bunx" || value === "uvx";
+}
+
+export const InstalledMcpEntrySchema = z.object({
+	enabled: z.boolean().default(true),
+	id: z.string().min(1),
+	installedAt: z.string().default(""),
+	kind: McpKindSchema.default("local"),
+	lastCheckedAt: z.string().nullable().default(null),
+	latestVersion: z.string().nullable().default(null),
+	name: z.string().min(1).max(64).refine(isSafeMcpName, "Invalid MCP name"),
+	package: z.string().default(""),
+	runtime: McpRuntimeSchema.default("npx"),
+	url: z.string().default(""),
+	version: z.string().nullable().default(null),
+});
+
+export type InstalledMcpEntry = z.infer<typeof InstalledMcpEntrySchema>;
+
+export const McpStoreSchema = z.object({
+	items: z.array(InstalledMcpEntrySchema).default([]),
+});
+
+export type McpStore = z.infer<typeof McpStoreSchema>;
+
+export const STORAGE_KEY = "uma:mcp-servers:v1";
+
+export const EMPTY_STORE: McpStore = { items: [] };
+
+const storeDef = defineLocalStore(STORAGE_KEY, McpStoreSchema, EMPTY_STORE);
+
+function dedupe(items: InstalledMcpEntry[]): InstalledMcpEntry[] {
+	const seenIds = new Set<string>();
+	const seenNames = new Set<string>();
+	const out: InstalledMcpEntry[] = [];
+	for (const entry of items) {
+		if (seenIds.has(entry.id)) continue;
+		// Enforce kind-specific invariants + version safety beyond the schema.
+		if (entry.kind === "local") {
+			if (!isSafeMcpPackage(entry.package.trim())) continue;
+		} else if (!isSafeMcpUrl(entry.url.trim())) continue;
+		if (entry.version !== null && !isSafeMcpVersion(entry.version.trim()))
+			continue;
+		if (
+			entry.latestVersion !== null &&
+			!isSafeMcpVersion(entry.latestVersion.trim())
+		)
+			continue;
+		const lowered = entry.name.toLowerCase();
+		if (seenNames.has(lowered)) continue;
+		seenIds.add(entry.id);
+		seenNames.add(lowered);
+		out.push(entry);
+	}
+	return out;
+}
+
+export function parseStore(raw: unknown): McpStore {
+	if (typeof raw !== "string") return EMPTY_STORE;
+	try {
+		const parsed: unknown = JSON.parse(raw);
+		const result = McpStoreSchema.safeParse(parsed);
+		if (!result.success) return EMPTY_STORE;
+		return { items: dedupe(result.data.items) };
+	} catch {
+		return EMPTY_STORE;
+	}
+}
+
+export function loadStore(): McpStore {
+	return storeDef.load();
+}
+
+export function saveStore(store: McpStore): void {
+	storeDef.save(store);
 }
 
 /** Display name derived from an npm package (`@scope/name` → `name`). */
@@ -143,97 +188,4 @@ export function buildMcpJson(
 					url: entry.url,
 				};
 	return JSON.stringify({ mcp: { [entry.name]: config } }, null, 2);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function asEntry(value: unknown): InstalledMcpEntry | null {
-	if (!isRecord(value)) return null;
-	const id = typeof value.id === "string" ? value.id : "";
-	const rawName = typeof value.name === "string" ? value.name.trim() : "";
-	if (!id || !isSafeMcpName(rawName)) return null;
-	const kind = value.kind === "remote" ? "remote" : "local";
-	const runtime =
-		typeof value.runtime === "string" && isValidMcpRuntime(value.runtime)
-			? value.runtime
-			: "npx";
-	if (kind === "local") {
-		const pkg = typeof value.package === "string" ? value.package.trim() : "";
-		if (!isSafeMcpPackage(pkg)) return null;
-	} else {
-		const url = typeof value.url === "string" ? value.url.trim() : "";
-		if (!isSafeMcpUrl(url)) return null;
-	}
-	const version =
-		typeof value.version === "string" && value.version.trim() !== ""
-			? value.version.trim()
-			: null;
-	if (version !== null && !isSafeMcpVersion(version)) return null;
-	const latestVersion =
-		typeof value.latestVersion === "string" &&
-		value.latestVersion.trim() !== "" &&
-		isSafeMcpVersion(value.latestVersion.trim())
-			? value.latestVersion.trim()
-			: null;
-	return {
-		enabled: value.enabled !== false,
-		id,
-		installedAt: typeof value.installedAt === "string" ? value.installedAt : "",
-		kind,
-		lastCheckedAt:
-			typeof value.lastCheckedAt === "string" ? value.lastCheckedAt : null,
-		latestVersion,
-		name: rawName,
-		package: typeof value.package === "string" ? value.package.trim() : "",
-		runtime,
-		url: typeof value.url === "string" ? value.url.trim() : "",
-		version,
-	};
-}
-
-export const EMPTY_STORE: McpStore = { items: [] };
-
-export function parseStore(raw: unknown): McpStore {
-	if (typeof raw !== "string") return EMPTY_STORE;
-	try {
-		const parsed: unknown = JSON.parse(raw);
-		if (!isRecord(parsed) || !Array.isArray(parsed.items)) return EMPTY_STORE;
-		const seenIds = new Set<string>();
-		const seenNames = new Set<string>();
-		const items: InstalledMcpEntry[] = [];
-		for (const v of parsed.items) {
-			const entry = asEntry(v);
-			if (!entry || seenIds.has(entry.id)) continue;
-			const lowered = entry.name.toLowerCase();
-			if (seenNames.has(lowered)) continue;
-			seenIds.add(entry.id);
-			seenNames.add(lowered);
-			items.push(entry);
-		}
-		return { items };
-	} catch {
-		return EMPTY_STORE;
-	}
-}
-
-export function loadStore(): McpStore {
-	try {
-		if (typeof window === "undefined" || !window.localStorage) {
-			return EMPTY_STORE;
-		}
-		return parseStore(window.localStorage.getItem(STORAGE_KEY));
-	} catch {
-		return EMPTY_STORE;
-	}
-}
-
-export function saveStore(store: McpStore): void {
-	try {
-		if (typeof window === "undefined" || !window.localStorage) return;
-		window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-	} catch {
-		// Storage full or unavailable — the page keeps working in memory.
-	}
 }
