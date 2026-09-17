@@ -45,6 +45,7 @@ import {
 	RadarIcon,
 	RadioIcon,
 	Redo02Icon,
+	RocketIcon,
 	SearchIcon,
 	ServerIcon,
 	Settings01Icon,
@@ -58,6 +59,7 @@ import {
 	Unlink01Icon,
 	UserIcon,
 	Video01Icon,
+	ZapIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import type { ComponentType } from "react";
@@ -97,6 +99,8 @@ export const LayoutDashboard = makeIcon(LayoutDashboardIcon);
 export const BookOpen = makeIcon(BookOpenIcon);
 export const Radar = makeIcon(RadarIcon);
 export const Radio = makeIcon(RadioIcon);
+export const Rocket = makeIcon(RocketIcon);
+export const Zap = makeIcon(ZapIcon);
 export const SquareKanban = makeIcon(SquareKanbanIcon);
 export const Check = makeIcon(CheckIcon);
 export const ChevronDown = makeIcon(ChevronDownIcon);
