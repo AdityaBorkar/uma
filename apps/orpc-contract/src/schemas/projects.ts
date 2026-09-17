@@ -14,6 +14,25 @@ export type ProjectStatus = z.infer<typeof ProjectStatusEnum>;
 
 export const GITHUB_REPO_FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
+export const ProjectSchema = z.object({
+	createdAt: z.date(),
+	createdBy: z.string(),
+	description: z.string().max(5000).optional().nullable(),
+	githubRepoFullName: z.string().optional().nullable(),
+	githubRepoId: z.string().optional().nullable(),
+	githubRepoUrl: z.string().optional().nullable(),
+	id: z.string(),
+	name: z.string().min(2).max(100),
+	slug: z
+		.string()
+		.min(PROJECT_SLUG_MIN)
+		.max(PROJECT_SLUG_MAX)
+		.regex(PROJECT_SLUG_RE),
+	status: ProjectStatusEnum.default("active"),
+	updatedAt: z.date(),
+});
+export type Project = z.infer<typeof ProjectSchema>;
+
 export const ProjectCreateInputSchema = z.object({
 	description: z.string().max(5000, "Max 5000 characters").optional(),
 	githubRepoFullName: z
