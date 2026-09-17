@@ -3,10 +3,10 @@
 Automated backups via **pgBackRest** → **OCI Object Storage** (ADR 007). This
 page is the "how do I check it / recover" reference. It assumes you deployed
 the production stack (`pulumi up --stack production`) and can reach the
-postgres container by name (`postgres-container`, per `infra/docker/postgres.ts`).
+postgres container by name (`postgres-container`, per `apps/infra/docker/postgres.ts`).
 
 > ⚠️ **Status (2026-08-31):** the steps below assume the backup wiring is
-> **enabled**. As committed, `infra/index.ts` has the `createBackupBackend()`
+> **enabled**. As committed, `apps/infra/index.ts` has the `createBackupBackend()`
 > call commented out and never passes `backends` to `postgresContainer()` —
 > the postgres image is stock, `$BACKUP_*` envs are absent, and archiving is
 > off. Re-enable first (see ADR 007), then verify per "Verify backups are

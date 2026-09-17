@@ -25,9 +25,12 @@ Two bounded contexts, one contract:
 
 ## Known wiring drift (verify before trusting)
 
-Infra was moved out of `apps/web` into `apps/infra`, and not all paths were updated:
-
-- `apps/infra/docker/app.ts:72-73` builds with context `apps/` and Dockerfile `apps/Dockerfile` (neither exists); the real file is `apps/web/Dockerfile`, which copies root-level `package.json`/`bun.lockb`/`bunfig.toml` (`apps/web/Dockerfile:5-9`), so it expects the repo root as build context.
-- `apps/infra/utils/run-command.ts:35-37` is now fixed — resolves to the repo root via `resolve(import.meta.dir, "../../../")` where `Pulumi.yaml` lives.
-- `apps/web/scripts/check-env.ts` does not exist (only `mdx-editor.roundtrip.ts`, `seed.ts`); `apps/infra/utils/extract-env.ts:8-9` still cites it as verifier. `apps/web/package.json:16` correctly runs `bun ../infra/utils/run-command.ts` (exists at `apps/infra/utils/run-command.ts`).
-- Web ADRs 006/007 and `docs/do-not-touch-ai/*` still cite pre-move `infra/*` paths; ADRs note the delta inline.
+Infra was moved out of `apps/web` into `apps/infra`; the path fallout is
+fixed: `apps/infra/docker/app.ts` builds from the repo-root context with
+`apps/web/Dockerfile`, `apps/infra/utils/run-command.ts` resolves the repo
+root where `Pulumi.yaml` lives, and `bun run check:env` in `apps/web`
+(`scripts/check-env.ts`) verifies the `APP_ENV_VARS` manifest against the
+Dockerfile `ARG` block and `apps/web/src/env.ts`.
+`docs/do-not-touch-ai/REFERENCE.md` links still assume the pre-move layout
+(`src/lib/*`, `infra/*`) and are aspirational for future engines (frozen —
+do not restructure).

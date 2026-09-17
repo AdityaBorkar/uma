@@ -9,7 +9,7 @@ import { displayName } from "./utils.ts";
  * Provisions the OCI Object Storage bucket + lifecycle policy and the
  * S3-compatibility Customer Secret Key that pgBackRest authenticates with.
  * The resulting `BackupBackend` is consumed by `postgresContainer` (see
- * `infra/docker/postgres.ts`), which builds the pgBackRest-enabled image and
+ * `apps/infra/docker/postgres.ts`), which builds the pgBackRest-enabled image and
  * points `archive_command` + the every-N-days cron at this repo.
  *
  * Config (`backup:` namespace):
@@ -79,7 +79,7 @@ export function createBackupBackend(): BackupBackend {
 
 	// Lifecycle policy = the retention enforcement layer. pgBackRest itself
 	// never prunes WAL before the cloud rule (see entrypoint.sh in
-	// infra/docker/backup), so what survives in the bucket is bounded here.
+	// apps/infra/docker/backup), so what survives in the bucket is bounded here.
 	new oci.objectstorage.ObjectLifecyclePolicy(
 		"pg-backup-lifecycle",
 		{

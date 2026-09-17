@@ -70,7 +70,7 @@ export function postgresContainer({
 		password: config.requireSecret("DB_PASSWORD"),
 	};
 
-	// With backups the postgres image is built from infra/docker/backup
+	// With backups the postgres image is built from apps/infra/docker/backup
 	// (postgres:18-alpine + pgBackRest + cron); without, stock postgres. The
 	// RemoteImage is only instantiated on the dev path, so production never
 	// pulls an unused tag. Timings are wall-clock on the machine running
@@ -82,7 +82,7 @@ export function postgresContainer({
 				{
 					build: {
 						context: resolve(import.meta.dir, "backup"),
-						dockerfile: "Dockerfile",
+						dockerfile: resolve(import.meta.dir, "backup/Dockerfile"),
 						platform: "linux/arm64",
 					},
 					imageName: interpolate`${getProject()}-postgres:latest`,

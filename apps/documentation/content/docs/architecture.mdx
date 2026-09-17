@@ -34,4 +34,4 @@ flowchart TD
 | `apps/documentation` | This site (Astro + Fumadocs) |
 | `apps/cli` | `uma-docs` MCP/docs CLI — a different tool from `uma-machine` |
 
-Known wiring drift (infra moved out of `apps/web`): `apps/web/package.json` `infra:*` scripts, `check-env.ts` import, root `check:env`/`infra:prepare`, and `apps/infra/docker/app.ts` build context still point at old paths — please double-check them (see root `AGENTS.md`).
+Env/build wiring is verified by `bun run check:env` in `apps/web` (manifest ↔ Dockerfile ↔ `src/env.ts`).

@@ -2,14 +2,16 @@
  * Environment-variable wiring for the Pulumi layer, in one place.
  *
  * `APP_ENV_VARS` is the single source of truth for the app container's
- * environment variables. Every var the app reads (see `src/env.ts`) is
- * declared here exactly once; `appEnvValues` (consumed by
- * `infra/docker/app.ts`) derives both the Docker build args and the runtime
- * container envs from this manifest (historical verifier `scripts/check-env.ts`
- * does not exist; only `mdx-editor.roundtrip.ts`, `seed.ts` under `apps/web/scripts/`).
+ * environment variables. Every var the app reads (see
+ * `apps/web/src/env.ts`) is declared here exactly once; `appEnvValues`
+ * (consumed by `apps/infra/docker/app.ts`) derives both the Docker build
+ * args and the runtime container envs from this manifest. The build-arg
+ * block in `apps/web/Dockerfile` must list every `build: true` var;
+ * `bun run check:env` in `apps/web` (`scripts/check-env.ts`) verifies the
+ * three files stay in sync.
  *
  * `extractEnv` flattens Pulumi stack config into a plain `name -> value` map.
- * Its consumer is `infra/utils/run-command.ts`, which parses
+ * Its consumer is `apps/infra/utils/run-command.ts`, which parses
  * `pulumi config --json --show-secrets` output to spawn commands with sourced
  * env vars.
  *

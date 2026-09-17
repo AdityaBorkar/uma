@@ -11,9 +11,9 @@ Pulumi program (OCI VM + Cloudflare DNS + Docker + pgBackRest) plus the app env 
 
 ## Conventions
 
-- Imports use relative paths with explicit `.ts` extensions, `import type` for types (`verbatimModuleSyntax`, strict TS). (`package.json:5-7` maps `#/*` → `./src/*` but there is no `src/` dir; `index.ts:4-8` and `docker/app.ts:8-13` use relative imports.)
+- Imports use relative paths with explicit `.ts` extensions, `import type` for types (`verbatimModuleSyntax`, strict TS). There is no `#/*` alias in this app.
 - `utils/extract-env.ts` is the single source of truth for app env (`APP_ENV_VARS` manifest + `appEnvValues`/`appBuildArgs`/`appRuntimeEnvs`/`extractEnv`). When adding a var: add it here (correct `source`: `app`|`postgres`|`derived`; `secret` for secrets; `optional` for unset-tolerant; `build: true` only for `PUBLIC_*`), then update `apps/web/src/env.ts` validation and `apps/web/Dockerfile` (`ARG` only for `PUBLIC_*`; secrets runtime-only, never build args — `appBuildArgs` excludes them by construction).
 - Config keys are namespaced (`namespace:NAME`); `extractEnv` strips the prefix and returns a name-sorted flat map. Secrets go through `requireSecret`, optionals through `get` (empty string when unset).
 - DB backup wiring is currently commented out in `index.ts`; runbook in `docs/do-not-touch-ai/BACKUPS.md`, decision in `apps/web/docs/adr/007-postgresql-backups.md`. `README-dev.md` tracks ops gaps (silent backup failures, unplumbed `backup:CIPHER_PASS`, no restore tooling) — read it before touching backup code.
-- Known drift (verify before trusting): `docker/app.ts:72-73` builds with context `apps/` and Dockerfile `apps/Dockerfile` (neither exists; real file `apps/web/Dockerfile` expects repo-root context). `utils/run-command.ts:35-37` is fixed — resolves to repo root. `utils/extract-env.ts:8-9` cites `scripts/check-env.ts` which does not exist. Fix paths when you touch them; don't entrench them.
+- Wiring is verified, not trusted: `docker/app.ts` builds from the repo-root context with `apps/web/Dockerfile`; `utils/run-command.ts` resolves the repo root where `Pulumi.yaml` lives; `bun run check:env` in `apps/web` verifies the env manifest against the Dockerfile and `apps/web/src/env.ts`. Fix paths when you touch them; don't entrench them.
 - Never commit `.env` files or real secrets; values come from Pulumi stack config.

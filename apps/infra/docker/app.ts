@@ -69,8 +69,12 @@ export async function appContainer({
 		{
 			build: {
 				args: buildArgs,
-				context: resolve(import.meta.dir, "../.."),
-				dockerfile: resolve(import.meta.dir, "../../Dockerfile"),
+				// Repo-root context: apps/web/Dockerfile copies the root
+				// manifest (package.json/bun.lockb/bunfig.toml) and builds the
+				// @uma/web workspace, so the context must be the repo root
+				// (where Pulumi.yaml lives).
+				context: resolve(import.meta.dir, "../../../"),
+				dockerfile: resolve(import.meta.dir, "../../../apps/web/Dockerfile"),
 				platform: "linux/arm64",
 			},
 			imageName: interpolate`${getProject()}-app:latest`,

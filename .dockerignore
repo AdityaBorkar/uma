@@ -1,0 +1,36 @@
+# Build context is the repo root (see apps/infra/docker/app.ts). Docker only
+# reads this file from the context root, so repo-wide exclusions live here.
+
+# VCS / editor / tooling
+.git
+.github
+.husky
+.zed
+.agents
+.opencode
+
+# Local env & secrets — must never be baked into the image
+.env
+.env.*
+*.pem
+
+# Builds & caches
+node_modules
+.nitro
+.tanstack
+.output
+.local
+
+# Pulumi — Pulumi.*.yaml contains secrets
+Pulumi*.yaml
+
+# Unrelated workspaces — the web image only needs the root manifest plus
+# apps/web and apps/orpc-contract (copied explicitly before install).
+# Excluding the rest keeps remote builds (context streamed over SSH) small.
+apps/machine
+apps/cli
+apps/documentation
+apps/infra
+
+# Product theory and site sources — never part of the image
+docs
