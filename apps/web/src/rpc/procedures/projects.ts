@@ -2,6 +2,11 @@ import { ORPCError, os } from "@orpc/server";
 import { and, desc, eq, ilike, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
+import {
+	assertValidGithubRepoFullName,
+	fetchGithubRepo,
+	requireGithubAccessToken,
+} from "#/lib/connections/github.ts";
 import { db } from "#/lib/db.ts";
 import { isReservedProjectSlug } from "#/lib/slug.ts";
 import { type RpcContext, requireUser } from "#/rpc/auth.ts";
@@ -102,6 +107,35 @@ export const create = os
 	.handler(async ({ input, context }) => {
 		const ctx = context as RpcContext;
 		const user = await requireUser(ctx.headers);
+		if (!input.githubRepoFullName) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "GitHub repository is required to create a project.",
+			});
+		}
+		const requestedRepo = assertValidGithubRepoFullName(
+			input.githubRepoFullName,
+		);
+		// GitHub connection is mandatory — surfaces a clear error when missing.
+		const accessToken = await requireGithubAccessToken(user.id);
+		const repo = await fetchGithubRepo(accessToken, requestedRepo);
+
+		// One project per GitHub repo per user.
+		const [duplicate] = await db
+			.select({ id: projects.id })
+			.from(projects)
+			.where(
+				and(
+					eq(projects.createdBy, user.id),
+					ilike(projects.githubRepoFullName, repo.fullName),
+				),
+			)
+			.limit(1);
+		if (duplicate) {
+			throw new ORPCError("CONFLICT", {
+				message: `A project for ${repo.fullName} already exists`,
+			});
+		}
+
 		const desired = slugForNewProject(input.name, input.slug);
 		if (isReservedProjectSlug(desired)) {
 			throw new ORPCError("BAD_REQUEST", {
@@ -110,15 +144,20 @@ export const create = os
 		}
 		const slug = await uniqueProjectSlug(user.id, desired);
 		const id = crypto.randomUUID();
+		// Description is always synced from the GitHub repository — the
+		// client-supplied description is intentionally ignored.
 		const [row] = await db
 			.insert(projects)
 			.values({
 				createdBy: user.id,
-				description: input.description ?? null,
+				description: repo.description ?? null,
+				githubRepoFullName: repo.fullName,
+				githubRepoId: String(repo.id),
+				githubRepoUrl: repo.htmlUrl,
 				id,
 				name: input.name,
 				slug,
-				status: input.status ?? "active",
+				status: "active",
 			})
 			.returning();
 		if (!row) {
@@ -144,11 +183,67 @@ export const update = os
 		if (input.name !== undefined) {
 			patch.name = input.name;
 		}
-		if (input.description !== undefined) {
+		// GitHub linkage: prefer the newly supplied repo, otherwise keep the
+		// stored one. When a repo is linked, description is always re-synced
+		// from GitHub and any client-supplied description is ignored.
+		const targetRepoFullName =
+			input.githubRepoFullName ?? existing.githubRepoFullName;
+		if (input.githubRepoFullName !== undefined) {
+			const requestedRepo = assertValidGithubRepoFullName(
+				input.githubRepoFullName,
+			);
+			const accessToken = await requireGithubAccessToken(user.id);
+			const repo = await fetchGithubRepo(accessToken, requestedRepo);
+			if (
+				!existing.githubRepoFullName ||
+				existing.githubRepoFullName.toLowerCase() !==
+					repo.fullName.toLowerCase()
+			) {
+				const [duplicate] = await db
+					.select({ id: projects.id })
+					.from(projects)
+					.where(
+						and(
+							eq(projects.createdBy, user.id),
+							ilike(projects.githubRepoFullName, repo.fullName),
+						),
+					)
+					.limit(1);
+				if (duplicate && duplicate.id !== existing.id) {
+					throw new ORPCError("CONFLICT", {
+						message: `A project for ${repo.fullName} already exists`,
+					});
+				}
+			}
+			patch.githubRepoFullName = repo.fullName;
+			patch.githubRepoId = String(repo.id);
+			patch.githubRepoUrl = repo.htmlUrl;
+			patch.description = repo.description ?? null;
+		} else if (targetRepoFullName) {
+			// Keep description in sync even when only name/slug changes.
+			try {
+				const accessToken = await requireGithubAccessToken(user.id);
+				const repo = await fetchGithubRepo(accessToken, targetRepoFullName);
+				patch.githubRepoFullName = repo.fullName;
+				patch.githubRepoId = String(repo.id);
+				patch.githubRepoUrl = repo.htmlUrl;
+				patch.description = repo.description ?? null;
+			} catch (error) {
+				// If the GitHub connection is gone we still allow name/slug
+				// edits, but never accept a client-supplied description as
+				// the source of truth.
+				if (
+					error instanceof ORPCError &&
+					(error.code === "NOT_FOUND" || error.code === "UNAUTHORIZED")
+				) {
+					// leave stored description untouched
+				} else {
+					throw error;
+				}
+			}
+		} else if (input.description !== undefined) {
+			// Legacy projects without GitHub linkage keep manual descriptions.
 			patch.description = input.description ?? null;
-		}
-		if (input.status !== undefined) {
-			patch.status = input.status;
 		}
 		if (input.slug !== undefined) {
 			const desired = input.slug.trim().toLowerCase();

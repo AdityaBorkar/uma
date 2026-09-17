@@ -12,8 +12,18 @@ export const PROJECT_STATUS_VALUES = [
 export const ProjectStatusEnum = z.enum(PROJECT_STATUS_VALUES);
 export type ProjectStatus = z.infer<typeof ProjectStatusEnum>;
 
+export const GITHUB_REPO_FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+
 export const ProjectCreateInputSchema = z.object({
 	description: z.string().max(5000, "Max 5000 characters").optional(),
+	githubRepoFullName: z
+		.string()
+		.min(1, "GitHub repository is required")
+		.max(200, "Max 200 characters")
+		.regex(
+			GITHUB_REPO_FULL_NAME_RE,
+			"GitHub repository must be in the form owner/repo",
+		),
 	name: z
 		.string()
 		.min(2, "Must be at least 2 characters")
@@ -24,7 +34,6 @@ export const ProjectCreateInputSchema = z.object({
 		.max(PROJECT_SLUG_MAX)
 		.regex(PROJECT_SLUG_RE)
 		.optional(),
-	status: ProjectStatusEnum.default("active"),
 });
 export type ProjectCreateInput = z.infer<typeof ProjectCreateInputSchema>;
 

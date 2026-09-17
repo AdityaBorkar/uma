@@ -28,6 +28,9 @@ export const projects = pgTable(
 		deadlineDate: date("deadline_date", { mode: "date" }),
 		definitionOfDone: text("definition_of_done").notNull().default(""),
 		description: text("description"),
+		githubRepoFullName: text("github_repo_full_name"),
+		githubRepoId: text("github_repo_id"),
+		githubRepoUrl: text("github_repo_url"),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		outcome: text("outcome").notNull().default(""),
@@ -41,6 +44,10 @@ export const projects = pgTable(
 	(table) => [
 		index("projects_createdBy_idx").on(table.createdBy),
 		uniqueIndex("projects_user_slug_uidx").on(table.createdBy, table.slug),
+		uniqueIndex("projects_user_github_repo_uidx").on(
+			table.createdBy,
+			table.githubRepoFullName,
+		),
 		check(
 			"projects_deadline_is_sunday",
 			sql`EXTRACT(ISODOW FROM ${table.deadlineDate}) = 7 OR ${table.deadlineDate} IS NULL`,

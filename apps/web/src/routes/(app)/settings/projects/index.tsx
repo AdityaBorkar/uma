@@ -11,18 +11,11 @@ import {
 	ListResultCard,
 	PageHeader,
 } from "#/components/lists/shared.tsx";
-import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Input } from "#/components/ui/input.tsx";
 import { Label } from "#/components/ui/label.tsx";
-import { Select } from "#/components/ui/select.tsx";
 import { rpc } from "#/lib/rpc.ts";
-import {
-	PROJECT_STATUS_VALUES,
-	type ProjectStatus,
-	ProjectStatusEnum,
-} from "#/schemas/schema.ts";
 
 export const Route = createFileRoute("/(app)/settings/projects/")({
 	component: ProjectsPage,
@@ -39,7 +32,6 @@ export const Route = createFileRoute("/(app)/settings/projects/")({
 
 function ProjectsPage() {
 	const [q, setQ] = useState("");
-	const [status, setStatus] = useState<ProjectStatus | "">("");
 
 	const projectsQuery = useInfiniteQuery(
 		rpc.projects.list.infiniteOptions({
@@ -49,7 +41,6 @@ function ProjectsPage() {
 				cursor,
 				limit: LIST_LIMIT,
 				q: q || undefined,
-				status: status || undefined,
 			}),
 		}),
 	);
@@ -81,26 +72,6 @@ function ProjectsPage() {
 							value={q}
 						/>
 					</div>
-					<div className="w-full space-y-1.5 sm:w-40">
-						<Label className="font-semibold text-xs" htmlFor="statusFilter">
-							Status
-						</Label>
-						<Select
-							id="statusFilter"
-							onChange={(e) => {
-								const next = ProjectStatusEnum.safeParse(e.target.value);
-								setStatus(next.success ? next.data : "");
-							}}
-							value={status}
-						>
-							<option value="">All</option>
-							{PROJECT_STATUS_VALUES.map((value) => (
-								<option key={value} value={value}>
-									{value}
-								</option>
-							))}
-						</Select>
-					</div>
 				</CardContent>
 			</Card>
 
@@ -127,7 +98,6 @@ function ProjectsPage() {
 					summary={
 						<>
 							<span className="font-semibold">{items.length} projects</span>
-							<span className="text-muted-foreground">· {status || "all"}</span>
 						</>
 					}
 				>
@@ -155,11 +125,11 @@ function ProjectsPage() {
 									) : null}
 								</div>
 								<div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-									<Badge
-										variant={p.status === "active" ? "success" : "outline"}
-									>
-										{p.status}
-									</Badge>
+									{p.githubRepoFullName ? (
+										<span className="text-muted-foreground text-xs">
+											{p.githubRepoFullName}
+										</span>
+									) : null}
 									<span className="text-muted-foreground text-xs">
 										Updated{" "}
 										{new Date(p.updatedAt).toLocaleDateString("en-US", {

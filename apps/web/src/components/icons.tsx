@@ -33,6 +33,7 @@ import {
 	ListIcon,
 	ListOrderedIcon,
 	ListTodoIcon,
+	LockIcon,
 	Logout01Icon,
 	Mail01Icon,
 	MinusIcon,
@@ -124,6 +125,7 @@ export const ExternalLink = makeIcon(ExternalLinkIcon);
 export const MonitorSmartphone = makeIcon(MonitorSmartphoneIcon);
 export const LogOut = makeIcon(Logout01Icon);
 export const KeyRound = makeIcon(KeyRoundIcon);
+export const Lock = makeIcon(LockIcon);
 export const MoreHorizontal = makeIcon(MoreHorizontalIcon);
 export const Image = makeIcon(Image01Icon);
 export const Video = makeIcon(Video01Icon);

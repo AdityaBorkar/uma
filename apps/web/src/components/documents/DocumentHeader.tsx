@@ -66,9 +66,6 @@ export function DocumentHeader({
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div className="min-w-0 flex-1 space-y-2">
 						<div className="flex flex-wrap items-center gap-2">
-							<span className="text-muted-foreground text-xs">
-								#{doc.number}
-							</span>
 							<Badge className={stateBadgeClass(doc.state)} variant="secondary">
 								{doc.state}
 							</Badge>

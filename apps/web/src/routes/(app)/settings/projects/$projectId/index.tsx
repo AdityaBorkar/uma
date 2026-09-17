@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { ProjectForm } from "#/components/projects/ProjectForm.tsx";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert.tsx";
-import { Badge } from "#/components/ui/badge.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import {
 	Card,
@@ -24,7 +23,7 @@ export const Route = createFileRoute("/(app)/settings/projects/$projectId/")({
 		meta: [
 			{ title: "Project settings — Planner" },
 			{
-				content: "View and edit project details, status and workspace links.",
+				content: "View and edit project details and workspace links.",
 				name: "description",
 			},
 		],
@@ -118,14 +117,18 @@ function ProjectDetailPage() {
 						<ProjectForm
 							defaultValues={{
 								description: project.description ?? "",
+								githubRepoFullName: project.githubRepoFullName ?? "",
 								id: project.id,
 								name: project.name,
-								status: project.status,
 							}}
 							loading={updateMut.isPending}
 							onCancel={() => setEditing(false)}
 							onSubmit={async (values) => {
-								await updateMut.mutateAsync({ ...values, id: project.id });
+								await updateMut.mutateAsync({
+									githubRepoFullName: values.githubRepoFullName,
+									id: project.id,
+									name: values.name,
+								});
 							}}
 							submitLabel="Update"
 						/>
@@ -165,11 +168,19 @@ function ProjectDetailPage() {
 				</CardHeader>
 				<CardContent className="space-y-6 pt-4">
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge
-							variant={project.status === "active" ? "success" : "outline"}
-						>
-							{project.status}
-						</Badge>
+						{project.githubRepoFullName ? (
+							<a
+								className="text-xs underline hover:text-[var(--color-accent-fg)]"
+								href={
+									project.githubRepoUrl ??
+									`https://github.com/${project.githubRepoFullName}`
+								}
+								rel="noreferrer"
+								target="_blank"
+							>
+								{project.githubRepoFullName}
+							</a>
+						) : null}
 						<span className="text-muted-foreground text-xs">
 							Created{" "}
 							{new Date(project.createdAt).toLocaleDateString("en-US", {

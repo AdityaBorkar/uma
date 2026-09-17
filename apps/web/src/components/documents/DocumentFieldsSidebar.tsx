@@ -1,5 +1,6 @@
 import { MetadataForm } from "#/components/documents/MetadataForm.tsx";
 import type { DocumentDraft } from "#/components/documents/useDocumentDraft.ts";
+import { Lock } from "#/components/icons.tsx";
 import { Button } from "#/components/ui/button.tsx";
 import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Input } from "#/components/ui/input.tsx";
@@ -16,7 +17,6 @@ interface Props {
 	kind: string;
 	onReset: () => void;
 	onSave: () => void;
-	projectId: string | null;
 	projectName: string | null;
 	updatedAt: string;
 }
@@ -29,46 +29,37 @@ export function DocumentFieldsSidebar({
 	kind,
 	onReset,
 	onSave,
-	projectId,
 	projectName,
 	updatedAt,
 }: Props) {
 	const { state } = draft;
-	const projectLabel = projectId
-		? ` · ${projectName ?? projectId} (locked)`
-		: "";
 	return (
 		<Card>
 			<CardContent className="space-y-4 p-4">
 				<h3 className="font-semibold text-sm">Fields</h3>
-				<p className="text-muted-foreground text-xs">
-					Frontmatter is stored as JSONB — edit fields here, body stays WYSIWYG
-					on the left.
-				</p>
-				<Separator />
 
-				<div className="grid grid-cols-2 gap-3">
-					<div className="space-y-2">
-						<Label htmlFor="doc-field-kind">Kind</Label>
+				<div className="space-y-2">
+					<Label htmlFor="doc-field-kind">Kind</Label>
+					<div className="relative">
 						<Input
+							className="pr-9"
 							disabled={true}
 							id="doc-field-kind"
 							value={kindLabel(kind)}
 						/>
-						<p className="text-[11px] text-muted-foreground">
-							Locked after creation
-						</p>
+						<Lock className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					</div>
-					<div className="space-y-2">
-						<Label htmlFor="doc-field-project">Project</Label>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="doc-field-project">Project</Label>
+					<div className="relative">
 						<Input
+							className="pr-9"
 							disabled={true}
 							id="doc-field-project"
 							value={projectName ?? "—"}
 						/>
-						<p className="text-[11px] text-muted-foreground">
-							Locked after creation
-						</p>
+						<Lock className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					</div>
 				</div>
 
@@ -116,15 +107,19 @@ export function DocumentFieldsSidebar({
 					</div>
 				) : null}
 
-				{state.saveError ? (
-					<p className="text-destructive text-xs">{state.saveError}</p>
-				) : null}
-
 				<Separator />
-				<p className="text-muted-foreground text-xs">
-					opened {formatAgo(createdAt)} · updated {formatAgo(updatedAt)}
-					{projectLabel} · {kindLabel(kind)} locked
-				</p>
+				<div className="space-y-2">
+					<Label htmlFor="doc-field-activity">Activity</Label>
+					<div className="relative">
+						<Input
+							className="pr-9"
+							disabled={true}
+							id="doc-field-activity"
+							value={`opened ${formatAgo(createdAt)} · updated ${formatAgo(updatedAt)}`}
+						/>
+						<Lock className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+					</div>
+				</div>
 			</CardContent>
 		</Card>
 	);

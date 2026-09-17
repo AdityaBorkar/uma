@@ -2,6 +2,10 @@ import { ORPCError, os } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import {
+	fetchGithubRepos,
+	requireGithubAccessToken,
+} from "#/lib/connections/github.ts";
 import { revokeToken } from "#/lib/connections/profile.ts";
 import {
 	buildAuthorizationUrl,
@@ -76,6 +80,14 @@ export const providers = os.input(z.void()).handler(async ({ context }) => {
 	return {
 		providers: SUPPORTED_PROVIDERS.map((id) => ({ id })),
 	};
+});
+
+export const githubRepos = os.handler(async ({ context }) => {
+	const ctx = context as RpcContext;
+	const user = await requireUser(ctx.headers);
+	const accessToken = await requireGithubAccessToken(user.id);
+	const repos = await fetchGithubRepos(accessToken);
+	return repos;
 });
 
 export const disconnect = os

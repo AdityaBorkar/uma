@@ -194,7 +194,7 @@ function DocumentDetailPage() {
 			/>
 
 			<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-				<div className="min-w-0 space-y-6">
+				<div className="min-w-0">
 					<DocumentEditorSection
 						canEdit={canEdit}
 						docHtml={doc.html}
@@ -213,15 +213,11 @@ function DocumentDetailPage() {
 						kind={doc.kind}
 						onReset={resetToRaw}
 						onSave={handleSave}
-						projectId={doc.projectId}
 						projectName={doc.projectName}
 						updatedAt={doc.updatedAt}
 					/>
 
-					<DocumentTimeline
-						events={pageQuery.data.events}
-						frontmatter={doc.frontmatter}
-					/>
+					<DocumentTimeline events={pageQuery.data.events} />
 				</aside>
 			</div>
 		</div>

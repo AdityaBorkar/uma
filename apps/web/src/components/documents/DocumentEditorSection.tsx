@@ -1,7 +1,6 @@
 import { DocumentEditor } from "#/components/documents/Editor.tsx";
 import type { DocumentDraft } from "#/components/documents/useDocumentDraft.ts";
 import { Button } from "#/components/ui/button.tsx";
-import { Card, CardContent } from "#/components/ui/card.tsx";
 import { Label } from "#/components/ui/label.tsx";
 
 function SanitizedHtml({ html }: { html: string | null }) {
@@ -25,6 +24,12 @@ interface Props {
 	rawNumber: number;
 }
 
+/**
+ * Body section without card chrome: the rich editor and the source textarea
+ * already carry their own borders, so a wrapping Card only doubled them.
+ * The only chrome is the Rich/Source switch; status (dirty/saved) lives in
+ * the page header's Unsaved pill, not a footer bar.
+ */
 export function DocumentEditorSection({
 	canEdit,
 	docHtml,
@@ -33,54 +38,52 @@ export function DocumentEditorSection({
 	rawNumber,
 }: Props) {
 	const { state } = draft;
-	return (
-		<Card className="overflow-hidden">
-			<div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2">
-				<span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-					Body {isClosed ? "· read-only" : "· WYSIWYG"}
-				</span>
-				{canEdit ? (
-					<div className="flex items-center gap-1">
-						<Button
-							className={
-								state.mode === "rich" ? "bg-accent text-accent-foreground" : ""
-							}
-							onClick={() => draft.switchMode("rich")}
-							size="sm"
-							type="button"
-							variant="ghost"
-						>
-							Rich
-						</Button>
-						<Button
-							className={
-								state.mode === "source"
-									? "bg-accent text-accent-foreground"
-									: ""
-							}
-							onClick={() => draft.switchMode("source")}
-							size="sm"
-							type="button"
-							variant="ghost"
-						>
-							Source
-						</Button>
-					</div>
-				) : null}
-			</div>
 
-			{isClosed ? (
-				<CardContent className="pt-4">
-					<SanitizedHtml html={docHtml} />
-				</CardContent>
-			) : state.mode === "rich" ? (
+	if (isClosed) {
+		return (
+			<div className="rounded-md border bg-card px-4 py-3">
+				<SanitizedHtml html={docHtml} />
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-2">
+			{canEdit ? (
+				<div className="flex items-center justify-end gap-1">
+					<Button
+						className={
+							state.mode === "rich" ? "bg-accent text-accent-foreground" : ""
+						}
+						onClick={() => draft.switchMode("rich")}
+						size="sm"
+						type="button"
+						variant="ghost"
+					>
+						Rich
+					</Button>
+					<Button
+						className={
+							state.mode === "source" ? "bg-accent text-accent-foreground" : ""
+						}
+						onClick={() => draft.switchMode("source")}
+						size="sm"
+						type="button"
+						variant="ghost"
+					>
+						Source
+					</Button>
+				</div>
+			) : null}
+
+			{state.mode === "rich" ? (
 				<DocumentEditor
 					initialHtml={state.richHtml}
 					key={`${rawNumber}-${state.mode}-${state.revision}`}
 					onChange={draft.setBody}
 				/>
 			) : (
-				<div className="p-3">
+				<div>
 					<Label className="sr-only" htmlFor="doc-body">
 						Document body — MDX source
 					</Label>
@@ -98,19 +101,6 @@ export function DocumentEditorSection({
 					</p>
 				</div>
 			)}
-
-			{canEdit ? (
-				<div className="flex items-center justify-between border-t bg-muted/20 px-3 py-2 text-xs">
-					<span className="text-muted-foreground">
-						{state.mode === "rich"
-							? "Formatting is saved as MDX. What you see is what is saved."
-							: "Source mode — rich preview unavailable."}
-					</span>
-					<span className="text-muted-foreground">
-						{state.dirty ? "Unsaved changes" : "All changes saved"}
-					</span>
-				</div>
-			) : null}
-		</Card>
+		</div>
 	);
 }

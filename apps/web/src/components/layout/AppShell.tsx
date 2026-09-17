@@ -72,9 +72,8 @@ function CreateProjectDialog({
 						onCancel={() => onOpenChange(false)}
 						onSubmit={async (values) => {
 							await createMut.mutateAsync({
-								description: values.description,
+								githubRepoFullName: values.githubRepoFullName,
 								name: values.name,
-								status: values.status,
 							});
 						}}
 						submitLabel="Create project"

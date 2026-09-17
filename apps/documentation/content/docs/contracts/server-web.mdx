@@ -40,10 +40,10 @@ Task lifecycle: `queued → running → completed|failed|cancelled`, with `faile
 | `projects.list` | `{ cursor?, limit, q?, status? }?` | `{ items, nextCursor }` |
 | `projects.get` | `{ id }` | row, or `NOT_FOUND` |
 | `projects.getBySlug` | `{ slug }` | row, or `NOT_FOUND` |
-| `projects.create` | `{ name 2–100, description up to 5k?, slug? (regex, else derived), status = active }` | row; reserved/duplicate slug gives `BAD_REQUEST` |
-| `projects.update` | `{ id, ...partial }` | row, or `NOT_FOUND` / `BAD_REQUEST` |
+| `projects.create` | `{ name 2–100, githubRepoFullName owner/repo!, slug? (regex, else derived) }` | row; description synced from GitHub; missing GitHub connection gives `NOT_FOUND`; duplicate repo gives `CONFLICT`; reserved/duplicate slug gives `BAD_REQUEST` |
+| `projects.update` | `{ id, name?, githubRepoFullName?, slug? }` | row, description re-synced from GitHub, or `NOT_FOUND` / `BAD_REQUEST` |
 
-`status: active|on_hold|completed`. Slugs match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–60 chars.
+Slugs match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, 2–60 chars. `githubRepoFullName` matches `owner/repo`. Description is always sourced from the GitHub repository and is read-only in the UI.
 
 ## `documents.*` (`src/rpc/procedures/documents.ts`, exposed as `documents` + `documents.comments.create`)
 
@@ -68,6 +68,7 @@ Task lifecycle: `queued → running → completed|failed|cancelled`, with `faile
 | `connections.getAuthUrl` | `{ provider }` | `{ url, state, redirectUri }` (`BAD_REQUEST` if unsupported) |
 | `connections.providers` | `void` | `{ providers: [{ id }] }` |
 | `connections.disconnect` | `{ provider }` | `{ success: true }` |
+| `connections.githubRepos` | `void` | GitHub repos for the connected account (`NOT_FOUND` when GitHub not connected) |
 
 ## `device.*` and `machines.*` (`src/rpc/procedures/device.ts`, `src/rpc/procedures/machines.ts`)
 

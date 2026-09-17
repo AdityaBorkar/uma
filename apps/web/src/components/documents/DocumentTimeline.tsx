@@ -28,10 +28,9 @@ interface DocEvent {
 
 interface Props {
 	events: DocEvent[] | undefined;
-	frontmatter: Record<string, FrontmatterValue>;
 }
 
-export function DocumentTimeline({ events, frontmatter }: Props) {
+export function DocumentTimeline({ events }: Props) {
 	const list = events ?? [];
 	return (
 		<Card>
@@ -57,26 +56,6 @@ export function DocumentTimeline({ events, frontmatter }: Props) {
 						</div>
 					))
 				)}
-				{Object.keys(frontmatter).length > 0 ? (
-					<>
-						<Separator />
-						<details className="text-xs">
-							<summary className="cursor-pointer font-medium text-muted-foreground uppercase tracking-wide">
-								Frontmatter (raw)
-							</summary>
-							<dl className="mt-2 space-y-1">
-								{Object.entries(frontmatter).map(([key, value]) => (
-									<div key={key}>
-										<dt className="inline font-mono font-semibold">{key}</dt>
-										<dd className="ml-2 inline font-mono text-muted-foreground">
-											{JSON.stringify(value)}
-										</dd>
-									</div>
-								))}
-							</dl>
-						</details>
-					</>
-				) : null}
 			</CardContent>
 		</Card>
 	);

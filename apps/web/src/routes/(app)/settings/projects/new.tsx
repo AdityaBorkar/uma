@@ -75,9 +75,8 @@ function NewProjectPage() {
 						onCancel={() => void navigate({ to: "/settings/projects" })}
 						onSubmit={async (values) => {
 							await createMut.mutateAsync({
-								description: values.description,
+								githubRepoFullName: values.githubRepoFullName,
 								name: values.name,
-								status: values.status,
 							});
 						}}
 						submitLabel="Create project"
