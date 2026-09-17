@@ -379,8 +379,11 @@ html.dark {
 	}
 }
 
+/* Content reveal (beUI language): one meaningful surface lifts in fast and
+   settles quietly. Under 300ms like all interface motion — never a slow
+   marketing ease on product surfaces. */
 .rise-in {
-	animation: rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation: rise-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes rise-in {

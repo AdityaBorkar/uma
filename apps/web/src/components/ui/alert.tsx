@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type * as React from "react";
+import { type HTMLMotionProps, motion, useReducedMotion } from "motion/react";
 
+import { EASE_OUT } from "#/lib/ease.ts";
 import { cn } from "#/lib/utils.ts";
 
 const alertVariants = cva(
@@ -23,12 +24,19 @@ function Alert({
 	className,
 	variant,
 	...props
-}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
+}: HTMLMotionProps<"div"> & VariantProps<typeof alertVariants>) {
+	const reduce = useReducedMotion();
 	return (
-		<div
+		// beUI content reveal: one meaningful surface lifts in fast; reduced
+		// motion keeps the opacity fade and drops the travel.
+		<motion.div
+			animate={{ opacity: 1, y: 0 }}
 			className={cn(alertVariants({ variant }), className)}
 			data-slot="alert"
+			initial={{ opacity: 0, y: reduce ? 0 : 4 }}
+			layout
 			role="alert"
+			transition={{ duration: 0.18, ease: EASE_OUT }}
 			{...props}
 		/>
 	);

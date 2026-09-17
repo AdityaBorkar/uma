@@ -1,15 +1,21 @@
-import type * as React from "react";
+import { type HTMLMotionProps, motion } from "motion/react";
 
+import { SPRING_LAYOUT } from "#/lib/ease.ts";
 import { cn } from "#/lib/utils.ts";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, ...props }: HTMLMotionProps<"div">) {
 	return (
-		<div
+		// beUI layout continuity: the Box keeps its surface while its
+		// footprint changes (filters expand, errors appear), morphing height
+		// on a shared-layout spring instead of snapping.
+		<motion.div
 			className={cn(
 				"bg-card text-card-foreground flex flex-col gap-0 rounded-md border",
 				className,
 			)}
 			data-slot="card"
+			layout
+			transition={SPRING_LAYOUT}
 			{...props}
 		/>
 	);

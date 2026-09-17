@@ -13,7 +13,7 @@ const MAX_TOASTS = 5;
 /** Global toast list. Replaces the former ToastContext + useState array. */
 export const toastStore = new Store<ToastItem[]>([]);
 
-function dismissToast(id: string) {
+export function dismissToast(id: string) {
 	toastStore.setState((prev) => prev.filter((t) => t.id !== id));
 }
 

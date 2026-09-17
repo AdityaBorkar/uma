@@ -1,5 +1,7 @@
-import type * as React from "react";
+import { type HTMLMotionProps, motion, useReducedMotion } from "motion/react";
+import * as React from "react";
 
+import { EASE_OUT } from "#/lib/ease.ts";
 import { cn } from "#/lib/utils.ts";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
@@ -27,13 +29,38 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 	);
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+function TableBody({
+	children,
+	className,
+	...props
+}: React.ComponentProps<"tbody">) {
+	// Tables opt into the beUI table language (minimal, reduced-motion-safe)
+	// automatically: each body row fades in with a small capped stagger so
+	// list updates read as a content reveal, never as layout churn.
+	const staggered = React.Children.map(children, (child, index) => {
+		if (
+			React.isValidElement(child) &&
+			child.type === TableRow &&
+			typeof (child.props as { staggerIndex?: unknown }).staggerIndex ===
+				"undefined"
+		) {
+			return React.cloneElement(
+				child as React.ReactElement<{
+					staggerIndex?: number | undefined;
+				}>,
+				{ staggerIndex: index },
+			);
+		}
+		return child;
+	});
 	return (
 		<tbody
 			className={cn("[&_tr:last-child]:border-0", className)}
 			data-slot="table-body"
 			{...props}
-		/>
+		>
+			{staggered}
+		</tbody>
 	);
 }
 
@@ -50,14 +77,35 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 	);
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableRow({
+	className,
+	staggerIndex,
+	...props
+}: HTMLMotionProps<"tr"> & {
+	staggerIndex?: number | undefined;
+}) {
+	const reduce = useReducedMotion();
+	// Opacity-only: CSS transforms do not reliably apply to `display:
+	// table-row`, so rows reveal with opacity while the stagger delay keeps
+	// the cascade under 300ms total. Reduced motion removes the delay.
 	return (
-		<tr
+		<motion.tr
 			className={cn(
 				"border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
 				className,
 			)}
 			data-slot="table-row"
+			{...(staggerIndex === undefined
+				? {}
+				: {
+						animate: { opacity: 1 },
+						initial: { opacity: 0 },
+						transition: {
+							delay: reduce ? 0 : Math.min(staggerIndex * 0.015, 0.15),
+							duration: 0.18,
+							ease: EASE_OUT,
+						},
+					})}
 			{...props}
 		/>
 	);
